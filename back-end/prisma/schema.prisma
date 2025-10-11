@@ -1,0 +1,46 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  role_id        Int
+  email          String    @unique @db.VarChar(100)
+  password_hash  String    @db.VarChar(255)
+  full_name      String    @db.VarChar(100)
+  phone          String?   @db.VarChar(20)
+  address        String?   @db.VarChar(255)
+  loyalty_points Int       @default(0)
+  license_number String?   @db.VarChar(100)
+  hire_date      DateTime?
+  gender         Gender?
+  birth_day      DateTime?
+  avatar_url     String?   @db.VarChar(255)
+  is_active      Boolean   @default(false)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now())
+
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Role {
+  id    Int     @id @default(autoincrement())
+  name  String  @db.VarChar(100)
+
+  users User[]
+
+  @@map("roles")
+}
+
+enum Gender {
+  male
+  female
+  other
+}
