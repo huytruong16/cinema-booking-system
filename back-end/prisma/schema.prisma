@@ -1,46 +1,321 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id             Int       @id @default(autoincrement())
-  role_id        Int
-  email          String    @unique @db.VarChar(100)
-  password_hash  String    @db.VarChar(255)
-  full_name      String    @db.VarChar(100)
-  phone          String?   @db.VarChar(20)
-  address        String?   @db.VarChar(255)
-  loyalty_points Int       @default(0)
-  license_number String?   @db.VarChar(100)
-  hire_date      DateTime?
-  gender         Gender?
-  birth_day      DateTime?
-  avatar_url     String?   @db.VarChar(255)
-  is_active      Boolean   @default(false)
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @default(now())
-
-  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
-
-  @@map("users")
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-model Role {
-  id    Int     @id @default(autoincrement())
-  name  String  @db.VarChar(100)
-
-  users User[]
-
-  @@map("roles")
+model PHIM {
+  MaPhim           Int             @id @default(autoincrement())
+  TenPhim          String          @unique
+  TomTatNoiDung    String?
+  DaoDien          String?
+  DanhSachDienVien String?
+  QuocGia          String?
+  TrailerUrl       String?
+  ThoiLuong        Int
+  NgayBatDauChieu  DateTime
+  NgayKetThucChieu DateTime
+  DiemDanhGia      Decimal?        @default(0.0)
+  TrangThaiPhim    trang_thai_phim @default(SAPCHIEU)
+  DinhDangs        PHIM_DINHDANG[]
+  TheLoais         PHIM_THELOAI[]
 }
 
-enum Gender {
-  male
-  female
-  other
+model THELOAI {
+  MaTheLoai    Int            @id @default(autoincrement())
+  TenTheLoai   String         @unique
+  PhimTheLoais PHIM_THELOAI[]
+}
+
+model PHIM_THELOAI {
+  MaTheLoaiPhim Int     @id @default(autoincrement())
+  MaPhim        Int
+  MaTheLoai     Int
+  PHIM          PHIM    @relation(fields: [MaPhim], references: [MaPhim])
+  THELOAI       THELOAI @relation(fields: [MaTheLoai], references: [MaTheLoai])
+}
+
+model DINHDANG {
+  MaDinhDang    Int             @id @default(autoincrement())
+  TenDinhDang   String          @unique
+  GiaVe         Decimal
+  PhimDinhDangs PHIM_DINHDANG[]
+}
+
+model PHIM_DINHDANG {
+  MaPhimDinhDang Int         @id @default(autoincrement())
+  MaPhim         Int
+  MaDinhDang     Int
+  GiaVe          Decimal
+  DINHDANG       DINHDANG    @relation(fields: [MaDinhDang], references: [MaDinhDang])
+  PHIM           PHIM        @relation(fields: [MaPhim], references: [MaPhim])
+  SuatChieus     SUATCHIEU[]
+}
+
+model PHONGCHIEU {
+  MaPhongChieu  Int              @id @default(autoincrement())
+  TenPhongChieu String           @unique
+  SoDoGhe       Json
+  GhePhongChieu GHE_PHONGCHIEU[]
+  SuatChieus    SUATCHIEU[]
+}
+
+model LOAIGHE {
+  MaLoaiGhe  Int     @id @default(autoincrement())
+  LoaiGhe    String
+  HeSoGiaGhe Decimal @default(1.0)
+  Ghes       GHE[]
+}
+
+model GHE {
+  MaGhe         Int              @id @default(autoincrement())
+  SoGhe         String
+  MaLoaiGhe     Int
+  LOAIGHE       LOAIGHE          @relation(fields: [MaLoaiGhe], references: [MaLoaiGhe])
+  GhePhongChieu GHE_PHONGCHIEU[]
+}
+
+model GHE_PHONGCHIEU {
+  MaGhePhongChieu Int             @id @default(autoincrement())
+  MaGhe           Int
+  MaPhongChieu    Int
+  GHE             GHE             @relation(fields: [MaGhe], references: [MaGhe])
+  PHONGCHIEU      PHONGCHIEU      @relation(fields: [MaPhongChieu], references: [MaPhongChieu])
+  GheSuatChieu    GHE_SUATCHIEU[]
+}
+
+model SUATCHIEU {
+  MaSuatChieu     Int                   @id @default(autoincrement())
+  MaPhimDinhDang  Int
+  MaPhongChieu    Int
+  ThoiGianBatDau  DateTime
+  ThoiGianKetThuc DateTime
+  TrangThai       trang_thai_suat_chieu @default(CHUACHIEU)
+  GheSuatChieu    GHE_SUATCHIEU[]
+  PHIM_DINHDANG   PHIM_DINHDANG         @relation(fields: [MaPhimDinhDang], references: [MaPhimDinhDang])
+  PHONGCHIEU      PHONGCHIEU            @relation(fields: [MaPhongChieu], references: [MaPhongChieu])
+}
+
+model GHE_SUATCHIEU {
+  MaGheSuatChieu  Int            @id @default(autoincrement())
+  MaGhePhongChieu Int
+  MaSuatChieu     Int
+  TrangThai       trang_thai_ghe @default(CONTRONG)
+  GHE_PHONGCHIEU  GHE_PHONGCHIEU @relation(fields: [MaGhePhongChieu], references: [MaGhePhongChieu])
+  SUATCHIEU       SUATCHIEU      @relation(fields: [MaSuatChieu], references: [MaSuatChieu])
+  Ves             VE[]
+}
+
+model KHACHHANG {
+  MaKhachHang      Int                   @id @default(autoincrement())
+  HoTen            String
+  MaNguoiDung      Int
+  HoaDons          HOADON[]
+  NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM      @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
+  KhuyenMais       KHUYENMAI_KHACHHANG[]
+}
+
+model VE {
+  MaVe           Int           @id @default(autoincrement())
+  MaGheSuatChieu Int
+  GiaVe          Decimal
+  MaHoaDon       Int
+  TrangThaiVe    trang_thai_ve @default(CHUASUDUNG)
+  GHE_SUATCHIEU  GHE_SUATCHIEU @relation(fields: [MaGheSuatChieu], references: [MaGheSuatChieu])
+  HOADON         HOADON        @relation(fields: [MaHoaDon], references: [MaHoaDon])
+}
+
+model COMBO {
+  MaCombo     Int              @id @default(autoincrement())
+  TenCombo    String           @unique
+  MoTa        String?
+  GiaTien     Decimal
+  TrangThai   trang_thai_combo @default(CONHANG)
+  HinhAnh     String?
+  HoaDonCombo HOADONCOMBO[]
+}
+
+model HOADONCOMBO {
+  MaVeCombo Int     @id @default(autoincrement())
+  MaHoaDon  Int
+  MaCombo   Int
+  SoLuong   Int     @default(1)
+  DonGia    Decimal
+  COMBO     COMBO   @relation(fields: [MaCombo], references: [MaCombo])
+  HOADON    HOADON  @relation(fields: [MaHoaDon], references: [MaHoaDon])
+}
+
+model HOADON {
+  MaHoaDon    Int           @id @default(autoincrement())
+  Email       String
+  Code        String        @unique
+  NgayLap     DateTime
+  MaKhachHang Int?
+  TongTien    Decimal
+  KHACHHANG   KHACHHANG?    @relation(fields: [MaKhachHang], references: [MaKhachHang])
+  HoaDonCombo HOADONCOMBO[]
+  ThanhToan   THANHTOAN[]
+  Ves         VE[]
+}
+
+model KHUYENMAI {
+  MaKhuyenMai       Int                   @id @default(autoincrement())
+  TenKhuyenMai      String
+  MoTa              String?
+  Code              String                @unique
+  LoaiGiamGia       loai_giam_gia
+  GiaTri            Decimal
+  NgayBatDau        DateTime
+  NgayKetThuc       DateTime
+  SoLuongMa         Int
+  GiaTriDonToiThieu Decimal
+  GiaTriGiamToiDa   Decimal
+  TrangThai         trang_thai_khuyen_mai @default(CONHOATDONG)
+  KhuyenMaiKH       KHUYENMAI_KHACHHANG[]
+}
+
+model KHUYENMAI_KHACHHANG {
+  MaKhuyenMaiKH Int       @id @default(autoincrement())
+  MaKhuyenMai   Int
+  MaKhachHang   Int
+  DaSuDung      Boolean   @default(false)
+  KHACHHANG     KHACHHANG @relation(fields: [MaKhachHang], references: [MaKhachHang])
+  KHUYENMAI     KHUYENMAI @relation(fields: [MaKhuyenMai], references: [MaKhuyenMai])
+}
+
+model THANHTOAN {
+  MaThanhToan   Int                    @id @default(autoincrement())
+  MaNhanVien    Int?
+  MaHoaDon      Int
+  PhuongThuc    phuong_thuc_thanh_toan
+  TongTien      Decimal
+  TrangThai     trang_thai_thanh_toan  @default(DANGCHO)
+  NgayThanhToan DateTime
+  NoiDung       String?
+  LoaiGiaoDich  loai_giao_dich
+  MaGiaoDich    String
+  ThanhToanUrl  String
+  HOADON        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
+  NHANVIEN      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])
+}
+
+model NHANVIEN {
+  MaNhanVien       Int                  @id @default(autoincrement())
+  TenNhanVien      String
+  NgayVaoLam       DateTime
+  TrangThai        trang_thai_nhan_vien @default(CONLAM)
+  MaNguoiDung      Int
+  NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM     @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
+  ThanhToans       THANHTOAN[]
+}
+
+model NGUOIDUNGPHANMEM {
+  MaNguoiDung     Int                   @id @default(autoincrement())
+  TenTaiKhoan     String                @unique
+  MatKhau         String
+  SoDienThoai     String?
+  Email           String                @unique
+  MaNhomNguoiDung Int?
+  TrangThai       trang_thai_nguoi_dung @default(CHUAKICHHOAT)
+  KhachHangs      KHACHHANG[]
+  NHOMNGUOIDUNG   NHOMNGUOIDUNG?        @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
+  NhanViens       NHANVIEN[]
+}
+
+model NHOMNGUOIDUNG {
+  MaNhomNguoiDung  Int                   @id @default(autoincrement())
+  TenNhomNguoiDung String                @unique
+  NguoiDungs       NGUOIDUNGPHANMEM[]
+  QuyenNhom        QUYEN_NHOMNGUOIDUNG[]
+}
+
+model QUYEN_NHOMNGUOIDUNG {
+  MaQuyenNhomNguoiDung Int           @id @default(autoincrement())
+  MaNhomNguoiDung      Int
+  Quyen                quyen
+  NHOMNGUOIDUNG        NHOMNGUOIDUNG @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
+}
+
+enum trang_thai_phim {
+  SAPCHIEU
+  DANGCHIEU
+  NGUNGCHIEU
+}
+
+enum trang_thai_suat_chieu {
+  CHUACHIEU
+  DANGCHIEU
+  DACHIEU
+  DAHUY
+}
+
+enum trang_thai_ghe {
+  CONTRONG
+  DADAT
+  DANGGIU
+  BAOTRI
+}
+
+enum trang_thai_ve {
+  CHUASUDUNG
+  DASUDUNG
+  DAHETHAN
+  CHUAHOANTIEN
+  CHOHOANTIEN
+  DAHOAN
+}
+
+enum trang_thai_combo {
+  CONHANG
+  HETHANG
+}
+
+enum phuong_thuc_thanh_toan {
+  TRUCTIEP
+  TRUCTUYEN
+}
+
+enum loai_giam_gia {
+  CODINH
+  PHANTRAM
+}
+
+enum trang_thai_khuyen_mai {
+  CONHOATDONG
+  KHONGCONHOATDONG
+}
+
+enum trang_thai_thanh_toan {
+  DANGCHO
+  THANHCONG
+  THATBAI
+}
+
+enum loai_giao_dich {
+  MUAVE
+  HOANTIEN
+}
+
+enum trang_thai_nhan_vien {
+  CONLAM
+  DANGHI
+}
+
+enum trang_thai_nguoi_dung {
+  CHUAKICHHOAT
+  CONHOATDONG
+  KHONGHOATDONG
+}
+
+enum quyen {
+  BANVE
+  HOANVE
+  SOATVE
+  BAOCAODOANHTHU
+  QLPHIM
+  QLLICHCHIEU
 }
