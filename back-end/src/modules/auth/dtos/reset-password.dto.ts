@@ -9,5 +9,5 @@ export class ResetPasswordDto {
     @ApiProperty({ example: 'newPassword123', description: 'Mật khẩu mới' })
     @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
     @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
-    newPassword: string;
+    matkhauMoi: string;
 }
