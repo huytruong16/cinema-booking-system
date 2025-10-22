@@ -215,12 +215,13 @@ model NHANVIEN {
 
 model NGUOIDUNGPHANMEM {
   MaNguoiDung     Int                   @id @default(autoincrement())
-  TenTaiKhoan     String                @unique
+  HoTen           String                @unique(map: "NGUOIDUNGPHANMEM_TenTaiKhoan_key")
   MatKhau         String
   SoDienThoai     String?
   Email           String                @unique
   MaNhomNguoiDung Int?
   TrangThai       trang_thai_nguoi_dung @default(CHUAKICHHOAT)
+  VaiTro          vaitro                @default(KHACHHANG)
   KhachHangs      KHACHHANG[]
   NHOMNGUOIDUNG   NHOMNGUOIDUNG?        @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
   NhanViens       NHANVIEN[]
@@ -318,4 +319,10 @@ enum quyen {
   BAOCAODOANHTHU
   QLPHIM
   QLLICHCHIEU
+}
+
+enum vaitro {
+  KHACHHANG
+  NHANVIEN
+  ADMIN
 }

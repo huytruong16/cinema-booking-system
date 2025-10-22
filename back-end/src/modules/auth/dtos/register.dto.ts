@@ -9,9 +9,9 @@ export class RegisterDto {
     @ApiProperty({ example: '123456', description: 'Mật khẩu đăng ký' })
     @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
     @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
-    password: string;
+    matkhau: string;
 
     @ApiProperty({ example: 'Nguyễn Văn A', description: 'Họ tên đầy đủ của người dùng' })
     @IsNotEmpty({ message: 'Họ tên không được để trống' })
-    fullName: string;
+    hoTen: string;
 }

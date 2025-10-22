@@ -17,10 +17,10 @@ export class AuthService {
     ) { }
 
     async login(dto: LoginDto) {
-        const { email, password } = dto;
-        const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { Email: dto.email }, });
+        const { email, matkhau } = dto;
+        const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { Email: email } });
 
-        if (!user || !(await bcryptUtil.comparePassword(password, user.MatKhau))) {
+        if (!user || !(await bcryptUtil.comparePassword(matkhau, user.MatKhau))) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
         }
 
@@ -28,28 +28,42 @@ export class AuthService {
             throw new ForbiddenException('Tài khoản chưa xác minh email.');
         }
 
-        const payload = { id: user.MaNguoiDung, email: user.Email };
+        const payload = { id: user.MaNguoiDung, email: user.Email, vaitro: user.VaiTro };
         const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
         const refreshToken = this.jwtService.sign({ id: user.MaNguoiDung }, { expiresIn: '7d' });
 
         return { accessToken, refreshToken };
     }
 
+    async refreshAccessToken(refreshToken: string) {
+        try {
+            const decoded = this.jwtService.verify<{ id: number }>(refreshToken);
+            const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { MaNguoiDung: decoded.id } });
+
+            if (!user) throw new NotFoundException('Người dùng không tồn tại.');
+
+            const payload = { id: user.MaNguoiDung, email: user.Email, vaitro: user.VaiTro };
+            return { accessToken: this.jwtService.sign(payload, { expiresIn: '15m' }) };
+        } catch (error) {
+            throw new ForbiddenException('Refresh token không hợp lệ.');
+        }
+    }
+
     async register(dto: RegisterDto) {
-        const { email, password, fullName } = dto;
+        const { email, matkhau, hoTen } = dto;
         const existing = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { Email: email } });
-        const hashed = await bcryptUtil.hashPassword(password);
+        const hashed = await bcryptUtil.hashPassword(matkhau);
 
         let user;
         if (existing) {
             if (existing.TrangThai !== 'CHUAKICHHOAT') throw new ConflictException('Email đã tồn tại.');
             user = await this.prisma.nGUOIDUNGPHANMEM.update({
                 where: { Email: email },
-                data: { TenTaiKhoan: fullName, MatKhau: hashed },
+                data: { HoTen: hoTen, MatKhau: hashed },
             });
         } else {
             user = await this.prisma.nGUOIDUNGPHANMEM.create({
-                data: { Email: email, TenTaiKhoan: fullName, MatKhau: hashed, TrangThai: 'CHUAKICHHOAT' },
+                data: { Email: email, HoTen: hoTen, MatKhau: hashed },
             });
         }
 
@@ -101,12 +115,35 @@ export class AuthService {
         return { message: 'OTP đặt lại mật khẩu đã được gửi qua email.' };
     }
 
+    async verifyResetOtp(dto: VerifyResetOtpDto) {
+        const { email, otp } = dto;
+        const hashOtp = await this.redisService.get(`reset_otp:${email}`);
+        if (!hashOtp) throw new ForbiddenException('OTP không hợp lệ hoặc đã hết hạn.');
+
+        let attempts = parseInt((await this.redisService.get(`reset_attempts:${email}`)) ?? '0');
+        if (attempts >= 5) {
+            await this.redisService.del(`reset_otp:${email}`, `reset_attempts:${email}`);
+            throw new ForbiddenException('Bạn đã nhập sai OTP quá nhiều lần, vui lòng thử lại.');
+        }
+
+        const match = await bcryptUtil.comparePassword(otp, hashOtp);
+        if (!match) {
+            await this.redisService.setEx(`reset_attempts:${email}`, 300, (attempts + 1).toString());
+            throw new ForbiddenException(`OTP không đúng (${attempts + 1}/5 lần).`);
+        }
+
+        await this.redisService.setEx(`reset_verified:${email}`, 600, 'true');
+        await this.redisService.del(`reset_otp:${email}`, `reset_attempts:${email}`);
+
+        return { message: 'OTP hợp lệ, bạn có thể đặt lại mật khẩu.' };
+    }
+
     async resetPassword(dto: ResetPasswordDto) {
-        const { email, newPassword } = dto;
+        const { email, matkhauMoi } = dto;
         const verified = await this.redisService.get(`reset_verified:${email}`);
         if (!verified) throw new ForbiddenException('Bạn chưa xác minh OTP.');
 
-        const hashed = await bcryptUtil.hashPassword(newPassword);
+        const hashed = await bcryptUtil.hashPassword(matkhauMoi);
         await this.prisma.nGUOIDUNGPHANMEM.update({ where: { Email: email }, data: { MatKhau: hashed } });
         await this.redisService.del(`reset_verified:${email}`);
 
