@@ -1,8 +1,11 @@
-import { Body, Controller, Post, Res, Get, Req } from '@nestjs/common';
+import { Body, Controller, Post, Res, Get, Req, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Response, Request } from 'express';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { LoginDto, RegisterDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto } from './dtos';
+import {
+    LoginDto, RegisterDto, VerifyOtpDto,
+    ForgotPasswordDto, ResetPasswordDto, VerifyResetOtpDto
+} from './dtos';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -18,18 +21,19 @@ export class AuthController {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         return res.json({ accessToken });
     }
 
-    // @Get('refresh')
-    // @ApiOperation({ summary: 'Làm mới access token' })
-    // async refresh(@Req() req: Request) {
-    //     const refreshToken = req.cookies?.refreshToken;
-    //     return this.authService.refreshAccessToken(refreshToken);
-    // }
+    @Get('refresh')
+    @ApiOperation({ summary: 'Làm mới access token' })
+    async refresh(@Req() req: Request) {
+        const refreshToken = req.cookies?.refreshToken;
+        if (!refreshToken) throw new ForbiddenException('Refresh token không tồn tại.');
+        return this.authService.refreshAccessToken(refreshToken);
+    }
 
     @Post('register')
     @ApiOperation({ summary: 'Đăng ký người dùng mới' })
@@ -47,6 +51,12 @@ export class AuthController {
     @ApiOperation({ summary: 'Gửi OTP quên mật khẩu' })
     async forgotPassword(@Body() dto: ForgotPasswordDto) {
         return this.authService.forgotPassword(dto);
+    }
+
+    @Post('verify-reset-otp')
+    @ApiOperation({ summary: 'Xác minh OTP để đặt lại mật khẩu' })
+    async verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
+        return this.authService.verifyResetOtp(dto);
     }
 
     @Post('reset-password')

@@ -18,7 +18,7 @@ export class AuthService {
 
     async login(dto: LoginDto) {
         const { email, password } = dto;
-        const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { Email: dto.email }, });
+        const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { Email: email } });
 
         if (!user || !(await bcryptUtil.comparePassword(password, user.MatKhau))) {
             throw new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
@@ -33,6 +33,20 @@ export class AuthService {
         const refreshToken = this.jwtService.sign({ id: user.MaNguoiDung }, { expiresIn: '7d' });
 
         return { accessToken, refreshToken };
+    }
+
+    async refreshAccessToken(refreshToken: string) {
+        try {
+            const decoded = this.jwtService.verify<{ id: number }>(refreshToken);
+            const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({ where: { MaNguoiDung: decoded.id } });
+
+            if (!user) throw new NotFoundException('Người dùng không tồn tại.');
+
+            const payload = { id: user.MaNguoiDung, email: user.Email };
+            return { accessToken: this.jwtService.sign(payload, { expiresIn: '15m' }) };
+        } catch (error) {
+            throw new ForbiddenException('Refresh token không hợp lệ.');
+        }
     }
 
     async register(dto: RegisterDto) {
@@ -99,6 +113,29 @@ export class AuthService {
         await this.mailService.sendMail(email, 'Đặt lại mật khẩu', `Mã OTP của bạn là: ${otp}`);
 
         return { message: 'OTP đặt lại mật khẩu đã được gửi qua email.' };
+    }
+
+    async verifyResetOtp(dto: VerifyResetOtpDto) {
+        const { email, otp } = dto;
+        const hashOtp = await this.redisService.get(`reset_otp:${email}`);
+        if (!hashOtp) throw new ForbiddenException('OTP không hợp lệ hoặc đã hết hạn.');
+
+        let attempts = parseInt((await this.redisService.get(`reset_attempts:${email}`)) ?? '0');
+        if (attempts >= 5) {
+            await this.redisService.del(`reset_otp:${email}`, `reset_attempts:${email}`);
+            throw new ForbiddenException('Bạn đã nhập sai OTP quá nhiều lần, vui lòng thử lại.');
+        }
+
+        const match = await bcryptUtil.comparePassword(otp, hashOtp);
+        if (!match) {
+            await this.redisService.setEx(`reset_attempts:${email}`, 300, (attempts + 1).toString());
+            throw new ForbiddenException(`OTP không đúng (${attempts + 1}/5 lần).`);
+        }
+
+        await this.redisService.setEx(`reset_verified:${email}`, 600, 'true');
+        await this.redisService.del(`reset_otp:${email}`, `reset_attempts:${email}`);
+
+        return { message: 'OTP hợp lệ, bạn có thể đặt lại mật khẩu.' };
     }
 
     async resetPassword(dto: ResetPasswordDto) {
