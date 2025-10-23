@@ -215,7 +215,7 @@ model NHANVIEN {
 
 model NGUOIDUNGPHANMEM {
   MaNguoiDung     Int                   @id @default(autoincrement())
-  HoTen           String                @unique(map: "NGUOIDUNGPHANMEM_TenTaiKhoan_key")
+  HoTen           String                
   MatKhau         String
   SoDienThoai     String?
   Email           String                @unique
