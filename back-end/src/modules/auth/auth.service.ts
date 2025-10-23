@@ -72,7 +72,7 @@ export class AuthService {
 
         await this.redisService.setEx(`otp:${email}`, 300, hashOtp);
         await this.redisService.setEx(`otp_attempts:${email}`, 300, '0');
-        await this.mailService.sendMail(email, 'Xác minh tài khoản', `Mã OTP của bạn là: ${otp}`);
+        await this.mailService.sendOTPEmail(email, 'Xác minh tài khoản', `${otp}`, hoTen, 'register');
 
         return { message: 'Đăng ký thành công, vui lòng xác minh OTP.' };
     }
@@ -110,7 +110,7 @@ export class AuthService {
 
         await this.redisService.setEx(`reset_otp:${email}`, 300, hashOtp);
         await this.redisService.setEx(`reset_attempts:${email}`, 300, '0');
-        await this.mailService.sendMail(email, 'Đặt lại mật khẩu', `Mã OTP của bạn là: ${otp}`);
+        await this.mailService.sendOTPEmail(email, 'Đặt lại mật khẩu', `${otp}`, user.HoTen, 'forgot-password');
 
         return { message: 'OTP đặt lại mật khẩu đã được gửi qua email.' };
     }

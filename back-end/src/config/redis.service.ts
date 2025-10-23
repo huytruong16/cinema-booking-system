@@ -4,38 +4,53 @@ import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-    private client: RedisClientType;
+  private client: RedisClientType;
 
-    constructor(private readonly configService: ConfigService) { }
+  constructor(private readonly configService: ConfigService) { }
 
-    async onModuleInit() {
-        const redisConfig = this.configService.get('redis');
-        const url = `redis://${redisConfig.user}:${redisConfig.password}@${redisConfig.host}`;
+  async onModuleInit() {
+    const redisConfig = this.configService.get('redis');
+    const host = redisConfig.host || 'localhost';
+    const port = redisConfig.port || '6379';
+    const pass = redisConfig.password || '';
+    const user = redisConfig.user || '';
 
-        this.client = createClient({ url });
-        this.client.on('error', (err) => console.error('Redis Error:', err));
-
-        await this.client.connect();
-        console.log('Redis connected successfully!');
+    let url = `redis://${host}:${port}`;
+    if (user && pass) {
+      url = `redis://${user}:${pass}@${host}`;
     }
 
-    async onModuleDestroy() {
-        await this.client.quit();
-        console.log('Redis connection closed.');
-    }
+    this.client = createClient({ url });
+    this.client.on('error', (err) => console.error('Redis Error:', err));
 
-    getClient(): RedisClientType {
-        return this.client;
+    try {
+      await this.client.connect();
+      console.log('Redis connected successfully!');
+    } catch (err) {
+      console.error('Failed to connect to Redis:', err);
     }
-    async setEx(key: string, ttl: number, value: string) {
-        return this.client.setEx(key, ttl, value);
-    }
+  }
 
-    async get(key: string) {
-        return this.client.get(key);
+  async onModuleDestroy() {
+    if (this.client) {
+      await this.client.quit();
+      console.log('Redis connection closed');
     }
+  }
 
-    async del(...keys: string[]) {
-        return this.client.del(keys);
-    }
+  getClient(): RedisClientType {
+    return this.client;
+  }
+
+  async setEx(key: string, ttl: number, value: string) {
+    return this.client.setEx(key, ttl, value);
+  }
+
+  async get(key: string) {
+    return this.client.get(key);
+  }
+
+  async del(...keys: string[]) {
+    return this.client.del(keys);
+  }
 }
