@@ -142,16 +142,8 @@ export default function LoginPage() {
 
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="remember"
-                                checked={formData.remember}
-                                onCheckedChange={(val) =>
-                                    setFormData({ ...formData, remember: Boolean(val) })
-                                }
-                            />
-                            <Label htmlFor="remember" className="text-gray-600 text-sm">
-                                Ghi nhớ tôi
-                            </Label>
+                            
+
                         </div>
 
                         <Link
