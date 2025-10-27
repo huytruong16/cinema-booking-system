@@ -41,18 +41,18 @@ export function OTPVerificationDialog({ email, onClose, onVerified }: OTPDialogP
         }
     }
 
-    const handleResendOTP = async () => {
-        setLoading(true)
-        setMessage("Đang gửi lại mã OTP...")
-        try {
-            await authService.resendVerificationCode({ email })
-            setMessage("✅ Mã OTP mới đã được gửi đến email của bạn.")
-        } catch {
-            setMessage("❌ Không thể gửi lại OTP. Vui lòng thử lại sau.")
-        } finally {
-            setLoading(false)
-        }
-    }
+    // const handleResendOTP = async () => {
+    //     setLoading(true)
+    //     setMessage("Đang gửi lại mã OTP...")
+    //     try {
+    //         await authService.resendVerificationCode({ email })
+    //         setMessage("✅ Mã OTP mới đã được gửi đến email của bạn.")
+    //     } catch {
+    //         setMessage("❌ Không thể gửi lại OTP. Vui lòng thử lại sau.")
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
 
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

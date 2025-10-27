@@ -21,13 +21,12 @@ export const authService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    // API chỉ trả về message khi thành công
     return handleResponse<ApiResponse<string>>(res);
   },
 
   async login(payload: {
     email: string;
-    matkhau: string; // Đổi tên
+    matkhau: string; 
   }) {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
@@ -40,7 +39,7 @@ export const authService = {
 
   async verifyUser(payload: {
     email: string;
-    otp: string; // Đổi tên
+    otp: string; 
   }) {
     const res = await fetch(`${API_URL}/auth/verify-otp`, { 
       method: "POST",
