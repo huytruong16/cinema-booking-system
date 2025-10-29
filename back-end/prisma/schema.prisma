@@ -9,7 +9,7 @@ datasource db {
 }
 
 model PHIM {
-  MaPhim           Int             @id @default(autoincrement())
+  MaPhim           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenPhim          String          @unique
   TomTatNoiDung    String?
   DaoDien          String?
@@ -21,149 +21,198 @@ model PHIM {
   NgayKetThucChieu DateTime
   DiemDanhGia      Decimal?        @default(0.0)
   TrangThaiPhim    trang_thai_phim @default(SAPCHIEU)
+  DanhGias         DANHGIA[]
   DinhDangs        PHIM_DINHDANG[]
   TheLoais         PHIM_THELOAI[]
+  CreatedAt        DateTime @default(now()) 
+  UpdatedAt        DateTime @default(now())
+  DeletedAt        DateTime?
 }
 
 model THELOAI {
-  MaTheLoai    Int            @id @default(autoincrement())
+  MaTheLoai    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenTheLoai   String         @unique
   PhimTheLoais PHIM_THELOAI[]
+  CreatedAt    DateTime       @default(now()) 
+  UpdatedAt    DateTime       @default(now())
+  DeletedAt    DateTime?
 }
 
 model PHIM_THELOAI {
-  MaTheLoaiPhim Int     @id @default(autoincrement())
-  MaPhim        Int
-  MaTheLoai     Int
-  PHIM          PHIM    @relation(fields: [MaPhim], references: [MaPhim])
-  THELOAI       THELOAI @relation(fields: [MaTheLoai], references: [MaTheLoai])
+  MaTheLoaiPhim String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaPhim        String    @db.Uuid
+  MaTheLoai     String    @db.Uuid
+  PHIM          PHIM      @relation(fields: [MaPhim], references: [MaPhim])
+  THELOAI       THELOAI   @relation(fields: [MaTheLoai], references: [MaTheLoai])
+  CreatedAt     DateTime  @default(now())
+  UpdatedAt     DateTime  @default(now())
+  DeletedAt     DateTime?
 }
 
 model DINHDANG {
-  MaDinhDang    Int             @id @default(autoincrement())
+  MaDinhDang    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenDinhDang   String          @unique
   GiaVe         Decimal
   PhimDinhDangs PHIM_DINHDANG[]
+  CreatedAt     DateTime        @default(now())
+  UpdatedAt     DateTime        @default(now())
+  DeletedAt     DateTime?
 }
 
 model PHIM_DINHDANG {
-  MaPhimDinhDang Int         @id @default(autoincrement())
-  MaPhim         Int
-  MaDinhDang     Int
+  MaPhimDinhDang String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaPhim         String      @db.Uuid
+  MaDinhDang     String      @db.Uuid
   GiaVe          Decimal
   DINHDANG       DINHDANG    @relation(fields: [MaDinhDang], references: [MaDinhDang])
   PHIM           PHIM        @relation(fields: [MaPhim], references: [MaPhim])
   SuatChieus     SUATCHIEU[]
+  CreatedAt      DateTime    @default(now())
+  UpdatedAt      DateTime    @default(now())
+  DeletedAt      DateTime?
 }
 
 model PHONGCHIEU {
-  MaPhongChieu  Int              @id @default(autoincrement())
+  MaPhongChieu  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenPhongChieu String           @unique
   SoDoGhe       Json
   GhePhongChieu GHE_PHONGCHIEU[]
   SuatChieus    SUATCHIEU[]
+  CreatedAt     DateTime         @default(now())
+  UpdatedAt     DateTime         @default(now())
+  DeletedAt     DateTime?
 }
 
 model LOAIGHE {
-  MaLoaiGhe  Int     @id @default(autoincrement())
+  MaLoaiGhe  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   LoaiGhe    String
-  HeSoGiaGhe Decimal @default(1.0)
+  HeSoGiaGhe Decimal    @default(1.0)
   Ghes       GHE[]
+  CreatedAt  DateTime   @default(now())
+  UpdatedAt  DateTime   @default(now())
+  DeletedAt  DateTime?
 }
 
 model GHE {
-  MaGhe         Int              @id @default(autoincrement())
+  MaGhe         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   SoGhe         String
-  MaLoaiGhe     Int
+  MaLoaiGhe     String           @db.Uuid
   LOAIGHE       LOAIGHE          @relation(fields: [MaLoaiGhe], references: [MaLoaiGhe])
   GhePhongChieu GHE_PHONGCHIEU[]
+  CreatedAt     DateTime         @default(now())
+  UpdatedAt     DateTime         @default(now())
+  DeletedAt     DateTime?
 }
 
 model GHE_PHONGCHIEU {
-  MaGhePhongChieu Int             @id @default(autoincrement())
-  MaGhe           Int
-  MaPhongChieu    Int
+  MaGhePhongChieu String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaGhe           String          @db.Uuid
+  MaPhongChieu    String          @db.Uuid
   GHE             GHE             @relation(fields: [MaGhe], references: [MaGhe])
   PHONGCHIEU      PHONGCHIEU      @relation(fields: [MaPhongChieu], references: [MaPhongChieu])
   GheSuatChieu    GHE_SUATCHIEU[]
+  CreatedAt       DateTime        @default(now())
+  UpdatedAt       DateTime        @default(now())
+  DeletedAt       DateTime?
 }
 
 model SUATCHIEU {
-  MaSuatChieu     Int                   @id @default(autoincrement())
-  MaPhimDinhDang  Int
-  MaPhongChieu    Int
+  MaSuatChieu     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaPhimDinhDang  String @db.Uuid
+  MaPhongChieu    String @db.Uuid
   ThoiGianBatDau  DateTime
   ThoiGianKetThuc DateTime
   TrangThai       trang_thai_suat_chieu @default(CHUACHIEU)
   GheSuatChieu    GHE_SUATCHIEU[]
   PHIM_DINHDANG   PHIM_DINHDANG         @relation(fields: [MaPhimDinhDang], references: [MaPhimDinhDang])
   PHONGCHIEU      PHONGCHIEU            @relation(fields: [MaPhongChieu], references: [MaPhongChieu])
+  CreatedAt       DateTime              @default(now())
+  UpdatedAt       DateTime              @default(now())
+  DeletedAt       DateTime?
 }
 
 model GHE_SUATCHIEU {
-  MaGheSuatChieu  Int            @id @default(autoincrement())
-  MaGhePhongChieu Int
-  MaSuatChieu     Int
+  MaGheSuatChieu  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaGhePhongChieu String         @db.Uuid
+  MaSuatChieu     String         @db.Uuid
   TrangThai       trang_thai_ghe @default(CONTRONG)
   GHE_PHONGCHIEU  GHE_PHONGCHIEU @relation(fields: [MaGhePhongChieu], references: [MaGhePhongChieu])
   SUATCHIEU       SUATCHIEU      @relation(fields: [MaSuatChieu], references: [MaSuatChieu])
   Ves             VE[]
+  CreatedAt       DateTime       @default(now())
+  UpdatedAt       DateTime       @default(now())
+  DeletedAt       DateTime?
 }
 
 model KHACHHANG {
-  MaKhachHang      Int                   @id @default(autoincrement())
+  MaKhachHang      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   HoTen            String
-  MaNguoiDung      Int
+  MaNguoiDung      String                @db.Uuid
   HoaDons          HOADON[]
   NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM      @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
   KhuyenMais       KHUYENMAI_KHACHHANG[]
+  CreatedAt        DateTime              @default(now())
+  UpdatedAt        DateTime              @default(now())
+  DeletedAt        DateTime?
 }
 
 model VE {
-  MaVe           Int           @id @default(autoincrement())
-  MaGheSuatChieu Int
+  MaVe           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaGheSuatChieu String        @db.Uuid
   GiaVe          Decimal
-  MaHoaDon       Int
+  MaHoaDon       String        @db.Uuid
   TrangThaiVe    trang_thai_ve @default(CHUASUDUNG)
   GHE_SUATCHIEU  GHE_SUATCHIEU @relation(fields: [MaGheSuatChieu], references: [MaGheSuatChieu])
   HOADON         HOADON        @relation(fields: [MaHoaDon], references: [MaHoaDon])
+  CreatedAt      DateTime      @default(now())
+  UpdatedAt      DateTime      @default(now())
+  DeletedAt      DateTime?
 }
 
 model COMBO {
-  MaCombo     Int              @id @default(autoincrement())
+  MaCombo     String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenCombo    String           @unique
   MoTa        String?
   GiaTien     Decimal
   TrangThai   trang_thai_combo @default(CONHANG)
   HinhAnh     String?
   HoaDonCombo HOADONCOMBO[]
+  CreatedAt   DateTime         @default(now())
+  UpdatedAt   DateTime         @default(now())
+  DeletedAt   DateTime?
 }
 
 model HOADONCOMBO {
-  MaVeCombo Int     @id @default(autoincrement())
-  MaHoaDon  Int
-  MaCombo   Int
-  SoLuong   Int     @default(1)
-  DonGia    Decimal
-  COMBO     COMBO   @relation(fields: [MaCombo], references: [MaCombo])
-  HOADON    HOADON  @relation(fields: [MaHoaDon], references: [MaHoaDon])
+  MaVeCombo String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaHoaDon  String     @db.Uuid
+  MaCombo   String     @db.Uuid
+  SoLuong   Int        @default(1)
+  DonGia    Decimal  
+  COMBO     COMBO      @relation(fields: [MaCombo], references: [MaCombo])
+  HOADON    HOADON     @relation(fields: [MaHoaDon], references: [MaHoaDon])
+  CreatedAt DateTime   @default(now())
+  UpdatedAt DateTime   @default(now())
+  DeletedAt DateTime?
 }
 
 model HOADON {
-  MaHoaDon    Int           @id @default(autoincrement())
+  MaHoaDon    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   Email       String
-  Code        String        @unique
+  Code        String         @unique
   NgayLap     DateTime
-  MaKhachHang Int?
+  MaKhachHang String?        @db.Uuid
   TongTien    Decimal
-  KHACHHANG   KHACHHANG?    @relation(fields: [MaKhachHang], references: [MaKhachHang])
+  KHACHHANG   KHACHHANG?     @relation(fields: [MaKhachHang], references: [MaKhachHang])
   HoaDonCombo HOADONCOMBO[]
   ThanhToan   THANHTOAN[]
   Ves         VE[]
+  CreatedAt   DateTime       @default(now())
+  UpdatedAt   DateTime       @default(now())
+  DeletedAt   DateTime?
 }
 
 model KHUYENMAI {
-  MaKhuyenMai       Int                   @id @default(autoincrement())
+  MaKhuyenMai       String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenKhuyenMai      String
   MoTa              String?
   Code              String                @unique
@@ -176,21 +225,27 @@ model KHUYENMAI {
   GiaTriGiamToiDa   Decimal
   TrangThai         trang_thai_khuyen_mai @default(CONHOATDONG)
   KhuyenMaiKH       KHUYENMAI_KHACHHANG[]
+  CreatedAt         DateTime              @default(now())
+  UpdatedAt         DateTime              @default(now())
+  DeletedAt         DateTime?
 }
 
 model KHUYENMAI_KHACHHANG {
-  MaKhuyenMaiKH Int       @id @default(autoincrement())
-  MaKhuyenMai   Int
-  MaKhachHang   Int
-  DaSuDung      Boolean   @default(false)
-  KHACHHANG     KHACHHANG @relation(fields: [MaKhachHang], references: [MaKhachHang])
-  KHUYENMAI     KHUYENMAI @relation(fields: [MaKhuyenMai], references: [MaKhuyenMai])
+  MaKhuyenMaiKH String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaKhuyenMai   String      @db.Uuid
+  MaKhachHang   String      @db.Uuid
+  DaSuDung      Boolean     @default(false)
+  KHACHHANG     KHACHHANG   @relation(fields: [MaKhachHang], references: [MaKhachHang])
+  KHUYENMAI     KHUYENMAI   @relation(fields: [MaKhuyenMai], references: [MaKhuyenMai])
+  CreatedAt     DateTime    @default(now())
+  UpdatedAt     DateTime    @default(now())
+  DeletedAt     DateTime?
 }
 
 model THANHTOAN {
-  MaThanhToan   Int                    @id @default(autoincrement())
-  MaNhanVien    Int?
-  MaHoaDon      Int
+  MaThanhToan   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaNhanVien    String?                @db.Uuid
+  MaHoaDon      String @db.Uuid
   PhuongThuc    phuong_thuc_thanh_toan
   TongTien      Decimal
   TrangThai     trang_thai_thanh_toan  @default(DANGCHO)
@@ -201,44 +256,70 @@ model THANHTOAN {
   ThanhToanUrl  String
   HOADON        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   NHANVIEN      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])
+  CreatedAt     DateTime               @default(now())
+  UpdatedAt     DateTime               @default(now())
+  DeletedAt     DateTime?
 }
 
 model NHANVIEN {
-  MaNhanVien       Int                  @id @default(autoincrement())
+  MaNhanVien       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenNhanVien      String
   NgayVaoLam       DateTime
   TrangThai        trang_thai_nhan_vien @default(CONLAM)
-  MaNguoiDung      Int
+  MaNguoiDung      String @db.Uuid
   NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM     @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
   ThanhToans       THANHTOAN[]
+  CreatedAt        DateTime             @default(now())
+  UpdatedAt        DateTime             @default(now())
+  DeletedAt        DateTime?
 }
 
 model NGUOIDUNGPHANMEM {
-  MaNguoiDung     Int                   @id @default(autoincrement())
-  HoTen           String                
+  MaNguoiDung     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  HoTen           String
   MatKhau         String
   SoDienThoai     String?
   Email           String                @unique
-  MaNhomNguoiDung Int?
+  MaNhomNguoiDung String? @db.Uuid
   TrangThai       trang_thai_nguoi_dung @default(CHUAKICHHOAT)
   VaiTro          vaitro                @default(KHACHHANG)
   KhachHangs      KHACHHANG[]
   NHOMNGUOIDUNG   NHOMNGUOIDUNG?        @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
   NhanViens       NHANVIEN[]
+  CreatedAt       DateTime              @default(now())
+  UpdatedAt       DateTime              @default(now())
+  DeletedAt       DateTime?
 }
 
 model NHOMNGUOIDUNG {
-  MaNhomNguoiDung  Int                   @id @default(autoincrement())
+  MaNhomNguoiDung  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   TenNhomNguoiDung String                @unique
   NguoiDungs       NGUOIDUNGPHANMEM[]
   QuyenNhom        QUYEN_NHOMNGUOIDUNG[]
+  CreatedAt        DateTime              @default(now())
+  UpdatedAt        DateTime              @default(now())
+  DeletedAt        DateTime?
 }
 
 model QUYEN_NHOMNGUOIDUNG {
-  MaQuyenNhomNguoiDung Int           @id @default(autoincrement())
-  MaNhomNguoiDung      Int
+  MaQuyenNhomNguoiDung String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaNhomNguoiDung      String        @db.Uuid
   Quyen                quyen
   NHOMNGUOIDUNG        NHOMNGUOIDUNG @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
+  CreatedAt            DateTime      @default(now())
+  UpdatedAt            DateTime      @default(now())
+  DeletedAt            DateTime?
+}
+
+model DANHGIA {
+  MaDanhGia  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  NoiDung    String
+  Diem       String
+  MaPhim     String?   @db.Uuid
+  PHIM       PHIM?     @relation(fields: [MaPhim], references: [MaPhim], onDelete: NoAction, onUpdate: NoAction)
+  CreatedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  UpdatedAt  DateTime  @default(now()) @db.Timestamp(6)
+  DeletedAt  DateTime? @db.Timestamp(6)
 }
 
 enum trang_thai_phim {
