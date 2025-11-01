@@ -10,7 +10,8 @@ datasource db {
 
 model PHIM {
   MaPhim           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenPhim          String          @unique
+  TenGoc           String          @unique
+  TenHienThi       String          @unique
   TomTatNoiDung    String?
   DaoDien          String?
   DanhSachDienVien String?
