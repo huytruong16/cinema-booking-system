@@ -315,7 +315,7 @@ model QUYEN_NHOMNGUOIDUNG {
 model DANHGIA {
   MaDanhGia  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   NoiDung    String
-  Diem       String
+  Diem       Decimal
   MaPhim     String?   @db.Uuid
   PHIM       PHIM?     @relation(fields: [MaPhim], references: [MaPhim], onDelete: NoAction, onUpdate: NoAction)
   CreatedAt  DateTime  @default(now()) @db.Timestamptz(6)
