@@ -205,7 +205,7 @@ model HOADON {
   TongTien    Decimal
   KHACHHANG   KHACHHANG?     @relation(fields: [MaKhachHang], references: [MaKhachHang])
   HoaDonCombo HOADONCOMBO[]
-  ThanhToan   THANHTOAN[]
+  GiaoDich    GIAODICH[]
   Ves         VE[]
   CreatedAt   DateTime       @default(now())
   UpdatedAt   DateTime       @default(now())
@@ -243,18 +243,18 @@ model KHUYENMAI_KHACHHANG {
   DeletedAt     DateTime?
 }
 
-model THANHTOAN {
-  MaThanhToan   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model GIAODICH {
+  MaGiaoDich    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   MaNhanVien    String?                @db.Uuid
   MaHoaDon      String @db.Uuid
   PhuongThuc    phuong_thuc_thanh_toan
   TongTien      Decimal
   TrangThai     trang_thai_thanh_toan  @default(DANGCHO)
-  NgayThanhToan DateTime
+  NgayGiaoDich  DateTime
   NoiDung       String?
   LoaiGiaoDich  loai_giao_dich
-  MaGiaoDich    String
-  ThanhToanUrl  String
+  Code          String
+  GiaoDichUrl   String
   HOADON        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   NHANVIEN      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])
   CreatedAt     DateTime               @default(now())
@@ -269,7 +269,7 @@ model NHANVIEN {
   TrangThai        trang_thai_nhan_vien @default(CONLAM)
   MaNguoiDung      String @db.Uuid
   NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM     @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
-  ThanhToans       THANHTOAN[]
+  GiaoDichs        GIAODICH[]
   CreatedAt        DateTime             @default(now())
   UpdatedAt        DateTime             @default(now())
   DeletedAt        DateTime?

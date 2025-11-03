@@ -1,0 +1,10 @@
+export enum TicketStatusEnum {
+    CHUASUDUNG = 'CHUASUDUNG',
+    DASUDUNG = 'DASUDUNG',
+    DAHETHAN = 'DAHETHAN',
+    CHUAHOANTIEN = 'CHUAHOANTIEN',
+    CHOHOANTIEN = 'CHOHOANTIEN',
+    DAHOAN = 'DAHOAN',
+}
+
+export default TicketStatusEnum;
