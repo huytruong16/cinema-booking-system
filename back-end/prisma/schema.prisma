@@ -222,6 +222,7 @@ model KHUYENMAI {
   NgayBatDau        DateTime
   NgayKetThuc       DateTime
   SoLuongMa         Int
+  SoLuongSuDung     Int                   @default(0)
   GiaTriDonToiThieu Decimal
   GiaTriGiamToiDa   Decimal
   TrangThai         trang_thai_khuyen_mai @default(CONHOATDONG)

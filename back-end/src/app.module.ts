@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './config/redis.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { FilmModule } from './modules/film/film.module';
+import { VoucherModule } from './modules/voucher/voucher.module';
 
 @Module({
   imports: [
@@ -33,7 +34,8 @@ import { FilmModule } from './modules/film/film.module';
     AuthModule,
     RedisModule,
     PrismaModule,
-    FilmModule
+    FilmModule,
+    VoucherModule
   ],
   controllers: [AppController],
   providers: [AppService],
