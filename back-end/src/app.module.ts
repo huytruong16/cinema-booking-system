@@ -11,6 +11,7 @@ import { RedisModule } from './config/redis.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { FilmModule } from './modules/film/film.module';
 import { VoucherModule } from './modules/voucher/voucher.module';
+import { ComboModule } from './modules/combo/combo.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { VoucherModule } from './modules/voucher/voucher.module';
     RedisModule,
     PrismaModule,
     FilmModule,
-    VoucherModule
+    VoucherModule,
+    ComboModule
   ],
   controllers: [AppController],
   providers: [AppService],
