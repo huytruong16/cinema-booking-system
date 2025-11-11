@@ -1,5 +1,6 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body } from '@nestjs/common';
 import { FilmService } from './film.service';
+import { CreateFilmDto } from './dtos/create-film.dto';
 import {
     ApiTags,
     ApiOperation,
@@ -227,5 +228,31 @@ export class FilmController {
         const film = await this.filmService.getFilmById(id);
         if (!film) throw new NotFoundException('Phim không tồn tại');
         return film;
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Tạo phim mới' })
+    @ApiResponse({
+        status: 201, example: {
+            "MaPhim": "18f0c1b1-8d76-453c-b155-e172407a7370",
+            "TenGoc": "Dune: Part Two",
+            "TenHienThi": "Dune: Hành tinh cát - Phần 2",
+            "TomTatNoiDung": "Paul Atreides liên minh với người Fremen và bắt đầu hành trình trả thù cho gia đình mình, đồng thời đối mặt với định mệnh của chính mình để trở thành người được tiên tri.",
+            "DaoDien": "Denis Villeneuve",
+            "DanhSachDienVien": "Timothée Chalamet, Zendaya, Rebecca Ferguson, Javier Bardem, Austin Butler, Florence Pugh",
+            "QuocGia": "Mỹ",
+            "TrailerUrl": "https://www.youtube.com/watch?v=Way9Dexny3w",
+            "ThoiLuong": 166,
+            "NgayBatDauChieu": "2025-11-15T00:00:00.000Z",
+            "NgayKetThucChieu": "2026-01-15T00:00:00.000Z",
+            "DiemDanhGia": "0",
+            "TrangThaiPhim": "SAPCHIEU",
+            "CreatedAt": "2025-11-11T14:07:52.055Z",
+            "UpdatedAt": "2025-11-11T14:07:52.055Z",
+            "DeletedAt": null
+        }
+    })
+    async createFilm(@Body() payload: CreateFilmDto) {
+        return this.filmService.createFilm(payload);
     }
 }
