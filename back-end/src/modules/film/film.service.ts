@@ -127,7 +127,7 @@ export class FilmService {
         return await this.prisma.pHIM_DINHDANG.findMany({
             orderBy: { CreatedAt: 'desc' },
             where: { DeletedAt: null },
-            select: { PHIM: true, DINHDANG: true, },
+            select: { MaPhimDinhDang: true, PHIM: true, DINHDANG: true, },
         });
     }
 

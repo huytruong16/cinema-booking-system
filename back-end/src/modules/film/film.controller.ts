@@ -93,6 +93,7 @@ export class FilmController {
         status: 200,
         example: [
             {
+                "MaPhimDinhDang": "7116e12a-eca6-4265-a3cf-7eca651c9418",
                 "PHIM": {
                     "MaPhim": "a623c63d-53ed-4438-8a43-965510f52016",
                     "TenGoc": "Inside Out 2",
@@ -121,6 +122,7 @@ export class FilmController {
                 }
             },
             {
+                "MaPhimDinhDang": "e5ec8497-e7ef-4be1-a0ef-a4d2ce9bf413",
                 "PHIM": {
                     "MaPhim": "a623c63d-53ed-4438-8a43-965510f52016",
                     "TenGoc": "Inside Out 2",
