@@ -119,7 +119,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user?: {
-      id: string;
+      id: number;
       email: string;
       hoTen: string;
   };

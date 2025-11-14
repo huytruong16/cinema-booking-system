@@ -10,6 +10,31 @@ import { useState } from "react"
 import { AuthButton } from "@/components/auth/auth-button"
 import { authService } from "@/lib/api/authService"
 
+import { useAuth } from "@/contexts/AuthContext"
+import { useRouter } from "next/navigation"
+import { jwtDecode } from "jwt-decode"
+
+type VaiTro = "KHACHHANG" | "NHANVIEN" | "ADMIN";
+type TrangThaiNguoiDung = "CHUAKICHHOAT" | "CONHOATDONG" | "KHONGHOATDONG";
+
+interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+  role: VaiTro;
+  trangThai: TrangThaiNguoiDung;
+  soDienThoai?: string | null;
+  avatarUrl?: string | null;
+}
+
+interface JwtPayload {
+  id: number;
+  email: string;
+  vaitro: VaiTro; 
+  iat: number;
+  exp: number;
+}
+
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [formData, setFormData] = useState({
@@ -24,6 +49,9 @@ export default function LoginPage() {
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         return regex.test(email)
     }
+
+    const { login } = useAuth(); 
+    const router = useRouter()
 
     const handleLogin = async () => {
         setError("");
@@ -44,11 +72,32 @@ export default function LoginPage() {
                     email: formData.email,
                     matkhau: formData.password
                 });
-            const { accessToken, refreshToken, user } = response;
-            console.log("Logged in:", user?.hoTen || user?.email);
-            sessionStorage.setItem("accessToken", accessToken);
-            sessionStorage.setItem("refreshToken", refreshToken);
-            window.location.href = "/";
+
+            const { accessToken } = response; 
+
+            if (!accessToken) {
+                setError("Không nhận được token từ máy chủ.");
+                setLoading(false);
+                return;
+            }
+
+            localStorage.setItem("accessToken", accessToken);
+
+            const decodedPayload: JwtPayload = jwtDecode(accessToken);
+            const { id, email, vaitro } = decodedPayload;
+
+            const authUserForContext: AuthUser = {
+                id: id,
+                email: email,
+                username: email, 
+                role: vaitro,
+                trangThai: "CONHOATDONG",
+                soDienThoai: null,
+                avatarUrl: null
+            };
+
+            login(authUserForContext);
+            router.push("/");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             if (err.message === "Bad credentials") {
