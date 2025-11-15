@@ -130,3 +130,23 @@ export const mockShowtimes = [
     ]
   }
 ];
+export const mockCombos = [
+  {
+    id: 'combo_gaubong',
+    name: 'COMBO NHÀ GẤU',
+    price: 249000,
+    imageUrl: 'https://api-website.cinestar.com.vn/media/.thumbswysiwyg/pictures/PICCONNEW/CNS037_COMBO_NHA_GAU.png?rand=1723084117',
+  },
+  {
+    id: 'combo_couple',
+    name: 'COMBO ĐÔI',
+    price: 150000,
+    imageUrl: 'https://api-website.cinestar.com.vn/media/.thumbswysiwyg/pictures/PICCONNEW/CNS036_COMBO_CO_GAU.png?rand=1723084117',
+  },
+  {
+    id: 'combo_single',
+    name: 'COMBO ĐƠN',
+    price: 90000,
+    imageUrl: 'https://api-website.cinestar.com.vn/media/.thumbswysiwyg/pictures/PICCONNEW/CNS035_COMBO_GAU.png?rand=1723084117',
+  },
+];
