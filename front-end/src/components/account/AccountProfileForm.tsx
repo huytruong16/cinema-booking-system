@@ -36,7 +36,7 @@ export function AccountProfileForm({
 
         {/* Tên */}
         <div className="space-y-2">
-          <Label htmlFor="displayName">Họ và tên</Label>
+          <Label htmlFor="displayName">Tên hiển thị</Label>
           <Input
             id="displayName"
             type="text"
@@ -45,15 +45,34 @@ export function AccountProfileForm({
             className="bg-zinc-800 border-zinc-700 focus-visible:ring-yellow-500"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="displayName">Số điện thoại</Label>
-          <Input
-            id="displayName"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)} // 3. Dùng prop
-            className="bg-zinc-800 border-zinc-700 focus-visible:ring-yellow-500"
-          />
+
+        {/* Giới tính */}
+        <div className="space-y-3">
+          <Label>Giới tính</Label>
+          <RadioGroup
+            value={gender}
+            onValueChange={(val) => setGender(val as 'male' | 'female' | 'other')} // 4. Dùng prop
+            className="flex gap-6"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="male" id="male" />
+              <Label htmlFor="male" className="font-normal">
+                Nam
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="female" id="female" />
+              <Label htmlFor="female" className="font-normal">
+                Nữ
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="other" id="other" />
+              <Label htmlFor="other" className="font-normal">
+                Không xác định
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
       </CardContent>
     </Card>

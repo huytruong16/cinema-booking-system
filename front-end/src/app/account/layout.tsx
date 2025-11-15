@@ -9,6 +9,7 @@ export default function AccountLayout({
 }) {
   return (
     <div className="bg-black">
+      <Navbar />
       <div className="lg:flex min-h-screen text-white">
         <AccountNavigation />
         <main className="flex-1 bg-zinc-950 px-4 pb-4 pt-0 md:px-8 md:pb-8 lg:p-12">
