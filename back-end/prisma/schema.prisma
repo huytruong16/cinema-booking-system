@@ -17,6 +17,7 @@ model PHIM {
   DanhSachDienVien String?
   QuocGia          String?
   TrailerUrl       String?
+  PosterUrl        String?
   ThoiLuong        Int
   NgayBatDauChieu  DateTime
   NgayKetThucChieu DateTime
