@@ -148,7 +148,6 @@ model GHE_SUATCHIEU {
 
 model KHACHHANG {
   MaKhachHang      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  HoTen            String
   MaNguoiDung      String                @db.Uuid
   HoaDons          HOADON[]
   NGUOIDUNGPHANMEM NGUOIDUNGPHANMEM      @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
@@ -266,7 +265,6 @@ model GIAODICH {
 
 model NHANVIEN {
   MaNhanVien       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenNhanVien      String
   NgayVaoLam       DateTime
   TrangThai        trang_thai_nhan_vien @default(CONLAM)
   MaNguoiDung      String @db.Uuid
