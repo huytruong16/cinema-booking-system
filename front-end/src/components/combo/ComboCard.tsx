@@ -42,7 +42,7 @@ const ComboCard: React.FC<ComboCardProps> = ({
             <div className="flex items-center gap-4">
 
                 {/* Ảnh bên trái */}
-                <div className="relative h-[140px] w-[140px] rounded-xl overflow-hidden bg-card">
+                <div className="relative h-[120px] w-[160px] rounded-xl overflow-hidden bg-card">
                     <img
                         src={combo.imageUrl}
                         alt={combo.name}

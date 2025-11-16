@@ -25,7 +25,7 @@ const getUniqueFormats = () => {
 
 
 export default function ShowtimesPage() {
-    const router = useRouter();
+    const router = useRouter(); 
 
     const availableDates = getAvailableDates();
     const availableMovies = getNowShowingMovies();
@@ -57,8 +57,13 @@ export default function ShowtimesPage() {
 
 
     const handleBookTicket = (movie: Movie, time: string, type: string) => {
-        alert(`Đã chọn: ${movie.title} - ${type} - ${selectedDate} - ${time}`);
+        router.push(
+            `/booking?movieId=${movie.id}&date=${encodeURIComponent(
+                selectedDate 
+            )}&time=${encodeURIComponent(time)}&format=${encodeURIComponent(type)}`
+        );
     };
+
 
     return (
         <main className="dark bg-background min-h-screen text-foreground">

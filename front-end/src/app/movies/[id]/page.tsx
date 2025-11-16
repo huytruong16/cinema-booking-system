@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; 
 import Image from 'next/image';
 import { mockMovies, mockShowtimes } from '@/lib/mockData';
 import { Movie } from '@/types/movie';
@@ -16,7 +16,7 @@ import {
 
 export default function MovieDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const router = useRouter(); 
   const movieId = params.id;
   
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
@@ -32,9 +32,12 @@ export default function MovieDetailPage() {
   }
 
   const handleBookTicket = (time: string, type: string, date: string) => {
-    alert(`Đã chọn vé: ${movie.title} - ${type} - ${date} - ${time}`);
-    // router.push(`/booking?movieId=${movie.id}&showtime=${time}...`);
-  }
+    router.push(
+      `/booking?movieId=${movie.id}&date=${encodeURIComponent(
+        date
+      )}&time=${encodeURIComponent(time)}&format=${encodeURIComponent(type)}`
+    );
+  };
 
   return (
     <div className="dark bg-background min-h-screen text-foreground">
