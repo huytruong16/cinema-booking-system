@@ -281,6 +281,7 @@ model NGUOIDUNGPHANMEM {
   MatKhau         String
   SoDienThoai     String?
   Email           String                @unique
+  AvatarUrl       String?
   MaNhomNguoiDung String? @db.Uuid
   TrangThai       trang_thai_nguoi_dung @default(CHUAKICHHOAT)
   VaiTro          vaitro                @default(KHACHHANG)
