@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { Input } from "@/components/ui/input"
@@ -97,7 +99,13 @@ export default function LoginPage() {
             };
 
             login(authUserForContext);
-            router.push("/");
+            const role = authUserForContext.role; 
+
+            if (role === "ADMIN" || role === "NHANVIEN") {
+                router.push("/admin");
+            } else {
+                router.push("/"); 
+            }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             if (err.message === "Bad credentials") {

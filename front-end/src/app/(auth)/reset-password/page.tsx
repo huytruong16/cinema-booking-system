@@ -21,14 +21,13 @@ export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false)
 
     const validatePassword = (password: string) => {
-        // Regex mới: 8 ký tự, 1 hoa, 1 thường, 1 số, 1 ký tự đặc biệt
+        // 8 ký tự, 1 hoa, 1 thường, 1 số, 1 ký tự đặc biệt
         const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
         return regex.test(password)
     }
 
     const handleSubmitPassword = async (e: React.FormEvent) => {
         e.preventDefault()
-        // Bỏ kiểm tra otpVerified
         if (!email) {
             setMessage("❌ Thiếu thông tin email.")
             return

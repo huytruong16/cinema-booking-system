@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Lỗi khi gọi API logout, nhưng vẫn đăng xuất client", error);
     }
     setUser(null);   
-    router.push("/");
+    router.push("/login");
   };
   const isLoggedIn = !!user;
 
