@@ -65,6 +65,7 @@ export class FilmService {
                     DaoDien: payload.DaoDien ?? null,
                     DanhSachDienVien: payload.DanhSachDienVien ?? null,
                     PosterUrl: payload.PosterUrl ?? null,
+                    BackdropUrl: payload.BackdropUrl ?? null,
                     QuocGia: payload.QuocGia ?? null,
                     TrailerUrl: payload.TrailerUrl ?? null,
                     ThoiLuong: payload.ThoiLuong,

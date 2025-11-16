@@ -56,6 +56,11 @@ export class CreateFilmDto {
     @IsString()
     PosterUrl?: string;
 
+    @ApiPropertyOptional({ description: 'Backdrop URL', example: 'https://wallpapers.com/images/hd/dune-part-two-official-title-reveal-u5r7aul5r0emewht.jpg' })
+    @IsOptional()
+    @IsString()
+    BackdropUrl?: string;
+
     @ApiProperty({ description: 'Thời lượng (phút)', example: 166 })
     @IsInt()
     ThoiLuong: number;

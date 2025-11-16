@@ -18,6 +18,7 @@ model PHIM {
   QuocGia          String?
   TrailerUrl       String?
   PosterUrl        String?
+  BackdropUrl      String?
   ThoiLuong        Int
   NgayBatDauChieu  DateTime
   NgayKetThucChieu DateTime
