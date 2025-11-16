@@ -5,6 +5,7 @@ export interface Movie {
   posterUrl: string;
   backdropUrl?: string;
   description?: string;
+  trailerUrl?: string;
   year?: number;
   status?: "now_showing" | "coming_soon" | "ended";
   ageRating?: string;
