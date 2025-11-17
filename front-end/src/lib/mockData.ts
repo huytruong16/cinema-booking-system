@@ -150,3 +150,100 @@ export const mockCombos = [
     imageUrl: 'https://api-website.cinestar.com.vn/media/.thumbswysiwyg/pictures/PICCONNEW/CNS035_COMBO_GAU.png?rand=1723084117',
   },
 ];
+export const mockPromotions = [
+  {
+    id: 1,
+    code: "HELLOMOVIX",
+    description: "Giảm 20% cho thành viên mới",
+    type: "PERCENT", // PHANTRAM
+    value: 20,
+    maxDiscount: 50000,
+    minOrder: 0,
+  },
+  {
+    id: 2,
+    code: "WEDNESDAY50",
+    description: "Giảm 50K (Thứ 4 Vui Vẻ)",
+    type: "FIXED", // CODINH
+    value: 50000,
+    maxDiscount: null,
+    minOrder: 100000,
+  },
+];
+export const mockUserTickets = [
+  {
+    id: "MVX-892312",
+    movieId: 1,
+    movieTitle: "Inside Out 2",
+    posterUrl: "https://upload.wikimedia.org/wikipedia/vi/thumb/a/a3/Inside_Out_2_VN_poster.jpg/375px-Inside_Out_2_VN_poster.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/pI5jxew0I9kub4IXrtsOB8F40dw.jpg",
+    cinemaName: "Movix Thủ Đức",
+    roomName: "Phòng 2 (2D)",
+    showDate: "2024-06-15", 
+    showTime: "19:30",
+    seats: ["F5", "F6"],
+    // --- THÊM COMBO ---
+    combos: [
+        { name: "Combo Bắp Lớn + 2 Nước", quantity: 1 }
+    ],
+    // -----------------
+    price: 190000,
+    status: "upcoming", 
+    qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MVX-892312",
+  },
+  {
+    id: "MVX-123456",
+    movieId: 2,
+    movieTitle: "Deadpool & Wolverine",
+    posterUrl: "https://upload.wikimedia.org/wikipedia/en/4/4c/Deadpool_%26_Wolverine_poster.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/j290n2wN3MNGsQ2p8o9S0sS0E8.jpg",
+    cinemaName: "Movix Quận 1",
+    roomName: "Phòng 1 (IMAX)",
+    showDate: "2024-08-20",
+    showTime: "20:00",
+    seats: ["H10", "H11"],
+    // --- THÊM COMBO ---
+    combos: [
+        { name: "Bắp Phô Mai (L)", quantity: 1 },
+        { name: "Coca-Cola (L)", quantity: 2 }
+    ],
+    // -----------------
+    price: 320000,
+    status: "upcoming",
+    qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MVX-123456",
+  },
+  {
+    id: "MVX-777888",
+    movieId: 4,
+    movieTitle: "Mission: Impossible – Dead Reckoning",
+    posterUrl: "https://image.tmdb.org/t/p/original/eoLBADTttXo4HJLLUK9amxE4RRM.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/mRdNsdTJsn5FGjnMs8FyyiQKCaV.jpg",
+    cinemaName: "Movix Thủ Đức",
+    roomName: "Phòng 3",
+    showDate: "2023-07-14",
+    showTime: "18:15",
+    seats: ["E5"],
+    combos: [], // Không mua combo
+    price: 95000,
+    status: "completed",
+    qrCode: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MVX-777888",
+  },
+  {
+    id: "MVX-999000",
+    movieId: 3,
+    movieTitle: "A Quiet Place: Day One",
+    posterUrl: "https://image.tmdb.org/t/p/original/g5ra0GScw3svfCxGczTAohUH2yY.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/z1aZkp16kzguKi3BHKCuRGRNGq4.jpg",
+    cinemaName: "Movix Quận 7",
+    roomName: "Phòng 5",
+    showDate: "2024-05-01",
+    showTime: "21:00",
+    seats: ["J1", "J2", "J3"],
+    combos: [
+        { name: "Combo Couple", quantity: 1 }
+    ],
+    price: 270000,
+    status: "cancelled", 
+    qrCode: null,
+  }
+];
