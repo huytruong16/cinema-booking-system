@@ -86,7 +86,7 @@ const Navbar = () => {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className={`relative rounded-full ${isMobile ? 'h-9 w-9' : 'h-10 w-10'}`}>
           <Avatar className={isMobile ? 'h-9 w-9' : 'h-10 w-10'}>
-            <AvatarImage src={user?.avatarUrl || ''} alt={user?.username} />
+            <AvatarImage src={user?.avatarUrl || 'https://theselfishmeme.co.uk/wp-content/uploads/2025/10/avatar-mac-dinh-ca-nam-va-nu-26.webp'} alt={user?.username} />
             <AvatarFallback>
               {user?.username ? user.username[0].toUpperCase() : 'U'}
             </AvatarFallback>

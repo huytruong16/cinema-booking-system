@@ -183,9 +183,9 @@ function BookingPageContent() {
               </Button>
               <h2 className="text-lg font-bold text-white truncate max-w-[200px]">{movie.title}</h2>
             </div>
-            <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
               <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-[140px] h-9 bg-zinc-800 border-zinc-700 text-xs">
+                <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700 text-xs">
                   <Calendar className="w-3 h-3 mr-2 text-zinc-400" />
                   <SelectValue placeholder="Ngày" />
                 </SelectTrigger>
@@ -195,7 +195,7 @@ function BookingPageContent() {
               </Select>
 
               <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                <SelectTrigger className="w-[130px] h-9 bg-zinc-800 border-zinc-700 text-xs">
+                <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700 text-xs">
                   <Film className="w-3 h-3 mr-2 text-zinc-400" />
                   <SelectValue placeholder="Định dạng" />
                 </SelectTrigger>
@@ -205,7 +205,7 @@ function BookingPageContent() {
               </Select>
 
               <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger className="w-[100px] h-9 bg-zinc-800 border-zinc-700 text-xs">
+                <SelectTrigger className="w-[150px] h-9 bg-zinc-800 border-zinc-700 text-xs">
                   <Clock className="w-3 h-3 mr-2 text-zinc-400" />
                   <SelectValue placeholder="Giờ" />
                 </SelectTrigger>

@@ -48,18 +48,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/filter?type=movie" className="hover:text-white transition">
-                  Phim lẻ
+                <Link href="/" className="hover:text-white transition">
+                  Phim đang chiếu
                 </Link>
               </li>
               <li>
-                <Link href="/filter?type=tv" className="hover:text-white transition">
-                  Phim bộ
-                </Link>
-              </li>
-              <li>
-                <Link href="/#genres" className="hover:text-white transition">
-                  Theo thể loại
+                <Link href="/" className="hover:text-white transition">
+                  Phim sắp chiếu
                 </Link>
               </li>
             </ul>
@@ -70,18 +65,13 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Tính Năng</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/party" className="hover:text-white transition">
-                  Xem Chung (Party)
-                </Link>
-              </li>
-              <li>
                 <button className="hover:text-white transition text-left">
-                  Chatbot AI
+                  Tài khoản
                 </button>
               </li>
               <li>
                 <Link href="/favorites" className="hover:text-white transition">
-                  Yêu thích của tôi
+                  Vé của tôi
                 </Link>
               </li>
             </ul>
@@ -127,7 +117,7 @@ export default function Footer() {
         <div className="border-t border-gray-700 mt-10 pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
             <p className="text-center sm:text-left mb-2 sm:mb-0">
-              © {new Date().getFullYear()} Movix. Đồ án 1 - UIT.
+              © {new Date().getFullYear()} Movix.
             </p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-white transition">

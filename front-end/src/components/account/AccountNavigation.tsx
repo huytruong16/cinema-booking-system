@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Heart, List, History, Bell, User, LogOut } from "lucide-react";
+import { Heart, List, History, Bell, User, LogOut , Ticket} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -15,11 +15,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext"; 
 
 const navItems = [
-  { href: "/account/favorites", label: "Yêu thích", icon: Heart },
-  { href: "/account/playlist", label: "Danh sách", icon: List },
-  { href: "/account/history", label: "Xem tiếp", icon: History },
-  { href: "/account/notifications", label: "Thông báo", icon: Bell },
   { href: "/account/profile", label: "Tài khoản", icon: User },
+  { href: "/account/tickets", label: "Vé của tôi", icon: Ticket },
+  { href: "/account/notifications", label: "Thông báo", icon: Bell },
 ];
 
 export function AccountNavigation() {
@@ -37,7 +35,7 @@ export function AccountNavigation() {
   const UserProfile = () => (
     <div className="flex items-center gap-3">
       <Avatar className="h-10 w-10">
-        <AvatarImage src={user?.avatarUrl || ''} alt={user?.username} />
+        <AvatarImage src={user?.avatarUrl || 'https://theselfishmeme.co.uk/wp-content/uploads/2025/10/avatar-mac-dinh-ca-nam-va-nu-26.webp'} alt={user?.username} />
         <AvatarFallback>
           {user?.display_name?.[0] || user?.username?.[0] || 'U'}
         </AvatarFallback>
