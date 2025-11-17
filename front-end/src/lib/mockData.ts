@@ -247,3 +247,41 @@ export const mockUserTickets = [
     qrCode: null,
   }
 ];
+export const mockReviews = [
+  {
+    id: 1,
+    movieId: 1, // Inside Out 2
+    user: "Minh Khôi",
+    avatar: "https://i.pravatar.cc/150?img=11",
+    rating: 9,
+    date: "15/06/2024",
+    content: "Phim cực kỳ cảm động, đồ họa đẹp xuất sắc. Riley tuổi dậy thì đúng là một mớ hỗn độn nhưng rất đáng yêu. Rất đáng xem cùng gia đình!",
+  },
+  {
+    id: 2,
+    movieId: 1, // Inside Out 2
+    user: "Thảo Ly",
+    avatar: "https://i.pravatar.cc/150?img=5",
+    rating: 8,
+    date: "16/06/2024",
+    content: "Nhân vật Lo Âu (Anxiety) được xây dựng quá thật. Mình thấy bản thân mình trong đó. Tuy nhiên nhịp phim đoạn giữa hơi chậm một chút.",
+  },
+  {
+    id: 3,
+    movieId: 1, // Inside Out 2
+    user: "Hùng Dũng",
+    avatar: "https://i.pravatar.cc/150?img=3",
+    rating: 10,
+    date: "14/06/2024",
+    content: "Tuyệt phẩm của Pixar năm nay. 10/10 không bàn cãi!",
+  },
+  {
+    id: 4,
+    movieId: 2, // Deadpool
+    user: "Tuấn Anh",
+    avatar: "https://i.pravatar.cc/150?img=60",
+    rating: 9.5,
+    date: "27/07/2024",
+    content: "Cười từ đầu đến cuối, cameo ngập tràn. Fan Marvel nhất định phải xem nha anh em!",
+  },
+];

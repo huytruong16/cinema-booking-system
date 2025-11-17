@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { MovieReviews } from '@/components/movies/MovieReviews';
 import {
   Dialog,
   DialogContent,
@@ -160,7 +161,7 @@ export default function MovieDetailPage() {
             Lịch chiếu
           </h2>
 
-          <div className="w-full px-8 md:px-10"> 
+          <div className="w-full px-8 md:px-10">
             <Carousel
               opts={{
                 align: "start",
@@ -235,6 +236,10 @@ export default function MovieDetailPage() {
             )}
           </div>
         </div>
+        <div className='m-10'>
+          <MovieReviews movieId={movie.id} movieRating={movie.rating} />
+        </div>
+
       </div>
     </div>
   );
