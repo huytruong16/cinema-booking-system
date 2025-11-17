@@ -33,19 +33,19 @@ export class FilmController {
                 "ThoiLuong": 96,
                 "NgayBatDauChieu": "2025-10-29T21:52:23.000Z",
                 "NgayKetThucChieu": "2025-12-26T21:52:28.000Z",
-                "DiemDanhGia": "7.5",
+                "DiemDanhGia": 7.5,
                 "TrangThaiPhim": "DANGCHIEU",
                 "CreatedAt": "2025-11-01T14:55:45.027Z",
                 "UpdatedAt": "2025-11-01T14:55:45.027Z",
                 "DeletedAt": null,
                 "DanhGias": [
                     {
-                        "MaDanhGia": "67502c0f-46ce-414b-a7ec-678fbcd0c2c5",
-                        "NoiDung": "Hay tuyệt vời <3",
-                        "Diem": "2",
+                        "MaDanhGia": "e7a65a38-9d30-4c93-8591-d89f5431a81d",
+                        "NoiDung": "Phim hay",
+                        "Diem": 3.5,
                         "MaPhim": "a623c63d-53ed-4438-8a43-965510f52016",
-                        "CreatedAt": "2025-11-02T08:02:26.602Z",
-                        "UpdatedAt": "2025-11-02T08:02:26.602Z",
+                        "CreatedAt": "2025-11-17T14:08:29.078Z",
+                        "UpdatedAt": "2025-11-17T14:08:29.078Z",
                         "DeletedAt": null
                     }
                 ],
@@ -110,7 +110,7 @@ export class FilmController {
                     "ThoiLuong": 96,
                     "NgayBatDauChieu": "2025-10-29T21:52:23.000Z",
                     "NgayKetThucChieu": "2025-12-26T21:52:28.000Z",
-                    "DiemDanhGia": "7.5",
+                    "DiemDanhGia": 7.5,
                     "TrangThaiPhim": "DANGCHIEU",
                     "CreatedAt": "2025-11-01T14:55:45.027Z",
                     "UpdatedAt": "2025-11-01T14:55:45.027Z",
@@ -141,7 +141,7 @@ export class FilmController {
                     "ThoiLuong": 96,
                     "NgayBatDauChieu": "2025-10-29T21:52:23.000Z",
                     "NgayKetThucChieu": "2025-12-26T21:52:28.000Z",
-                    "DiemDanhGia": "7.5",
+                    "DiemDanhGia": 7.5,
                     "TrangThaiPhim": "DANGCHIEU",
                     "CreatedAt": "2025-11-01T14:55:45.027Z",
                     "UpdatedAt": "2025-11-01T14:55:45.027Z",
@@ -181,19 +181,19 @@ export class FilmController {
             "ThoiLuong": 96,
             "NgayBatDauChieu": "2025-10-29T21:52:23.000Z",
             "NgayKetThucChieu": "2025-12-26T21:52:28.000Z",
-            "DiemDanhGia": "7.5",
+            "DiemDanhGia": 7.5,
             "TrangThaiPhim": "DANGCHIEU",
             "CreatedAt": "2025-11-01T14:55:45.027Z",
             "UpdatedAt": "2025-11-01T14:55:45.027Z",
             "DeletedAt": null,
             "DanhGias": [
                 {
-                    "MaDanhGia": "67502c0f-46ce-414b-a7ec-678fbcd0c2c5",
-                    "NoiDung": "Hay tuyệt vời <3",
-                    "Diem": "2",
+                    "MaDanhGia": "e7a65a38-9d30-4c93-8591-d89f5431a81d",
+                    "NoiDung": "Phim hay",
+                    "Diem": 3.5,
                     "MaPhim": "a623c63d-53ed-4438-8a43-965510f52016",
-                    "CreatedAt": "2025-11-02T08:02:26.602Z",
-                    "UpdatedAt": "2025-11-02T08:02:26.602Z",
+                    "CreatedAt": "2025-11-17T14:08:29.078Z",
+                    "UpdatedAt": "2025-11-17T14:08:29.078Z",
                     "DeletedAt": null
                 }
             ],
@@ -244,7 +244,7 @@ export class FilmController {
     @ApiOperation({ summary: 'Tạo phim mới' })
     @ApiResponse({
         status: 201, example: {
-            "MaPhim": "18f0c1b1-8d76-453c-b155-e172407a7370",
+            "MaPhim": "081a1d35-af27-41c6-a576-bdecebd3becb",
             "TenGoc": "Dune: Part Two",
             "TenHienThi": "Dune: Hành tinh cát - Phần 2",
             "TomTatNoiDung": "Paul Atreides liên minh với người Fremen và bắt đầu hành trình trả thù cho gia đình mình, đồng thời đối mặt với định mệnh của chính mình để trở thành người được tiên tri.",
@@ -257,10 +257,10 @@ export class FilmController {
             "ThoiLuong": 166,
             "NgayBatDauChieu": "2025-11-15T00:00:00.000Z",
             "NgayKetThucChieu": "2026-01-15T00:00:00.000Z",
-            "DiemDanhGia": "0",
+            "DiemDanhGia": 0,
             "TrangThaiPhim": "SAPCHIEU",
-            "CreatedAt": "2025-11-11T14:07:52.055Z",
-            "UpdatedAt": "2025-11-11T14:07:52.055Z",
+            "CreatedAt": "2025-11-17T14:28:56.185Z",
+            "UpdatedAt": "2025-11-17T14:28:56.185Z",
             "DeletedAt": null
         }
     })
