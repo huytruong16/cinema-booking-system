@@ -87,31 +87,42 @@ model PHONGCHIEU {
 }
 
 model LOAIGHE {
-  MaLoaiGhe  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaLoaiGhe  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   LoaiGhe    String
-  HeSoGiaGhe Float      @default(1.0) @db.Real
-  Ghes       GHE[]
-  CreatedAt  DateTime   @default(now()) @db.Timestamptz(6)
-  UpdatedAt  DateTime   @default(now()) @db.Timestamptz(6)
-  DeletedAt  DateTime?  @db.Timestamptz(6)
+  HeSoGiaGhe Float          @default(1.0) @db.Real
+  GheLoaiGhe GHE_LOAIGHE[]
+  CreatedAt  DateTime       @default(now()) @db.Timestamptz(6)
+  UpdatedAt  DateTime       @default(now()) @db.Timestamptz(6)
+  DeletedAt  DateTime?      @db.Timestamptz(6)
 }
 
 model GHE {
   MaGhe         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  SoGhe         String
-  MaLoaiGhe     String           @db.Uuid
-  LOAIGHE       LOAIGHE          @relation(fields: [MaLoaiGhe], references: [MaLoaiGhe])
-  GhePhongChieu GHE_PHONGCHIEU[]
+  Hang          String         
+  Cot           String
+  GheLoaiGhe    GHE_LOAIGHE[]
   CreatedAt     DateTime         @default(now()) @db.Timestamptz(6)
   UpdatedAt     DateTime         @default(now()) @db.Timestamptz(6)
   DeletedAt     DateTime?        @db.Timestamptz(6)
 }
 
+model GHE_LOAIGHE {
+  MaGheLoaiGhe   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaGhe          String           @db.Uuid
+  MaLoaiGhe      String           @db.Uuid
+  GHE            GHE              @relation(fields: [MaGhe], references: [MaGhe])
+  LOAIGHE        LOAIGHE          @relation(fields: [MaLoaiGhe], references: [MaLoaiGhe])
+  GhePhongChieu  GHE_PHONGCHIEU[]
+  CreatedAt      DateTime         @default(now()) @db.Timestamptz(6)
+  UpdatedAt      DateTime         @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime?        @db.Timestamptz(6)
+}
+
 model GHE_PHONGCHIEU {
   MaGhePhongChieu String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  MaGhe           String          @db.Uuid
+  MaGheLoaiGhe    String          @db.Uuid
   MaPhongChieu    String          @db.Uuid
-  GHE             GHE             @relation(fields: [MaGhe], references: [MaGhe])
+  GHE_LOAIGHE     GHE_LOAIGHE     @relation(fields: [MaGheLoaiGhe], references: [MaGheLoaiGhe])
   PHONGCHIEU      PHONGCHIEU      @relation(fields: [MaPhongChieu], references: [MaPhongChieu])
   GheSuatChieu    GHE_SUATCHIEU[]
   CreatedAt       DateTime        @default(now()) @db.Timestamptz(6)
