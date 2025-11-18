@@ -46,6 +46,7 @@ const Navbar = () => {
     { title: 'Trang chủ', href: '/' },
     { title: 'Tìm & Lọc', href: '/filter' },
     { title: 'Lịch chiếu', href: '/showtimes' },
+    { title: 'Ưu đãi', href: '/promotions' },
   ];
 
   const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -129,6 +129,10 @@ export default function MovieDetailPage() {
             <p className="mt-6 text-base leading-relaxed text-muted-foreground">
               {movie.description}
             </p>
+            <p className="mt-6 text-base leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-primary">Danh sách diễn viên:</span> {movie.actorList}
+            </p>
+
             {movie.trailerUrl && (
               <Dialog open={isTrailerOpen} onOpenChange={setIsTrailerOpen}>
                 <DialogTrigger asChild>

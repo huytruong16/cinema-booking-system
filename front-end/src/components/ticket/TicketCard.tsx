@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Calendar, Clock, Ticket, Armchair, Ban, AlertCircle, CheckCircle2, Utensils } from 'lucide-react'; // Thêm icon Utensils
+import { Calendar, Clock, Ticket, Armchair, Ban, AlertCircle, CheckCircle2, Utensils, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TicketDetail } from './TicketDetail'; // <--- IMPORT MỚI
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -46,7 +45,6 @@ interface TicketProps {
 export function TicketCard({ ticket }: TicketProps) {
   const [currentStatus, setCurrentStatus] = useState(ticket.status);
   const [isCancelling, setIsCancelling] = useState(false);
-
   const [resultDialog, setResultDialog] = useState<{
     open: boolean;
     type: 'success' | 'error';
@@ -198,37 +196,17 @@ export function TicketCard({ ticket }: TicketProps) {
                     </AlertDialog>
                   )}
 
-                  {isCancelled ? (
-                    <Button disabled variant="outline" size="sm" className="bg-zinc-800/50 border-zinc-700 text-zinc-500 cursor-not-allowed opacity-70">
-                      <Ban className="w-4 h-4 mr-2" />
-                      Vé này đã hủy
-                    </Button>
-                  ) : (
-                    isUpcoming && ticket.qrCode && (
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">
-                                    <Ticket className="w-4 h-4 mr-2" />
-                                    Xem mã vé
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-zinc-900 border-zinc-800 text-white sm:max-w-xs">
-                                <DialogHeader>
-                                    <DialogTitle className="text-center">Mã vé vào cổng</DialogTitle>
-                                </DialogHeader>
-                                <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                                    <div className="bg-white p-2 rounded-lg">
-                                        <Image src={ticket.qrCode} alt="QR Code" width={180} height={180} />
-                                    </div>
-                                    <p className="text-2xl font-mono font-bold tracking-widest">{ticket.id.split('-')[1]}</p>
-                                    <p className="text-xs text-zinc-400 text-center px-4">
-                                        Vui lòng đưa mã này cho nhân viên soát vé khi vào rạp.
-                                    </p>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                    )
-                  )}
+                  <Dialog>
+                      <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">
+                              {isCancelled ? <Eye className="w-4 h-4 mr-2" /> : <Ticket className="w-4 h-4 mr-2" />}
+                              {isCancelled ? "Xem lại" : "Chi tiết vé"}
+                          </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-transparent border-none shadow-none p-0 max-w-md w-full">
+                          <TicketDetail ticket={{...ticket, status: currentStatus}} />
+                      </DialogContent>
+                  </Dialog>
               </div>
             </div>
           </CardContent>
@@ -239,26 +217,13 @@ export function TicketCard({ ticket }: TicketProps) {
         <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              {resultDialog.type === 'success' ? (
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              ) : (
-                <AlertCircle className="w-6 h-6 text-red-500" />
-              )}
-              <AlertDialogTitle className={resultDialog.type === 'success' ? 'text-green-500' : 'text-red-500'}>
-                {resultDialog.title}
-              </AlertDialogTitle>
+              {resultDialog.type === 'success' ? <CheckCircle2 className="w-6 h-6 text-green-500" /> : <AlertCircle className="w-6 h-6 text-red-500" />}
+              <AlertDialogTitle className={resultDialog.type === 'success' ? 'text-green-500' : 'text-red-500'}>{resultDialog.title}</AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-zinc-300 text-base">
-              {resultDialog.message}
-            </AlertDialogDescription>
+            <AlertDialogDescription className="text-zinc-300 text-base">{resultDialog.message}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction 
-              onClick={() => setResultDialog(prev => ({ ...prev, open: false }))}
-              className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700"
-            >
-              Đóng
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => setResultDialog(prev => ({ ...prev, open: false }))} className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700">Đóng</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

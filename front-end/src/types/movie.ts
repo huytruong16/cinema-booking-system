@@ -12,7 +12,8 @@ export interface Movie {
   type?: string;           
   tags?: string[];
   rating?: number;         
-  duration?: string;       
+  duration?: string;
+  actorList?: string;       
   country?: string;        
   price?: number;         
   cinema?: string;         

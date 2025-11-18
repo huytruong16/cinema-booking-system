@@ -12,6 +12,7 @@ export const mockMovies: Movie[] = [
     duration: "1h 36m",
     ageRating: "K",
     rating: 8.5,
+    actorList:"Amy Poehler, Maya Hawke, Kensington Tallman, Liza Lapira, Tony Hale, Lewis Black, Phyllis Smith, Ayo Edebiri, Lilimar, Grace Lu",
     tags: ["Hoạt hình", "Gia đình", "Hài hước"],
     description: "Riley bước vào tuổi dậy thì, đối mặt với những cảm xúc mới mẻ và hỗn loạn như Lo lắng, Ganh tị, Xấu hổ và Chán nản...",
     trailerUrl: "https://www.youtube.com/embed/LEjhY15eCx0?si=Gb1YCXqZeKejb3RI",
@@ -27,6 +28,7 @@ export const mockMovies: Movie[] = [
     type: "2D/IMAX",
     duration: "2h 07m",
     ageRating: "T18",
+    actorList: "Ryan Reynolds, Hugh Jackman, Emma Corrin, Morena Baccarin, Rob Delaney, Leslie Uggams, Karan Soni, Matthew Macfadyen",
     rating: 9.1,
     tags: ["Hành động", "Hài hước"],
     description: "Deadpool được tổ chức TVA kéo khỏi cuộc sống yên bình và giao nhiệm vụ cứu vãn Đa vũ trụ...",
@@ -96,7 +98,7 @@ export const mockGenres = [
 ];
 export const mockShowtimes = [
   {
-    date: "Hôm nay, 13/11",
+    date: "Hôm nay, 18/11",
     types: [
       {
         type: "2D Phụ đề (Phòng 1)",
@@ -113,7 +115,7 @@ export const mockShowtimes = [
     ]
   },
   {
-    date: "Ngày mai, 14/11",
+    date: "Ngày mai, 19/11",
     types: [
       {
         type: "2D Phụ đề (Phòng 1)",
@@ -179,7 +181,7 @@ export const mockUserTickets = [
     backdropUrl: "https://image.tmdb.org/t/p/original/pI5jxew0I9kub4IXrtsOB8F40dw.jpg",
     cinemaName: "Movix Thủ Đức",
     roomName: "Phòng 2 (2D)",
-    showDate: "2024-06-15", 
+    showDate: "2025-11-18", 
     showTime: "19:30",
     seats: ["F5", "F6"],
     // --- THÊM COMBO ---
@@ -199,7 +201,7 @@ export const mockUserTickets = [
     backdropUrl: "https://image.tmdb.org/t/p/original/j290n2wN3MNGsQ2p8o9S0sS0E8.jpg",
     cinemaName: "Movix Quận 1",
     roomName: "Phòng 1 (IMAX)",
-    showDate: "2024-08-20",
+    showDate: "2025-11-29",
     showTime: "20:00",
     seats: ["H10", "H11"],
     // --- THÊM COMBO ---
