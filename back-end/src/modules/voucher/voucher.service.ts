@@ -11,18 +11,12 @@ export class VoucherService {
         return await this.prisma.kHUYENMAI.findMany({
             orderBy: { CreatedAt: 'desc' },
             where: { DeletedAt: null },
-            include: {
-                KhuyenMaiKH: false,
-            },
         });
     }
 
     async getVoucherById(id: string) {
         return await this.prisma.kHUYENMAI.findUnique({
             where: { MaKhuyenMai: id, DeletedAt: null },
-            include: {
-                KhuyenMaiKH: false,
-            },
         });
     }
 }
