@@ -12,17 +12,17 @@ export class ScreeningRoomService {
             where: { DeletedAt: null },
             select: {
                 MaGhePhongChieu: true,
-                GHE_LOAIGHE: {
+                GheLoaiGhe: {
                     select: {
                         MaGheLoaiGhe: true,
-                        GHE: {
+                        Ghe: {
                             select: {
                                 MaGhe: true,
                                 Hang: true,
                                 Cot: true
                             }
                         },
-                        LOAIGHE: {
+                        LoaiGhe: {
                             select: {
                                 MaLoaiGhe: true,
                                 LoaiGhe: true,
@@ -33,8 +33,8 @@ export class ScreeningRoomService {
                 }
             },
             orderBy: [
-                { GHE_LOAIGHE: { GHE: { Hang: 'asc' } } },
-                { GHE_LOAIGHE: { GHE: { Cot: 'asc' } } }
+                { GheLoaiGhe: { Ghe: { Hang: 'asc' } } },
+                { GheLoaiGhe: { Ghe: { Cot: 'asc' } } }
             ]
         };
     }
@@ -47,7 +47,7 @@ export class ScreeningRoomService {
                 MaPhongChieu: true,
                 TenPhongChieu: true,
                 SoDoGhe: true,
-                GhePhongChieu: this.getSeatsIncludeQuery(),
+                GhePhongChieus: this.getSeatsIncludeQuery(),
                 CreatedAt: true,
                 UpdatedAt: true,
                 DeletedAt: true,
@@ -59,7 +59,7 @@ export class ScreeningRoomService {
         return await this.prisma.pHONGCHIEU.findUnique({
             where: { MaPhongChieu: id, DeletedAt: null },
             include: {
-                GhePhongChieu: this.getSeatsIncludeQuery()
+                GhePhongChieus: this.getSeatsIncludeQuery()
             }
         });
     }
