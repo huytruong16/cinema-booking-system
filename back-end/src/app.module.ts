@@ -12,6 +12,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { FilmModule } from './modules/film/film.module';
 import { VoucherModule } from './modules/voucher/voucher.module';
 import { ComboModule } from './modules/combo/combo.module';
+import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
 
 @Module({
   imports: [
@@ -37,7 +38,8 @@ import { ComboModule } from './modules/combo/combo.module';
     PrismaModule,
     FilmModule,
     VoucherModule,
-    ComboModule
+    ComboModule,
+    ScreeningRoomModule
   ],
   controllers: [AppController],
   providers: [AppService],

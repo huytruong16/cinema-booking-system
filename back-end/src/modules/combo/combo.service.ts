@@ -10,7 +10,7 @@ export class ComboService {
             orderBy: { CreatedAt: 'desc' },
             where: { DeletedAt: null },
             include: {
-                HoaDonCombo: false,
+                HoaDonCombos: false,
             },
         });
     }
@@ -19,7 +19,7 @@ export class ComboService {
         return await this.prisma.cOMBO.findUnique({
             where: { MaCombo: id, DeletedAt: null },
             include: {
-                HoaDonCombo: false,
+                HoaDonCombos: false,
             },
         });
     }

@@ -13,8 +13,8 @@ export class FilmService {
             where: { DeletedAt: null },
             include: {
                 DanhGias: true,
-                DinhDangs: { select: { DINHDANG: true } },
-                TheLoais: { select: { THELOAI: true } },
+                PhienBanPhims: { select: { DinhDang: true, GiaVe: true, NgonNgu: true } },
+                PhimTheLoais: { select: { TheLoai: true } },
             },
         });
     }
@@ -57,13 +57,15 @@ export class FilmService {
         return created;
 
         async function addNewFilm(tx: any) {
-            return await tx.pHIM.create({
+            return await tx.phim.create({
                 data: {
                     TenGoc: payload.TenGoc,
                     TenHienThi: payload.TenHienThi,
                     TomTatNoiDung: payload.TomTatNoiDung ?? null,
                     DaoDien: payload.DaoDien ?? null,
                     DanhSachDienVien: payload.DanhSachDienVien ?? null,
+                    PosterUrl: payload.PosterUrl ?? null,
+                    BackdropUrl: payload.BackdropUrl ?? null,
                     QuocGia: payload.QuocGia ?? null,
                     TrailerUrl: payload.TrailerUrl ?? null,
                     ThoiLuong: payload.ThoiLuong,
@@ -79,7 +81,7 @@ export class FilmService {
                     MaPhim: film.MaPhim,
                     MaTheLoai: ma,
                 }));
-                await tx.pHIM_THELOAI.createMany({ data: tlData });
+                await tx.phimTheLoai.createMany({ data: tlData });
             }
         }
 
@@ -94,9 +96,11 @@ export class FilmService {
                         MaPhim: film.MaPhim,
                         MaDinhDang: ma,
                         GiaVe: providedGiaVe ?? priceMap.get(ma) ?? 0,
+                        MaNgonNgu: (typeof entry === 'object' && entry.MaNgonNgu) ? entry.MaNgonNgu : null,
+                        LoaiPhienBan: (typeof entry === 'object' && entry.LoaiPhienBan) ? entry.LoaiPhienBan : 'LONGTIENG',
                     };
                 });
-                await tx.pHIM_DINHDANG.createMany({ data: ddData });
+                await tx.phienBanPhim.createMany({ data: ddData });
             }
         }
 
@@ -124,10 +128,10 @@ export class FilmService {
     }
 
     async getAllFilmFormats() {
-        return await this.prisma.pHIM_DINHDANG.findMany({
+        return await this.prisma.pHIENBANPHIM.findMany({
             orderBy: { CreatedAt: 'desc' },
             where: { DeletedAt: null },
-            select: { PHIM: true, DINHDANG: true, },
+            select: { MaPhienBanPhim: true, Phim: true, DinhDang: true, NgonNgu: true, GiaVe: true },
         });
     }
 
@@ -136,8 +140,8 @@ export class FilmService {
             where: { MaPhim: id, DeletedAt: null },
             include: {
                 DanhGias: true,
-                DinhDangs: { select: { DINHDANG: true, GiaVe: true } },
-                TheLoais: { select: { THELOAI: true } },
+                PhienBanPhims: { select: { DinhDang: true, GiaVe: true, NgonNgu: true } },
+                PhimTheLoais: { select: { TheLoai: true } },
             },
         });
     }
