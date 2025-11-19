@@ -13,6 +13,7 @@ import { VoucherModule } from './modules/voucher/voucher.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
 import { GenreModule } from './modules/genre/genre.module';
+import { FormatModule } from './modules/format/format.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { GenreModule } from './modules/genre/genre.module';
     VoucherModule,
     ComboModule,
     ScreeningRoomModule,
-    GenreModule
+    GenreModule,
+    FormatModule
   ],
   controllers: [AppController],
   providers: [AppService],
