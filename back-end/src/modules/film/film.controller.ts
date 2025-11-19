@@ -1,11 +1,13 @@
-import { Controller, Get, Param, NotFoundException, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body, Query } from '@nestjs/common';
 import { FilmService } from './film.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
+import { FilterFilmDto } from './dtos/filter-film.dto';
 import {
     ApiTags,
     ApiOperation,
     ApiParam,
     ApiResponse,
+    ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('Phim')
@@ -15,14 +17,22 @@ export class FilmController {
 
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách các phim' })
-    async getAllFilms() {
-        return this.filmService.getAllFilms();
+    @ApiQuery({ name: 'MaDinhDang', required: false, description: 'Lọc theo mã định dạng' })
+    @ApiQuery({ name: 'MaTheLoai', required: false, description: 'Lọc theo mã thể loại' })
+    @ApiQuery({ name: 'MaNhanPhim', required: false, description: 'Lọc theo mã nhãn phim' })
+    @ApiQuery({ name: 'MaNgonNgu', required: false, description: 'Lọc theo mã ngôn ngữ' })
+    async getAllFilms(@Query() filters: FilterFilmDto) {
+        return this.filmService.getAllFilms(filters);
     }
 
     @Get('format')
     @ApiOperation({ summary: 'Lấy danh sách các phim theo định dạng' })
-    async getAllFilmFormats() {
-        return this.filmService.getAllFilmFormats();
+    @ApiQuery({ name: 'MaDinhDang', required: false, description: 'Lọc theo mã định dạng' })
+    @ApiQuery({ name: 'MaTheLoai', required: false, description: 'Lọc theo mã thể loại' })
+    @ApiQuery({ name: 'MaNhanPhim', required: false, description: 'Lọc theo mã nhãn phim' })
+    @ApiQuery({ name: 'MaNgonNgu', required: false, description: 'Lọc theo mã ngôn ngữ' })
+    async getAllFilmFormats(@Query() filters: FilterFilmDto) {
+        return this.filmService.getAllFilmFormats(filters);
     }
 
     @Get(':id')
