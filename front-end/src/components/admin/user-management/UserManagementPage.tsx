@@ -359,9 +359,6 @@ function UserDetailPanel({ user, onClose, onEdit, getBadgeVariant, getBadgeLabel
     return (
         <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-24">
             <CardHeader className="relative items-center text-center">
-                 <Button variant="ghost" size="icon" className="absolute top-3 right-3" onClick={onClose}>
-                    <XCircle className="size-5 text-slate-400 hover:text-white" />
-                </Button>
                 <Avatar className="size-24 mx-auto border-4 border-slate-700">
                     <AvatarImage src={user.AvatarUrl || ""} alt={user.TenNhanVien} />
                     <AvatarFallback className="text-3xl">{user.TenNhanVien.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</AvatarFallback>
