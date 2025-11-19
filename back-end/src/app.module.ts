@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { SupabaseModule } from 'nestjs-supabase-js';
 
 import configuration from './config/configuration';
 import { AppController } from './app.controller';
@@ -13,6 +14,7 @@ import { FilmModule } from './modules/film/film.module';
 import { VoucherModule } from './modules/voucher/voucher.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -32,6 +34,31 @@ import { ScreeningRoomModule } from './modules/screening-room/screening-room.mod
       }),
     }),
 
+    SupabaseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          name: 'adminClient',
+          supabaseConfig: {
+            supabaseKey: configService.get<string>(
+              'supabase.serviceRoleKey',
+              '',
+            ),
+            supabaseUrl: configService.get<string>('supabase.url', ''),
+          },
+        },
+        {
+          name: 'anonClient',
+          supabaseConfig: {
+            supabaseKey: configService.get<string>('supabase.anonKey', ''),
+            supabaseUrl: configService.get<string>('supabase.url', ''),
+          },
+        },
+      ],
+    }),
+
+
     UsersModule,
     AuthModule,
     RedisModule,
@@ -39,7 +66,8 @@ import { ScreeningRoomModule } from './modules/screening-room/screening-room.mod
     FilmModule,
     VoucherModule,
     ComboModule,
-    ScreeningRoomModule
+    ScreeningRoomModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

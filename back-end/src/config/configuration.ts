@@ -23,7 +23,7 @@ export default () => ({
     },
     supabase: {
         url: process.env.SUPABASE_URL,
-        key: process.env.SUPABASE_KEY,
-        bucket: process.env.SUPABASE_BUCKET,
+        anonKey: process.env.SUPABASE_ANON_KEY,
+        serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
     },
 });
