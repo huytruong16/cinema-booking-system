@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import clsx from "clsx";
@@ -20,7 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return; 
     }
 
-    if (!user) {
+    if (!user) {    
       router.push("/login"); 
       return;
     }
@@ -29,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push("/"); 
     }
 
-  }, [user, isLoading, router]); 
+  }, [user, isLoading, router, allowedRoles]); 
   if (isLoading || !user || !allowedRoles.includes(user.role)) {
     return (
       <div className="flex min-h-screen bg-[#141414] text-white items-center justify-center">

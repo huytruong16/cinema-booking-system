@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import apiClient from '@/lib/apiClient';
+import { authService } from "@/lib/api/authService";
 
 type VaiTro = "KHACHHANG" | "NHANVIEN" | "ADMIN";
 
@@ -62,15 +63,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(user);    
   };
 
-  const logout = async () => {
+ const logout = async () => {
+  let currentToken = null;
+  if (typeof window !== 'undefined') {
+    currentToken = localStorage.getItem("accessToken");
+  }
+  setUser(null);
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+  }
+  router.push("/login");
+
+  if (currentToken) {
     try {
-      await apiClient.post("/auth/logout", {});
+      await authService.logout(currentToken);
+      console.log("Đã gọi API logout thành công (Cookie đã được xóa)");
     } catch (error) {
-        console.error("Lỗi khi gọi API logout, nhưng vẫn đăng xuất client", error);
+      console.error("Lỗi API logout (background):", error);
     }
-    setUser(null);   
-    router.push("/login");
-  };
+  }
+};
   const isLoggedIn = !!user;
 
   return (

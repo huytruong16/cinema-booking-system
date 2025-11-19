@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
 import { useState } from 'react';
@@ -33,15 +34,12 @@ const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoggedIn, logout } = useAuth();
-
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   if (AUTH_PATHS.includes(pathname)) {
     return null;
   }
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchText, setSearchText] = useState("");
-
   const navItems = [
     { title: 'Trang chủ', href: '/' },
     { title: 'Tìm & Lọc', href: '/filter' },

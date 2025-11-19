@@ -180,13 +180,9 @@ export default function AdminSidebar({
   };
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success("Đăng xuất thành công!");
-    } catch (error) {
-      console.error("Lỗi khi gọi API đăng xuất:", error);
-      toast.error("Đã xảy ra lỗi khi đăng xuất.");
-    }
+    console.log("Bắt đầu đăng xuất...");
+    await logout();
+    toast.success("Đăng xuất thành công!");
   };
 
   const currentUserName = user?.username || userName;
