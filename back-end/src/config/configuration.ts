@@ -21,4 +21,9 @@ export default () => ({
         pass: process.env.SMTP_PASSWORD,
         from: process.env.SMTP_MAIL,
     },
+    supabase: {
+        url: process.env.SUPABASE_URL,
+        key: process.env.SUPABASE_KEY,
+        bucket: process.env.SUPABASE_BUCKET,
+    },
 });

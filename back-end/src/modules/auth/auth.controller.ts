@@ -48,15 +48,15 @@ export class AuthController {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: true,
+            sameSite: 'none',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
         return res.json({ accessToken });
     }
 
-    @Get('refresh')
+    @Get('refresh-token')
     @ApiOperation({ summary: 'Làm mới access token' })
     @ApiOkResponse({
         description: 'Access token mới được cấp thành công.',
@@ -67,7 +67,7 @@ export class AuthController {
     @ApiNotFoundResponse({
         description: 'Người dùng không tồn tại.',
     })
-    async refresh(@Req() req: Request) {
+    async refreshToken(@Req() req: Request) {
         const refreshToken = req.cookies?.refreshToken;
         if (!refreshToken)
             throw new ForbiddenException('Refresh token không tồn tại.');
@@ -132,5 +132,19 @@ export class AuthController {
     })
     async resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authService.resetPassword(dto);
+    }
+
+    @Post('logout')
+    @ApiOperation({ summary: 'Đăng xuất người dùng' })
+    @ApiOkResponse({
+        description: 'Đăng xuất thành công.',
+    })
+    async logout(@Res() res: Response) {
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none'
+        })
+        return this.authService.logout()
     }
 }
