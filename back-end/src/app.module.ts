@@ -60,8 +60,7 @@ import { RatingModule } from './modules/rating/rating.module';
         },
       ],
     }),
-    
-    UsersModule,
+
     AuthModule,
     RedisModule,
     PrismaModule,
