@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Armchair, Minus, Plus, TicketCheck, Ticket, Search, X } from 'lucide-react'; // Thêm icon X
+import { Armchair, Minus, Plus, TicketCheck, Ticket, Search, X } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import {
   Carousel,
@@ -31,6 +31,16 @@ import {
   CarouselPrevious,
   CarouselNext,
 } from "@/components/ui/carousel";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"; 
+import { Checkbox } from "@/components/ui/checkbox";
 import { ButtonGroup } from '@/components/ui/button-group';
 
 // --- (Dữ liệu giả) ---
@@ -179,6 +189,16 @@ export default function PosPage() {
 
   const [selectedSeats, setSelectedSeats] = useState<SelectedSeat[]>([]);
   const [selectedCombos, setSelectedCombos] = useState<SelectedCombo[]>([]);
+
+  // --- State cho Dialog Thanh toán ---
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState({
+      name: "",
+      email: "",
+      phone: "",
+      ageConfirmed: true,
+      termsConfirmed: true
+  });
   
   // Lọc suất chiếu theo phim
   const filteredShowtimes = useMemo(() => {
@@ -273,6 +293,15 @@ export default function PosPage() {
     setSelectedShowtimeId(null);
     setSelectedSeats([]);
   }
+
+  const handlePaymentClick = () => {
+      setIsPaymentDialogOpen(true);
+  };
+
+  const handleConfirmPayment = () => {
+      alert(`Đã xác nhận thông tin cho khách hàng: ${customerInfo.name}. Tiến hành thanh toán ${totalPrice.toLocaleString('vi-VN')}₫`);
+      setIsPaymentDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -590,7 +619,8 @@ export default function PosPage() {
                   <Button 
                     size="lg" 
                     className="w-full text-lg h-12"
-                    disabled={selectedSeats.length === 0} // Chỉ cần chọn ghế là được
+                    disabled={selectedSeats.length === 0}
+                    onClick={handlePaymentClick}
                   >
                     Thanh toán
                   </Button>
@@ -601,6 +631,95 @@ export default function PosPage() {
         ) : (
           <TicketValidationSection />
         )}
+
+        {/* --- Dialog Thông tin người nhận vé --- */}
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+            <DialogContent className="sm:max-w-[500px] bg-[#1C1C1C] border-slate-800 text-white p-6 rounded-xl">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">Thông tin người nhận vé</DialogTitle>
+                    <DialogDescription className="text-slate-400">
+                        Vui lòng nhập thông tin để nhận vé điện tử.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-5 py-3">
+                    {/* Họ tên */}
+                    <div className="space-y-2">
+                        <Label htmlFor="name" className="text-slate-200">Họ và tên</Label>
+                        <Input 
+                            id="name" 
+                            placeholder="Nhập họ và tên" 
+                            className="bg-[#2a2a2a] border-slate-700 text-white placeholder:text-slate-500 focus:border-primary focus:ring-primary/50"
+                            value={customerInfo.name}
+                            onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                        />
+                    </div>
+                    {/* Email */}
+                    <div className="space-y-2">
+                        <Label htmlFor="email" className="text-slate-200">Email (để nhận vé)</Label>
+                        <Input 
+                            id="email" 
+                            type="email" 
+                            placeholder="Nhập email" 
+                            className="bg-[#2a2a2a] border-slate-700 text-white placeholder:text-slate-500 focus:border-primary focus:ring-primary/50"
+                            value={customerInfo.email}
+                            onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                        />
+                    </div>
+                    {/* SĐT */}
+                    <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-slate-200">Số điện thoại</Label>
+                        <Input 
+                            id="phone" 
+                            placeholder="Nhập số điện thoại" 
+                            className="bg-[#2a2a2a] border-slate-700 text-white placeholder:text-slate-500 focus:border-primary focus:ring-primary/50"
+                            value={customerInfo.phone}
+                            onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                        />
+                    </div>
+
+                    {/* Checkboxes */}
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-start space-x-3">
+                            <Checkbox 
+                                id="age" 
+                                className="border-slate-500 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                checked={customerInfo.ageConfirmed}
+                                onCheckedChange={(checked) => setCustomerInfo({...customerInfo, ageConfirmed: checked as boolean})}
+                            />
+                            <Label htmlFor="age" className="text-slate-300 text-sm font-normal leading-tight cursor-pointer">
+                                Đảm bảo mua vé đúng số tuổi quy định.
+                            </Label>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                            <Checkbox 
+                                id="terms" 
+                                className="border-slate-500 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                checked={customerInfo.termsConfirmed}
+                                onCheckedChange={(checked) => setCustomerInfo({...customerInfo, termsConfirmed: checked as boolean})}
+                            />
+                            <Label htmlFor="terms" className="text-slate-300 text-sm font-normal leading-tight cursor-pointer">
+                                Đồng ý với điều khoản của rạp.
+                            </Label>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter className="sm:justify-end gap-3 pt-2">
+                    <Button 
+                        variant="outline" 
+                        className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white min-w-[80px]"
+                        onClick={() => setIsPaymentDialogOpen(false)}
+                    >
+                        Hủy
+                    </Button>
+                    <Button 
+                        className="bg-[#ff6b00] hover:bg-[#e65c00] text-white min-w-[120px] font-medium"
+                        onClick={handleConfirmPayment}
+                    >
+                        Tiếp tục
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

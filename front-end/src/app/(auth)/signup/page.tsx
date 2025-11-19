@@ -119,7 +119,7 @@ export default function SignupPage() {
                         />
                     </div>
                     <div>
-                        <Label htmlFor="username" className="mb-2">Username</Label>
+                        <Label htmlFor="username" className="mb-2">Họ tên</Label>
                         <Input
                             id="username"
                             type="text"
