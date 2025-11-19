@@ -15,6 +15,7 @@ import { ScreeningRoomModule } from './modules/screening-room/screening-room.mod
 import { GenreModule } from './modules/genre/genre.module';
 import { FormatModule } from './modules/format/format.module';
 import { LanguageModule } from './modules/language/language.module';
+import { RatingModule } from './modules/rating/rating.module';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { LanguageModule } from './modules/language/language.module';
     ScreeningRoomModule,
     GenreModule,
     FormatModule,
-    LanguageModule
+    LanguageModule,
+    RatingModule
   ],
   controllers: [AppController],
   providers: [AppService],
