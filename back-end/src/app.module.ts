@@ -14,6 +14,7 @@ import { ComboModule } from './modules/combo/combo.module';
 import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
 import { GenreModule } from './modules/genre/genre.module';
 import { FormatModule } from './modules/format/format.module';
+import { LanguageModule } from './modules/language/language.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { FormatModule } from './modules/format/format.module';
     ComboModule,
     ScreeningRoomModule,
     GenreModule,
-    FormatModule
+    FormatModule,
+    LanguageModule
   ],
   controllers: [AppController],
   providers: [AppService],
