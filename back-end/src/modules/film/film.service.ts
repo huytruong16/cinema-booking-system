@@ -1,20 +1,55 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
+import { FilterFilmDto } from './dtos/filter-film.dto';
 
 @Injectable()
 export class FilmService {
     constructor(
         readonly prisma: PrismaService,
     ) { }
-    async getAllFilms() {
+    async getAllFilms(filters?: FilterFilmDto) {
+        const whereConditions: any = { DeletedAt: null };
+
+        if (filters?.MaNhanPhim) {
+            whereConditions.MaNhanPhim = filters.MaNhanPhim;
+        }
+
+        if (filters?.MaTheLoai) {
+            whereConditions.PhimTheLoais = {
+                some: {
+                    MaTheLoai: filters.MaTheLoai,
+                    DeletedAt: null
+                }
+            };
+        }
+
+        if (filters?.MaDinhDang) {
+            whereConditions.PhienBanPhims = {
+                some: {
+                    MaDinhDang: filters.MaDinhDang,
+                    DeletedAt: null
+                }
+            };
+        }
+
+        if (filters?.MaNgonNgu) {
+            whereConditions.PhienBanPhims = {
+                some: {
+                    MaNgonNgu: filters.MaNgonNgu,
+                    DeletedAt: null
+                }
+            };
+        }
+
         return await this.prisma.pHIM.findMany({
             orderBy: { CreatedAt: 'desc' },
-            where: { DeletedAt: null },
+            where: whereConditions,
             include: {
                 DanhGias: true,
                 PhienBanPhims: { select: { DinhDang: true, GiaVe: true, NgonNgu: true } },
                 PhimTheLoais: { select: { TheLoai: true } },
+                NhanPhim: true,
             },
         });
     }
@@ -127,11 +162,51 @@ export class FilmService {
         }
     }
 
-    async getAllFilmFormats() {
+    async getAllFilmFormats(filters?: FilterFilmDto) {
+        const whereConditions: any = { DeletedAt: null };
+
+        if (filters?.MaDinhDang) {
+            whereConditions.MaDinhDang = filters.MaDinhDang;
+        }
+        if (filters?.MaNgonNgu) {
+            whereConditions.MaNgonNgu = filters.MaNgonNgu;
+        }
+
+        if (filters?.MaTheLoai) {
+            whereConditions.Phim = {
+                PhimTheLoais: {
+                    some: {
+                        MaTheLoai: filters.MaTheLoai,
+                        DeletedAt: null
+                    }
+                },
+                DeletedAt: null
+            };
+        }
+
+        if (filters?.MaNhanPhim) {
+            whereConditions.Phim = {
+                ...whereConditions.Phim,
+                MaNhanPhim: filters.MaNhanPhim,
+                DeletedAt: null
+            };
+        }
+
         return await this.prisma.pHIENBANPHIM.findMany({
             orderBy: { CreatedAt: 'desc' },
-            where: { DeletedAt: null },
-            select: { MaPhienBanPhim: true, Phim: true, DinhDang: true, NgonNgu: true, GiaVe: true },
+            where: whereConditions,
+            select: {
+                MaPhienBanPhim: true,
+                Phim: {
+                    include: {
+                        NhanPhim: true,
+                        PhimTheLoais: { select: { TheLoai: true } }
+                    }
+                },
+                DinhDang: true,
+                NgonNgu: true,
+                GiaVe: true
+            },
         });
     }
 
