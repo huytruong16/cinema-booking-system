@@ -18,6 +18,7 @@ import { GenreModule } from './modules/genre/genre.module';
 import { FormatModule } from './modules/format/format.module';
 import { LanguageModule } from './modules/language/language.module';
 import { RatingModule } from './modules/rating/rating.module';
+import { ShowtimeModule } from './modules/showtime/showtime.module';
 
 @Module({
   imports: [
@@ -72,7 +73,8 @@ import { RatingModule } from './modules/rating/rating.module';
     GenreModule,
     FormatModule,
     LanguageModule,
-    RatingModule
+    RatingModule,
+    ShowtimeModule
   ],
   controllers: [AppController],
   providers: [AppService],
