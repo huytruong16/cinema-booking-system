@@ -6,7 +6,6 @@ import { SupabaseModule } from 'nestjs-supabase-js';
 import configuration from './config/configuration';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './config/redis.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -15,6 +14,10 @@ import { VoucherModule } from './modules/voucher/voucher.module';
 import { ComboModule } from './modules/combo/combo.module';
 import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { GenreModule } from './modules/genre/genre.module';
+import { FormatModule } from './modules/format/format.module';
+import { LanguageModule } from './modules/language/language.module';
+import { RatingModule } from './modules/rating/rating.module';
 
 @Module({
   imports: [
@@ -57,8 +60,7 @@ import { StorageModule } from './modules/storage/storage.module';
         },
       ],
     }),
-
-
+    
     UsersModule,
     AuthModule,
     RedisModule,
@@ -68,6 +70,10 @@ import { StorageModule } from './modules/storage/storage.module';
     ComboModule,
     ScreeningRoomModule,
     StorageModule,
+    GenreModule,
+    FormatModule,
+    LanguageModule,
+    RatingModule
   ],
   controllers: [AppController],
   providers: [AppService],
