@@ -29,7 +29,7 @@ const AUTH_PATHS = [
   '/reset-password',
   '/email-verification'
 ];
-
+const ADMIN_PREFIX = '/admin';
 const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,7 +37,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  if (AUTH_PATHS.includes(pathname)) {
+  if (AUTH_PATHS.includes(pathname) || pathname.startsWith(ADMIN_PREFIX)) {
     return null;
   }
   const navItems = [
