@@ -1,9 +1,10 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsEnum, IsUrl } from 'class-validator';
 import ComboStatusEnum from 'src/libs/common/enums/combo-status.enum';
+import { CreateComboDto } from './create-combo.dto';
 import { Type } from 'class-transformer';
 
-export class CreateComboDto {
+export class UpdateComboDto extends PartialType(CreateComboDto) {
     @ApiProperty({ example: 'Combo Solo', description: 'Tên combo' })
     @IsString({ message: 'Tên combo phải là chuỗi' })
     TenCombo: string;
