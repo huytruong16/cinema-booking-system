@@ -19,6 +19,7 @@ import { FormatModule } from './modules/format/format.module';
 import { LanguageModule } from './modules/language/language.module';
 import { RatingModule } from './modules/rating/rating.module';
 import { ShowtimeModule } from './modules/showtime/showtime.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
 
 @Module({
   imports: [
@@ -74,7 +75,8 @@ import { ShowtimeModule } from './modules/showtime/showtime.module';
     FormatModule,
     LanguageModule,
     RatingModule,
-    ShowtimeModule
+    ShowtimeModule,
+    StatisticsModule
   ],
   controllers: [AppController],
   providers: [AppService],

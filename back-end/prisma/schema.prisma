@@ -100,14 +100,15 @@ model PHIENBANPHIM {
 }
 
 model PHONGCHIEU {
-  MaPhongChieu   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenPhongChieu  String           @unique
+  MaPhongChieu   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  TenPhongChieu  String                  @unique
   SoDoGhe        Json
+  TrangThai      trang_thai_phong_chieu  @default(TRONG)
   GhePhongChieus GHE_PHONGCHIEU[]
   SuatChieus     SUATCHIEU[]
-  CreatedAt      DateTime         @default(now()) @db.Timestamptz(6)
-  UpdatedAt      DateTime         @default(now()) @db.Timestamptz(6)
-  DeletedAt      DateTime?        @db.Timestamptz(6)
+  CreatedAt      DateTime                @default(now()) @db.Timestamptz(6)
+  UpdatedAt      DateTime                @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime?               @db.Timestamptz(6)
 }
 
 model LOAIGHE {
@@ -392,16 +393,22 @@ enum trang_thai_phim {
 
 enum trang_thai_suat_chieu {
   CHUACHIEU
+  SAPCHIEU
   DANGCHIEU
   DACHIEU
   DAHUY
+}
+
+enum trang_thai_phong_chieu {
+  TRONG
+  SAPCHIEU
+  DANGCHIEU
 }
 
 enum trang_thai_ghe {
   CONTRONG
   DADAT
   DANGGIU
-  BAOTRI
 }
 
 enum trang_thai_ve {
