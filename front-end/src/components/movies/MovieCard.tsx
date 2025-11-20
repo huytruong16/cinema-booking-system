@@ -73,7 +73,7 @@ export function MovieCard({
 
             {/* Info  */}
             <div className="mt-2 px-1">
-                <p className="text-sm font-semibold text-foreground line-clamp-1">{title}</p>
+                <p className="text-base font-semibold text-foreground line-clamp-1">{title}</p>
 
                 {/* ⭐ Rating */}
                 <div className="flex items-center gap-1 text-xs text-yellow-400 font-medium mt-0.5">

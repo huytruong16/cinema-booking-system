@@ -28,8 +28,8 @@ export default function SignupPage() {
     }
 
     const validatePassword = (password: string) => {
-        // Ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số
-        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+        // Ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số, 1 kí tự đặc biệt
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
         return regex.test(password)
     }
 
@@ -49,7 +49,7 @@ export default function SignupPage() {
             return
         }
         if (!validatePassword(formData.password)) {
-            setError("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số")
+            setError("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)")
             return
         }
         if (formData.password !== formData.confirmPassword) {
@@ -119,7 +119,7 @@ export default function SignupPage() {
                         />
                     </div>
                     <div>
-                        <Label htmlFor="username" className="mb-2">Username</Label>
+                        <Label htmlFor="username" className="mb-2">Họ tên</Label>
                         <Input
                             id="username"
                             type="text"

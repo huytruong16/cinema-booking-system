@@ -1,3 +1,4 @@
+import apiClient from "@/lib/apiClient"
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://cinema-booking-system-xkgg.onrender.com";
 console.log("API_URL = ", API_URL);
 
@@ -32,6 +33,7 @@ export const authService = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      credentials: 'include',
     });
 
     return handleResponse<AuthResponse>(res);
@@ -61,6 +63,7 @@ export const authService = {
   async refreshToken() { 
     const res = await fetch(`${API_URL}/auth/refresh`, {
       method: "GET", 
+      credentials: 'include',
     });
     return handleResponse<ApiResponse<AuthResponse>>(res);
   },
@@ -100,12 +103,14 @@ export const authService = {
     return handleResponse<ApiResponse<string>>(res);
   },
 
-  async logout() {
-    const res = await fetch(`${API_URL}/auth/logout`, {
-      method: "POST",
-    });
-    return handleResponse<ApiResponse<string>>(res);
-  },
+  async logout(token?: string | null) {
+  const config = token 
+    ? { headers: { Authorization: `Bearer ${token}` } } 
+    : {}; 
+
+  const res = await apiClient.post('/auth/logout', {}, config);
+  return res.data;
+},
 };
 
 export interface ApiResponse<T> {
@@ -119,7 +124,7 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user?: {
-      id: string;
+      id: number;
       email: string;
       hoTen: string;
   };

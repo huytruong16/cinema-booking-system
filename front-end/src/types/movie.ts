@@ -5,13 +5,15 @@ export interface Movie {
   posterUrl: string;
   backdropUrl?: string;
   description?: string;
+  trailerUrl?: string;
   year?: number;
   status?: "now_showing" | "coming_soon" | "ended";
   ageRating?: string;
   type?: string;           
   tags?: string[];
   rating?: number;         
-  duration?: string;       
+  duration?: string;
+  actorList?: string;       
   country?: string;        
   price?: number;         
   cinema?: string;         

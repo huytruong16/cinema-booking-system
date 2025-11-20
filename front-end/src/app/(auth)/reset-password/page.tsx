@@ -21,21 +21,20 @@ export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false)
 
     const validatePassword = (password: string) => {
-        // Ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số
-        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+        // 8 ký tự, 1 hoa, 1 thường, 1 số, 1 ký tự đặc biệt
+        const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
         return regex.test(password)
     }
 
     const handleSubmitPassword = async (e: React.FormEvent) => {
         e.preventDefault()
-        // Bỏ kiểm tra otpVerified
         if (!email) {
             setMessage("❌ Thiếu thông tin email.")
             return
         }
 
         if (!validatePassword(formData.password)) {
-            setMessage("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số")
+            setMessage("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt (@$!%*?&)")
             return
         }
 
