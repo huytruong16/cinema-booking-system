@@ -1,7 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
+import { SummaryDto } from './dtos/summary.dto';
+import { GetSummaryQueryDto, SummaryModeEnum } from './dtos/get-summary-query.dto';
 
 @ApiTags('Thống kê')
 @Controller('statistics')
@@ -22,4 +24,19 @@ export class StatisticsController {
     async getRoomStatus(): Promise<RoomStatusDto[]> {
         return this.statisticsService.getRoomStatus();
     }
+
+    @Get('summary')
+    @ApiOperation({
+        summary: 'Tổng quan doanh thu vé / combo / tỉ lệ lấp đầy',
+    })
+    @ApiQuery({ name: 'date', required: false, description: 'ISO date, mặc định hôm nay' })
+    @ApiQuery({ name: 'mode', required: false, enum: ['day', 'week', 'month', 'year'], description: 'Khoảng thống kê' })
+    @ApiResponse({ status: 200 })
+    async getSummary(
+        @Query() query: GetSummaryQueryDto,
+    ): Promise<SummaryDto> {
+        return this.statisticsService.getSummary(query);
+    }
+
+
 }
