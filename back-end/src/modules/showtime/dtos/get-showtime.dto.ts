@@ -55,7 +55,6 @@ export class GetShowtimeDto {
     @ApiProperty({
         description: 'Ngày bắt đầu lọc (ISO 8601)',
         required: false,
-        example: '2024-01-01T00:00:00.000Z'
     })
     @IsOptional()
     @IsDateString()
@@ -64,7 +63,6 @@ export class GetShowtimeDto {
     @ApiProperty({
         description: 'Ngày kết thúc lọc (ISO 8601)',
         required: false,
-        example: '2024-12-31T23:59:59.000Z'
     })
     @IsOptional()
     @IsDateString()
