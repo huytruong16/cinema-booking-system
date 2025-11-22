@@ -4,6 +4,7 @@ import { StatisticsService } from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import { SummaryDto } from './dtos/summary.dto';
 import { GetSummaryQueryDto, SummaryModeEnum } from './dtos/get-summary-query.dto';
+import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
 
 @ApiTags('Thống kê')
 @Controller('statistics')
@@ -38,5 +39,12 @@ export class StatisticsController {
         return this.statisticsService.getSummary(query);
     }
 
+    @Get('revenue-chart')
+    @ApiOperation({ summary: 'Doanh thu vé / combo dạng biểu đồ cột theo ngày' })
+    @ApiQuery({ name: 'range', required: true, enum: ['week', 'month'], description: 'Khoảng thời gian' })
+    @ApiQuery({ name: 'date', required: false, description: 'Ngày bất kỳ nằm trong tuần / tháng cần thống kê (ISO), mặc định hôm nay' })
+    async getRevenueChart(@Query() query: GetRevenueChartQueryDto) {
+        return this.statisticsService.getRevenueChart(query);
+    }
 
 }
