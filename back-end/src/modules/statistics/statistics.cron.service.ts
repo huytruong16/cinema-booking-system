@@ -4,8 +4,6 @@ import { StatisticsService } from './statistics.service';
 
 @Injectable()
 export class StatisticsCronService {
-    private readonly logger = new Logger(StatisticsCronService.name);
-
     constructor(private readonly statisticsService: StatisticsService) { }
 
     @Cron(CronExpression.EVERY_MINUTE)
@@ -13,7 +11,14 @@ export class StatisticsCronService {
         try {
             await this.statisticsService.updateShowtimeStatuses();
         } catch (error) {
+        }
+    }
 
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async handleDailyRevenueFill() {
+        try {
+            await this.statisticsService.generateMissingDailyReports();
+        } catch (error) {
         }
     }
 }
