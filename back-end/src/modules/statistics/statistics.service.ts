@@ -6,6 +6,7 @@ import { SummaryDto } from './dtos/summary.dto';
 import { GetSummaryQueryDto } from './dtos/get-summary-query.dto';
 import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
 import { RevenueChartDto } from './dtos/revenue-chart.dto';
+import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 
 @Injectable()
 export class StatisticsService {
@@ -168,6 +169,7 @@ export class StatisticsService {
 
     async getSummary(filter: GetSummaryQueryDto): Promise<SummaryDto> {
         const targetDate = filter.date ? new Date(filter.date) : new Date();
+        await this.generateDailyRevenueReport(targetDate.toISOString());
 
         const y = targetDate.getFullYear();
         const m = targetDate.getMonth();
@@ -179,8 +181,8 @@ export class StatisticsService {
         let prevEnd: Date;
 
         if (filter.mode === 'day') {
-            start = new Date(y, m, d - 1, 0, 0, 0, 0);
-            end = new Date(y, m, d, 0, 0, 0, 0);
+            start = new Date(y, m, d, 0, 0, 0, 0);
+            end = new Date(y, m, d + 1, 0, 0, 0, 0);
             prevStart = new Date(y, m, d - 1, 0, 0, 0, 0);
             prevEnd = new Date(y, m, d, 0, 0, 0, 0);
         } else if (filter.mode === 'week') {
@@ -205,39 +207,21 @@ export class StatisticsService {
             prevEnd = new Date(y, m, 1, 0, 0, 0, 0);
         }
 
-        const invoices = await this.prisma.hOADON.findMany({
-            where: {
-                DeletedAt: null,
-                NgayLap: { gte: start, lt: end }
-            },
-            include: { Ves: true }
+        const reports = await this.prisma.bAOCAODOANHTHU.findMany({
+            where: { DeletedAt: null, Ngay: { gte: start, lt: end } }
         });
-        const revenue = invoices.reduce((sum, invoice) => {
-            const invoiceTotal = (invoice.Ves || [])
-                .filter(ve => ve.TrangThaiVe !== 'DAHOAN')
-                .reduce((veSum, ve) => veSum + Number(ve.GiaVe || 0), 0);
-            return sum + invoiceTotal;
-        }, 0);
+        const revenue = reports.reduce((sum, r) => sum + Number(r.DoanhThuVe || 0), 0);
+        const comboRevenue = reports.reduce((sum, r) => sum + Number(r.DoanhThuCombo || 0), 0);
 
-        const preInvoices = await this.prisma.hOADON.findMany({
-            where: {
-                DeletedAt: null,
-                NgayLap: { gte: prevStart, lt: prevEnd }
-            },
-            include: { Ves: true }
+        const prevReports = await this.prisma.bAOCAODOANHTHU.findMany({
+            where: { DeletedAt: null, Ngay: { gte: prevStart, lt: prevEnd } }
         });
-
-        const prevRevenue = preInvoices.reduce((sum, invoice) => {
-            const invoiceTotal = (invoice.Ves || [])
-                .filter(ve => ve.TrangThaiVe !== 'DAHOAN')
-                .reduce((veSum, ve) => veSum + Number(ve.GiaVe || 0), 0);
-            return sum + invoiceTotal;
-        }, 0);
+        const prevRevenue = prevReports.reduce((sum, r) => sum + Number(r.DoanhThuVe || 0), 0);
 
         const ticketsSold = await this.prisma.vE.count({
             where: {
                 DeletedAt: null,
-                TrangThaiVe: { in: ['CHUASUDUNG', 'DASUDUNG'] },
+                TrangThaiVe: { in: [TicketStatusEnum.CHUASUDUNG, TicketStatusEnum.DASUDUNG] },
                 HoaDon: {
                     DeletedAt: null,
                     NgayLap: { gte: start, lt: end }
@@ -248,28 +232,13 @@ export class StatisticsService {
         const prevTicketsSold = await this.prisma.vE.count({
             where: {
                 DeletedAt: null,
-                TrangThaiVe: { in: ['CHUASUDUNG', 'DASUDUNG'] },
+                TrangThaiVe: { in: [TicketStatusEnum.CHUASUDUNG, TicketStatusEnum.DASUDUNG] },
                 HoaDon: {
                     DeletedAt: null,
                     NgayLap: { gte: prevStart, lt: prevEnd }
                 }
             }
         });
-
-        const comboRecords = await this.prisma.hOADONCOMBO.findMany({
-            where: {
-                DeletedAt: null,
-                HoaDon: {
-                    DeletedAt: null,
-                    NgayLap: { gte: start, lt: end }
-                }
-            },
-            select: { SoLuong: true, DonGia: true }
-        });
-        const comboRevenue = comboRecords.reduce((sum, r) => {
-            const price = Number(r.DonGia);
-            return sum + r.SoLuong * price;
-        }, 0);
 
         const showtimes = await this.prisma.sUATCHIEU.findMany({
             where: {
@@ -317,6 +286,7 @@ export class StatisticsService {
         const y = baseDate.getFullYear();
         const m = baseDate.getMonth();
         const d = baseDate.getDate();
+        await this.generateDailyRevenueReport(baseDate.toISOString());
 
         let start: Date;
         let end: Date;
@@ -329,41 +299,25 @@ export class StatisticsService {
             end = new Date(monday.getTime());
             end.setDate(monday.getDate() + 7);
         } else if (filter.range === 'month') {
-            start = new Date(Date.UTC(y, m, 1));
-            end = new Date(Date.UTC(y, m + 1, 1));
+            start = new Date(y, m, 1, 0, 0, 0, 0);
+            end = new Date(y, m + 1, 1, 0, 0, 0, 0);
         } else {
-            start = new Date(Date.UTC(y, 0, 1));
-            end = new Date(Date.UTC(y + 1, 0, 1));
+            start = new Date(y, 0, 1, 0, 0, 0, 0);
+            end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
         }
 
-        const invoices = await this.prisma.hOADON.findMany({
-            where: { DeletedAt: null, NgayLap: { gte: start, lt: end } },
-            include: { Ves: true }
-        });
-        const combos = await this.prisma.hOADONCOMBO.findMany({
-            where: {
-                DeletedAt: null,
-                HoaDon: { DeletedAt: null, NgayLap: { gte: start, lt: end } }
-            },
-            include: { HoaDon: true }
+        const reports = await this.prisma.bAOCAODOANHTHU.findMany({
+            where: { DeletedAt: null, Ngay: { gte: start, lt: end } },
+            orderBy: { Ngay: 'asc' }
         });
 
-        const ticketMap: Record<string, number> = {};
-        for (const inv of invoices) {
-            if (!inv.Ves) continue;
-            const key = inv.NgayLap.toISOString().split('T')[0];
-            const ticketSum = (inv.Ves || [])
-                .filter(v => v.TrangThaiVe !== TicketStatusEnum.DAHOAN)
-                .reduce((s, v) => s + Number(v.GiaVe || 0), 0);
-            ticketMap[key] = (ticketMap[key] || 0) + ticketSum;
-        }
-
-        const comboMap: Record<string, number> = {};
-        for (const c of combos) {
-            if (!c.HoaDon) continue;
-            const key = c.HoaDon.NgayLap.toISOString().split('T')[0];
-            const lineTotal = Number(c.SoLuong || 0) * Number(c.DonGia || 0);
-            comboMap[key] = (comboMap[key] || 0) + lineTotal;
+        const reportMap: Record<string, { ticketRevenue: number; comboRevenue: number }> = {};
+        for (const r of reports) {
+            const key = r.Ngay.toISOString().split('T')[0];
+            reportMap[key] = {
+                ticketRevenue: Number(r.DoanhThuVe || 0),
+                comboRevenue: Number(r.DoanhThuCombo || 0)
+            };
         }
 
         const res: RevenueChartDto[] = [];
@@ -371,13 +325,112 @@ export class StatisticsService {
             const base = new Date(ts);
             const key = base.toISOString().split('T')[0];
             const label = `${base.getDate().toString().padStart(2, '0')}/${(base.getMonth() + 1).toString().padStart(2, '0')}`;
+            const data = reportMap[key] || { ticketRevenue: 0, comboRevenue: 0 };
             res.push({
                 Ngay: label,
-                DoanhThuVe: ticketMap[key] || 0,
-                DoanhThuCombo: comboMap[key] || 0
+                DoanhThuVe: data.ticketRevenue,
+                DoanhThuCombo: data.comboRevenue
             });
         }
 
         return res;
+    }
+
+    async generateDailyRevenueReport(dateIso?: string) {
+        const target = dateIso ? new Date(dateIso) : new Date();
+
+        const y = target.getFullYear();
+        const m = target.getMonth();
+        const d = target.getDate();
+
+        const start = new Date(y, m, d, 0, 0, 0, 0);
+        const end = new Date(y, m, d + 1, 0, 0, 0, 0);
+
+        const invoices = await this.prisma.hOADON.findMany({
+            where: { DeletedAt: null, NgayLap: { gte: start, lt: end } },
+            include: { Ves: true }
+        });
+
+        const ticketRevenue = invoices.reduce((sum, inv) => {
+            const invTotal = (inv.Ves || [])
+                .filter(v => v.TrangThaiVe !== TicketStatusEnum.DAHOAN)
+                .reduce((s, v) => s + Number(v.GiaVe || 0), 0);
+            return sum + invTotal;
+        }, 0);
+
+        const combos = await this.prisma.hOADONCOMBO.findMany({
+            where: {
+                DeletedAt: null,
+                HoaDon: { DeletedAt: null, NgayLap: { gte: start, lt: end } }
+            }
+        });
+
+        const comboRevenue = combos.reduce((sum, c) => {
+            const lineTotal = Number(c.SoLuong || 0) * Number(c.DonGia || 0);
+            return sum + lineTotal;
+        }, 0);
+
+        const discounts = await this.prisma.hOADON_KHUYENMAI.findMany({
+            where: {
+                DeletedAt: null,
+                HoaDon: { DeletedAt: null, NgayLap: { gte: start, lt: end } }
+            },
+            include: {
+                KhuyenMaiKH: { include: { KhuyenMai: true } }
+            }
+        });
+
+        let ticketDiscount = 0;
+        let comboDiscount = 0;
+
+        for (const km of discounts) {
+            const targetType = km.KhuyenMaiKH?.KhuyenMai?.DoiTuongApDung;
+            const value = Number(km.GiaTriGiam || 0);
+            if (targetType === VoucherTargetEnum.VE) ticketDiscount += value;
+            else if (targetType === VoucherTargetEnum.COMBO) comboDiscount += value;
+        }
+
+        const netTicketRevenue = Math.max(0, ticketRevenue - ticketDiscount);
+        const netComboRevenue = Math.max(0, comboRevenue - comboDiscount);
+
+        const upsert = await this.prisma.bAOCAODOANHTHU.upsert({
+            where: { Ngay: start },
+            update: {
+                DoanhThuVe: netTicketRevenue,
+                DoanhThuCombo: netComboRevenue,
+                UpdatedAt: new Date()
+            },
+            create: {
+                Ngay: start,
+                DoanhThuVe: netTicketRevenue,
+                DoanhThuCombo: netComboRevenue,
+                CreatedAt: new Date(),
+                UpdatedAt: new Date()
+            }
+        });
+
+        return upsert;
+    }
+
+    async generateMissingDailyReports() {
+        const lastReport = await this.prisma.bAOCAODOANHTHU.findFirst({
+            where: { DeletedAt: null },
+            orderBy: { Ngay: 'desc' }
+        });
+
+        let earliest: Date;
+        if (lastReport) earliest = lastReport.Ngay;
+        else earliest = new Date(2025, 0, 1);
+
+        const today = new Date();
+
+        if (earliest > today) return;
+
+        while (earliest <= today) {
+            await this.generateDailyRevenueReport(earliest.toISOString());
+            earliest.setDate(earliest.getDate() + 1);
+        }
+
+        return;
     }
 }
