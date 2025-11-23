@@ -7,6 +7,8 @@ import { GetSummaryQueryDto, SummaryRangeEnum } from './dtos/get-summary-query.d
 import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
 import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
 import { TopMovieDto } from './dtos/top-movie.dto';
+import { GetTopStaffQueryDto } from './dtos/get-top-staff-query.dto';
+import { TopStaffDto } from './dtos/top-staff.dto';
 
 @ApiTags('Thống kê')
 @Controller('statistics')
@@ -61,5 +63,14 @@ export class StatisticsController {
         @Query() query: GetTopMovieDto,
     ): Promise<TopMovieDto[]> {
         return this.statisticsService.getTopMovies(query);
+    }
+
+    @Get('top-staff')
+    @ApiOperation({ summary: 'Hiệu suất nhân viên' })
+    @ApiQuery({ name: 'range', required: true, enum: ['day', 'week', 'month', 'year'], description: 'Khoảng thời gian' })
+    @ApiQuery({ name: 'date', required: false, description: 'Một ngày trong khoảng thời gian lập báo cáo (ISO), mặc định hôm nay' })
+    @ApiResponse({ status: 200 })
+    async getTopStaff(@Query() query: GetTopStaffQueryDto): Promise<TopStaffDto[]> {
+        return this.statisticsService.getTopStaff(query);
     }
 }

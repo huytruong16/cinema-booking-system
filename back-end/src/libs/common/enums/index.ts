@@ -17,10 +17,10 @@ export { default as TicketStatusEnum } from './ticket-status.enum';
 export { default as ComboStatusEnum } from './combo-status.enum';
 
 // Payment Method
-export { default as PaymentMethodEnum } from './payment-method.enum';
+export { default as TransactionEnum } from './transaction-method.enum';
 
 // Payment Status
-export { default as PaymentStatusEnum } from './payment-status.enum';
+export { default as TransactionStatusEnum } from './transaction-status.enum';
 
 // Discount Type
 export { default as DiscountTypeEnum } from './discount-type.enum';

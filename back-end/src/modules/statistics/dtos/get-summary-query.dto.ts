@@ -2,10 +2,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsISO8601, IsOptional } from 'class-validator';
 
 export enum SummaryRangeEnum {
-    day = 'day',
-    week = 'week',
-    month = 'month',
-    year = 'year',
+    DAY = 'day',
+    WEEK = 'week',
+    MONTH = 'month',
+    YEAR = 'year',
 }
 
 export class GetSummaryQueryDto {
@@ -20,9 +20,9 @@ export class GetSummaryQueryDto {
     @ApiPropertyOptional({
         description: 'Khoảng thống kê',
         enum: SummaryRangeEnum,
-        default: SummaryRangeEnum.day,
+        default: SummaryRangeEnum.DAY,
     })
     @IsOptional()
     @IsEnum(SummaryRangeEnum, { message: 'range phải là một trong các giá trị: day, week, month, year' })
-    range: SummaryRangeEnum = SummaryRangeEnum.day;
+    range: SummaryRangeEnum = SummaryRangeEnum.DAY;
 }
