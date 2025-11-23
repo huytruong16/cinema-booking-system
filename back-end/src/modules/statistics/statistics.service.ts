@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
-import { ScreeningRoomStatusEnum, SeatStatusEnum, ShowtimeStatusEnum, TicketStatusEnum } from 'src/libs/common/enums';
+import { ScreeningRoomStatusEnum, SeatStatusEnum, ShowtimeStatusEnum, StaffStatusEnum, TicketStatusEnum, TransactionStatusEnum, TransactionTypeEnum } from 'src/libs/common/enums';
 import { SummaryDto } from './dtos/summary.dto';
-import { GetSummaryQueryDto } from './dtos/get-summary-query.dto';
-import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
+import { GetSummaryQueryDto, SummaryRangeEnum } from './dtos/get-summary-query.dto';
+import { GetRevenueChartQueryDto, RevenueChartRangeEnum } from './dtos/get-revenue-chart-query.dto';
 import { RevenueChartDto } from './dtos/revenue-chart.dto';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
-import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
+import { GetTopMovieDto, TopMovieRangeEnum } from './dtos/get-top-movie.dto-query';
 import { TopMovieDto } from './dtos/top-movie.dto';
+import { GetTopStaffQueryDto, TopStaffRangeEnum } from './dtos/get-top-staff-query.dto';
+import { TopStaffDto } from './dtos/top-staff.dto';
 
 @Injectable()
 export class StatisticsService {
@@ -183,14 +185,14 @@ export class StatisticsService {
         let prevEnd: Date;
 
         switch (filter.range) {
-            case 'day': {
+            case SummaryRangeEnum.DAY: {
                 start = new Date(y, m, d, 0, 0, 0, 0);
                 end = new Date(y, m, d + 1, 0, 0, 0, 0);
                 prevStart = new Date(y, m, d - 1, 0, 0, 0, 0);
                 prevEnd = new Date(y, m, d, 0, 0, 0, 0);
                 break;
             }
-            case 'week': {
+            case SummaryRangeEnum.WEEK: {
                 const dayOfWeek = targetDate.getDay();
                 const offsetToMonday = (dayOfWeek + 6) % 7;
                 const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
@@ -202,18 +204,19 @@ export class StatisticsService {
                 prevEnd = monday;
                 break;
             }
-            case 'year': {
+            case SummaryRangeEnum.YEAR: {
                 start = new Date(y, 0, 1, 0, 0, 0, 0);
                 end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
                 prevStart = new Date(y - 1, 0, 1, 0, 0, 0, 0);
                 prevEnd = new Date(y, 0, 1, 0, 0, 0, 0);
                 break;
             }
-            default: {
+            case SummaryRangeEnum.MONTH: {
                 start = new Date(y, m, 1, 0, 0, 0, 0);
                 end = new Date(y, m + 1, 1, 0, 0, 0, 0);
                 prevStart = new Date(y, m - 1, 1, 0, 0, 0, 0);
                 prevEnd = new Date(y, m, 1, 0, 0, 0, 0);
+                break;
             }
         }
 
@@ -302,7 +305,7 @@ export class StatisticsService {
         let end: Date;
 
         switch (filter.range) {
-            case 'week': {
+            case RevenueChartRangeEnum.WEEK: {
                 const dayOfWeek = baseDate.getDay();
                 const offsetToMonday = (dayOfWeek + 6) % 7;
                 const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
@@ -311,14 +314,15 @@ export class StatisticsService {
                 end.setDate(monday.getDate() + 7);
                 break;
             }
-            case 'month': {
+            case RevenueChartRangeEnum.MONTH: {
                 start = new Date(y, m, 1, 0, 0, 0, 0);
                 end = new Date(y, m + 1, 1, 0, 0, 0, 0);
                 break;
             }
-            default: {
+            case RevenueChartRangeEnum.YEAR: {
                 start = new Date(y, 0, 1, 0, 0, 0, 0);
                 end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+                break;
             }
         }
 
@@ -364,12 +368,12 @@ export class StatisticsService {
         let end: Date | undefined;
 
         switch (query.range) {
-            case 'day': {
+            case TopMovieRangeEnum.DAY: {
                 start = new Date(y, m, d, 0, 0, 0, 0);
                 end = new Date(y, m, d + 1, 0, 0, 0, 0);
                 break;
             }
-            case 'week': {
+            case TopMovieRangeEnum.WEEK: {
                 const dayOfWeek = now.getDay();
                 const offsetToMonday = (dayOfWeek + 6) % 7;
                 const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
@@ -378,18 +382,18 @@ export class StatisticsService {
                 end.setDate(monday.getDate() + 7);
                 break;
             }
-            case 'month':
+            case TopMovieRangeEnum.MONTH:
                 start = new Date(y, m, 1, 0, 0, 0, 0);
                 end = new Date(y, m + 1, 1, 0, 0, 0, 0);
                 break;
-            case 'year':
+            case TopMovieRangeEnum.YEAR:
                 start = new Date(y, 0, 1, 0, 0, 0, 0);
                 end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
                 break;
-            case 'all':
-            default:
+            case TopMovieRangeEnum.ALL:
                 start = undefined;
                 end = undefined;
+                break;
         }
 
         const whereClause: any = {
@@ -455,6 +459,85 @@ export class StatisticsService {
             DoanhThu: r.revenue,
             SoVeDaBan: r.ticketsSold
         }));
+    }
+
+    async getTopStaff(query: GetTopStaffQueryDto): Promise<TopStaffDto[]> {
+        const now = query.date ? new Date(query.date) : new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const d = now.getDate();
+
+        let start: Date;
+        let end: Date;
+
+        switch (query.range) {
+            case TopStaffRangeEnum.WEEK: {
+                const dayOfWeek = now.getDay();
+                const offsetToMonday = (dayOfWeek + 6) % 7;
+                const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
+                start = monday;
+                end = new Date(monday.getTime());
+                end.setDate(monday.getDate() + 7);
+                break;
+            }
+            case TopStaffRangeEnum.MONTH:
+                start = new Date(y, m, 1, 0, 0, 0, 0);
+                end = new Date(y, m + 1, 1, 0, 0, 0, 0);
+                break;
+            case TopStaffRangeEnum.DAY:
+                start = new Date(y, m, d, 0, 0, 0, 0);
+                end = new Date(y, m, d + 1, 0, 0, 0, 0);
+                break;
+            case TopStaffRangeEnum.YEAR:
+                start = new Date(y, 0, 1, 0, 0, 0, 0);
+                end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+                break;
+        }
+
+        const transactions = await this.prisma.gIAODICH.findMany({
+            where: {
+                DeletedAt: null,
+                TrangThai: TransactionStatusEnum.THANHCONG,
+                LoaiGiaoDich: TransactionTypeEnum.MUAVE,
+                MaNhanVien: { not: null },
+                NgayGiaoDich: { gte: start, lt: end }
+            },
+            include: {
+                NhanVien: {
+                    include: {
+                        NguoiDungPhanMem: true
+                    }
+                }
+            }
+        });
+
+        const agg: Record<string | number, { sales: number; count: number }> = {};
+        for (const gd of transactions) {
+            const staffId = gd.MaNhanVien ?? gd.NhanVien?.MaNhanVien;
+            if (!staffId) continue;
+            if (!agg[staffId]) agg[staffId] = { sales: 0, count: 0 };
+            agg[staffId].sales += Number(gd.TongTien || 0);
+            agg[staffId].count += 1;
+        }
+
+        const staffList = await this.prisma.nHANVIEN.findMany({
+            where: { DeletedAt: null, TrangThai: StaffStatusEnum.CONLAM },
+            include: { NguoiDungPhanMem: true }
+        });
+
+        const result: TopStaffDto[] = staffList.map(s => {
+            const staff = s;
+            const stats = agg[staff.MaNhanVien] || { sales: 0, count: 0 };
+            return {
+                NhanVien: staff,
+                DoanhThu: stats.sales,
+                SoLuotGiaoDich: stats.count
+            };
+        });
+
+        result.sort((a, b) => (b.DoanhThu - a.DoanhThu) || (b.SoLuotGiaoDich - a.SoLuotGiaoDich));
+
+        return result;
     }
 
     async generateDailyRevenueReport(dateIso?: string) {
