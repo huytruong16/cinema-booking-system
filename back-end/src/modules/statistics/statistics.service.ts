@@ -7,6 +7,8 @@ import { GetSummaryQueryDto } from './dtos/get-summary-query.dto';
 import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
 import { RevenueChartDto } from './dtos/revenue-chart.dto';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
+import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
+import { TopMovieDto } from './dtos/top-movie.dto';
 
 @Injectable()
 export class StatisticsService {
@@ -180,31 +182,39 @@ export class StatisticsService {
         let prevStart: Date;
         let prevEnd: Date;
 
-        if (filter.mode === 'day') {
-            start = new Date(y, m, d, 0, 0, 0, 0);
-            end = new Date(y, m, d + 1, 0, 0, 0, 0);
-            prevStart = new Date(y, m, d - 1, 0, 0, 0, 0);
-            prevEnd = new Date(y, m, d, 0, 0, 0, 0);
-        } else if (filter.mode === 'week') {
-            const dayOfWeek = targetDate.getDay();
-            const offsetToMonday = (dayOfWeek + 6) % 7;
-            const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
-            start = monday;
-            end = new Date(monday.getTime());
-            end.setDate(monday.getDate() + 7);
-            prevStart = new Date(monday.getTime());
-            prevStart.setDate(monday.getDate() - 7);
-            prevEnd = monday;
-        } else if (filter.mode === 'year') {
-            start = new Date(y, 0, 1, 0, 0, 0, 0);
-            end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
-            prevStart = new Date(y - 1, 0, 1, 0, 0, 0, 0);
-            prevEnd = new Date(y, 0, 1, 0, 0, 0, 0);
-        } else {
-            start = new Date(y, m, 1, 0, 0, 0, 0);
-            end = new Date(y, m + 1, 1, 0, 0, 0, 0);
-            prevStart = new Date(y, m - 1, 1, 0, 0, 0, 0);
-            prevEnd = new Date(y, m, 1, 0, 0, 0, 0);
+        switch (filter.range) {
+            case 'day': {
+                start = new Date(y, m, d, 0, 0, 0, 0);
+                end = new Date(y, m, d + 1, 0, 0, 0, 0);
+                prevStart = new Date(y, m, d - 1, 0, 0, 0, 0);
+                prevEnd = new Date(y, m, d, 0, 0, 0, 0);
+                break;
+            }
+            case 'week': {
+                const dayOfWeek = targetDate.getDay();
+                const offsetToMonday = (dayOfWeek + 6) % 7;
+                const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
+                start = monday;
+                end = new Date(monday.getTime());
+                end.setDate(monday.getDate() + 7);
+                prevStart = new Date(monday.getTime());
+                prevStart.setDate(monday.getDate() - 7);
+                prevEnd = monday;
+                break;
+            }
+            case 'year': {
+                start = new Date(y, 0, 1, 0, 0, 0, 0);
+                end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+                prevStart = new Date(y - 1, 0, 1, 0, 0, 0, 0);
+                prevEnd = new Date(y, 0, 1, 0, 0, 0, 0);
+                break;
+            }
+            default: {
+                start = new Date(y, m, 1, 0, 0, 0, 0);
+                end = new Date(y, m + 1, 1, 0, 0, 0, 0);
+                prevStart = new Date(y, m - 1, 1, 0, 0, 0, 0);
+                prevEnd = new Date(y, m, 1, 0, 0, 0, 0);
+            }
         }
 
         const reports = await this.prisma.bAOCAODOANHTHU.findMany({
@@ -266,7 +276,7 @@ export class StatisticsService {
         const ticketsDiff = ticketsSold - prevTicketsSold;
 
         return {
-            LoaiThongKe: filter.mode,
+            LoaiThongKe: filter.range,
             NgayBatDau: start.toISOString(),
             NgayKetThuc: end.toISOString(),
             TongDoanhThu: revenue + comboRevenue,
@@ -291,19 +301,25 @@ export class StatisticsService {
         let start: Date;
         let end: Date;
 
-        if (filter.range === 'week') {
-            const dayOfWeek = baseDate.getDay();
-            const offsetToMonday = (dayOfWeek + 6) % 7;
-            const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
-            start = monday;
-            end = new Date(monday.getTime());
-            end.setDate(monday.getDate() + 7);
-        } else if (filter.range === 'month') {
-            start = new Date(y, m, 1, 0, 0, 0, 0);
-            end = new Date(y, m + 1, 1, 0, 0, 0, 0);
-        } else {
-            start = new Date(y, 0, 1, 0, 0, 0, 0);
-            end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+        switch (filter.range) {
+            case 'week': {
+                const dayOfWeek = baseDate.getDay();
+                const offsetToMonday = (dayOfWeek + 6) % 7;
+                const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
+                start = monday;
+                end = new Date(monday.getTime());
+                end.setDate(monday.getDate() + 7);
+                break;
+            }
+            case 'month': {
+                start = new Date(y, m, 1, 0, 0, 0, 0);
+                end = new Date(y, m + 1, 1, 0, 0, 0, 0);
+                break;
+            }
+            default: {
+                start = new Date(y, 0, 1, 0, 0, 0, 0);
+                end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+            }
         }
 
         const reports = await this.prisma.bAOCAODOANHTHU.findMany({
@@ -334,6 +350,111 @@ export class StatisticsService {
         }
 
         return res;
+    }
+
+    async getTopMovies(
+        query: GetTopMovieDto,
+    ): Promise<TopMovieDto[]> {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const d = now.getDate();
+
+        let start: Date | undefined;
+        let end: Date | undefined;
+
+        switch (query.range) {
+            case 'day': {
+                start = new Date(y, m, d, 0, 0, 0, 0);
+                end = new Date(y, m, d + 1, 0, 0, 0, 0);
+                break;
+            }
+            case 'week': {
+                const dayOfWeek = now.getDay();
+                const offsetToMonday = (dayOfWeek + 6) % 7;
+                const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
+                start = monday;
+                end = new Date(monday.getTime());
+                end.setDate(monday.getDate() + 7);
+                break;
+            }
+            case 'month':
+                start = new Date(y, m, 1, 0, 0, 0, 0);
+                end = new Date(y, m + 1, 1, 0, 0, 0, 0);
+                break;
+            case 'year':
+                start = new Date(y, 0, 1, 0, 0, 0, 0);
+                end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+                break;
+            case 'all':
+            default:
+                start = undefined;
+                end = undefined;
+        }
+
+        const whereClause: any = {
+            DeletedAt: null,
+            TrangThaiVe: { not: TicketStatusEnum.DAHOAN },
+            HoaDon: {}
+        };
+        if (start && end) {
+            whereClause.HoaDon.NgayLap = { gte: start, lt: end };
+        }
+
+
+        const tickets = await this.prisma.vE.findMany({
+            where: whereClause,
+            select: {
+                GiaVe: true,
+                GheSuatChieu: {
+                    select: {
+                        SuatChieu: {
+                            select: {
+                                PhienBanPhim: {
+                                    select: {
+                                        Phim: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const agg: Record<string, { revenue: number; ticketsSold: number }> = {};
+        for (const t of tickets) {
+            const pbp = t.GheSuatChieu?.SuatChieu?.PhienBanPhim;
+            const maPhim = pbp?.Phim?.MaPhim;
+            if (!maPhim) continue;
+
+            if (!agg[maPhim]) agg[maPhim] = { revenue: 0, ticketsSold: 0 };
+            agg[maPhim].revenue += Number(t.GiaVe || 0);
+            agg[maPhim].ticketsSold += 1;
+        }
+
+        const capped = Math.max(1, Math.min(50, Number.isFinite(Number(query.limit)) ? Number(query.limit) : 5));
+
+        const ranked = Object.entries(agg)
+            .map(([id, v]) => ({ id, revenue: v.revenue, ticketsSold: v.ticketsSold }))
+            .sort((a, b) => (b.revenue - a.revenue) || (b.ticketsSold - a.ticketsSold))
+            .slice(0, capped);
+
+        const movieIds = ranked.map(r => r.id);
+        const movies = movieIds.length
+            ? await this.prisma.pHIM.findMany({
+                where: { MaPhim: { in: movieIds }, DeletedAt: null },
+            })
+            : [];
+
+        const movieMap: Record<string, any> = {};
+        for (const m of movies) movieMap[m.MaPhim] = m;
+
+        return ranked.map(r => ({
+            Phim: movieMap[r.id] ?? null,
+            DoanhThu: r.revenue,
+            SoVeDaBan: r.ticketsSold
+        }));
     }
 
     async generateDailyRevenueReport(dateIso?: string) {

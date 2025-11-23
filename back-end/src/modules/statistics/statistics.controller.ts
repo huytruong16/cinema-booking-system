@@ -3,8 +3,10 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import { SummaryDto } from './dtos/summary.dto';
-import { GetSummaryQueryDto, SummaryModeEnum } from './dtos/get-summary-query.dto';
+import { GetSummaryQueryDto, SummaryRangeEnum } from './dtos/get-summary-query.dto';
 import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
+import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
+import { TopMovieDto } from './dtos/top-movie.dto';
 
 @ApiTags('Thống kê')
 @Controller('statistics')
@@ -47,4 +49,17 @@ export class StatisticsController {
         return this.statisticsService.getRevenueChart(query);
     }
 
+    @Get('top-movies')
+    @ApiOperation({ summary: 'Top phim ăn khách theo doanh thu' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Số lượng phim trả về (mặc định 5, tối đa 50)' })
+    @ApiQuery({ name: 'range', required: false, enum: ['day', 'week', 'month', 'year', 'all'], description: 'Khoảng thời gian (mặc định day)' })
+    @ApiResponse({
+        status: 200,
+        description: 'Danh sách phim theo doanh thu giảm dần',
+    })
+    async getTopMovies(
+        @Query() query: GetTopMovieDto,
+    ): Promise<TopMovieDto[]> {
+        return this.statisticsService.getTopMovies(query);
+    }
 }
