@@ -20,6 +20,7 @@ import { LanguageModule } from './modules/language/language.module';
 import { RatingModule } from './modules/rating/rating.module';
 import { ShowtimeModule } from './modules/showtime/showtime.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -76,7 +77,8 @@ import { StatisticsModule } from './modules/statistics/statistics.module';
     LanguageModule,
     RatingModule,
     ShowtimeModule,
-    StatisticsModule
+    StatisticsModule,
+    TicketsModule
   ],
   controllers: [AppController],
   providers: [AppService],

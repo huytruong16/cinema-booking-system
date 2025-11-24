@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ShowtimeService } from './showtime.service';
 import { GetShowtimeDto } from './dtos/get-showtime.dto';
@@ -30,6 +30,10 @@ export class ShowtimeController {
     @ApiResponse({ status: 200 })
     @ApiResponse({ status: 404, description: 'Suất chiếu không tồn tại' })
     async getShowtimeById(@Param('id') id: string) {
-        return this.showtimeService.getShowtimeById(id);
+        const showtime = await this.showtimeService.getShowtimeById(id);
+        if (!showtime) {
+            throw new NotFoundException('Suất chiếu không tồn tại');
+        }
+        return showtime;
     }
 }
