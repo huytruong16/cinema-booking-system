@@ -21,6 +21,8 @@ import { RatingModule } from './modules/rating/rating.module';
 import { ShowtimeModule } from './modules/showtime/showtime.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
+import { SeatTypeModule } from './modules/seat-type/seat-type.module';
+import { SeatModule } from './modules/seat/seat.module';
 
 @Module({
   imports: [
@@ -78,7 +80,9 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     RatingModule,
     ShowtimeModule,
     StatisticsModule,
-    TicketsModule
+    TicketsModule,
+    SeatTypeModule,
+    SeatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
