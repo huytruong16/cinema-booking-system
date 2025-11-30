@@ -26,6 +26,7 @@ import { SeatModule } from './modules/seat/seat.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { UserModule } from './modules/user/user.module';
+import { InvoiceModule } from './modules/invoice/invoice.module';
 
 @Module({
   imports: [
@@ -88,7 +89,8 @@ import { UserModule } from './modules/user/user.module';
     SeatModule,
     CustomerModule,
     EmployeeModule,
-    UserModule
+    UserModule,
+    InvoiceModule
   ],
   controllers: [AppController],
   providers: [AppService],
