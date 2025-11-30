@@ -23,6 +23,9 @@ import { StatisticsModule } from './modules/statistics/statistics.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { SeatTypeModule } from './modules/seat-type/seat-type.module';
 import { SeatModule } from './modules/seat/seat.module';
+import { CustomerModule } from './modules/customer/customer.module';
+import { EmployeeModule } from './modules/employee/employee.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -83,6 +86,9 @@ import { SeatModule } from './modules/seat/seat.module';
     TicketsModule,
     SeatTypeModule,
     SeatModule,
+    CustomerModule,
+    EmployeeModule,
+    UserModule
   ],
   controllers: [AppController],
   providers: [AppService],
