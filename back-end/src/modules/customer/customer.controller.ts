@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import {
     ApiTags,
@@ -6,6 +6,7 @@ import {
     ApiParam,
     ApiResponse,
 } from '@nestjs/swagger';
+import { isUUID } from 'class-validator';
 
 @ApiTags('Khách hàng')
 @Controller('customers')
@@ -25,6 +26,7 @@ export class CustomerController {
     @ApiResponse({ status: 200, description: 'Chi tiết khách hàng' })
     @ApiResponse({ status: 404, description: 'Khách hàng không tồn tại' })
     async getById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.customerService.getCustomerById(id);
     }
 }
