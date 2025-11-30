@@ -17,8 +17,12 @@ export class EmployeeService {
                         MaNguoiDung: true,
                         HoTen: true,
                         Email: true,
+                        VaiTro: true,
                         SoDienThoai: true,
                         AvatarUrl: true,
+                        CreatedAt: true,
+                        UpdatedAt: true,
+                        DeletedAt: true,
                     }
                 },
             },
@@ -35,7 +39,17 @@ export class EmployeeService {
                         HoTen: true,
                         Email: true,
                         SoDienThoai: true,
+                        VaiTro: true,
                         AvatarUrl: true,
+                        MaNhomNguoiDung: true,
+                        NhomNguoiDung: {
+                            include: {
+                                QuyenNhomNguoiDungs: true
+                            }
+                        },
+                        CreatedAt: true,
+                        UpdatedAt: true,
+                        DeletedAt: true,
                     }
                 },
             },
