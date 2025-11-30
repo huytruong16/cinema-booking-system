@@ -24,6 +24,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 import { SeatTypeModule } from './modules/seat-type/seat-type.module';
 import { SeatModule } from './modules/seat/seat.module';
 import { CustomerModule } from './modules/customer/customer.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { CustomerModule } from './modules/customer/customer.module';
     SeatTypeModule,
     SeatModule,
     CustomerModule,
+    EmployeeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
