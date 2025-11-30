@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, BadRequestException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { SeatService } from './seat.service';
 import {
     ApiTags,
@@ -35,6 +36,7 @@ export class SeatController {
     @ApiResponse({ status: 200 })
     @ApiResponse({ status: 404, description: 'Ghế không tồn tại' })
     async getBaseSeatById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.seatService.getBaseSeatById(id);
     }
 
@@ -44,6 +46,7 @@ export class SeatController {
     @ApiResponse({ status: 200 })
     @ApiResponse({ status: 404, description: 'Ghế - loại ghế không tồn tại' })
     async getById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.seatService.getSeatById(id);
     }
 }

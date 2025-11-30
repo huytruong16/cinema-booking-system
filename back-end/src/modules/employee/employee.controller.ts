@@ -1,6 +1,7 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { isUUID } from 'class-validator';
 
 @ApiTags('Nhân viên')
 @Controller('employees')
@@ -17,6 +18,7 @@ export class EmployeeController {
     @ApiOperation({ summary: 'Lấy chi tiết nhân viên theo mã' })
     @ApiParam({ name: 'id', description: 'Mã nhân viên', required: true })
     async getEmployeeById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.employeeService.getEmployeeById(id);
     }
 }

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, NotFoundException, Post, Body, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body, Patch, Delete, BadRequestException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { VoucherService } from './voucher.service';
 import {
     ApiTags,
@@ -25,6 +26,7 @@ export class VoucherController {
     @ApiOperation({ summary: 'Lấy chi tiết voucher theo mã' })
     @ApiParam({ name: 'id', description: 'Mã voucher', required: true })
     async getById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         const voucher = await this.voucherService.getVoucherById(id);
         if (!voucher) throw new NotFoundException('Mã giảm giá không tồn tại');
         return voucher;
@@ -45,6 +47,7 @@ export class VoucherController {
     @ApiResponse({ status: 200, description: 'Cập nhật voucher thành công.' })
     @ApiResponse({ status: 404, description: 'Voucher không tồn tại.' })
     async update(@Param('id') id: string, @Body() dto: UpdateVoucherDto) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.voucherService.updateVoucher(id, dto);
     }
 
@@ -54,6 +57,7 @@ export class VoucherController {
     @ApiResponse({ status: 200, description: 'Xóa voucher thành công.' })
     @ApiResponse({ status: 404, description: 'Voucher không tồn tại.' })
     async remove(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.voucherService.removeVoucher(id);
     }
 }
