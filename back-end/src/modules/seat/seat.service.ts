@@ -1,9 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetSeatsDto } from './dtos/get-seat.dto';
+import { SeatCheckRequestDto, SeatCheckResponseDto } from './dtos/post-check-available.dto';
+import { SeatStatusEnum } from 'src/libs/common/enums';
 
 @Injectable()
 export class SeatService {
+    async checkAvailableSeats(dto: SeatCheckRequestDto): Promise<SeatCheckResponseDto> {
+        const seat = await this.prisma.gHE_SUATCHIEU.findFirst(
+            {
+                where: { MaGheSuatChieu: dto.MaGheSuatChieu, DeletedAt: null },
+            }
+        );
+
+        if (!seat) {
+            throw new NotFoundException('Ghế suất chiếu không tồn tại');
+        }
+
+        return { ConTrong: seat.TrangThai === SeatStatusEnum.CONTRONG };
+    }
     constructor(
         readonly prisma: PrismaService,
     ) { }
