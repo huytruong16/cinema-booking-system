@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, Query, BadRequestException, Post, Body } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { SeatService } from './seat.service';
 import {
@@ -9,6 +9,7 @@ import {
     ApiQuery,
 } from '@nestjs/swagger';
 import { GetSeatsDto } from './dtos/get-seat.dto';
+import { SeatCheckRequestDto } from './dtos/post-check-available.dto';
 
 @ApiTags('Ghế')
 @Controller('seats')
@@ -48,5 +49,12 @@ export class SeatController {
     async getById(@Param('id') id: string) {
         if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.seatService.getSeatById(id);
+    }
+
+    @Post('/check-available')
+    @ApiOperation({ summary: 'Kiểm tra ghế phòng chiếu có còn trống không', description: 'Được gọi khi khách hàng nhấn chọn vào 1 ghế trong suất chiếu để đặt vé' })
+    @ApiResponse({ status: 200 })
+    async checkAvailableSeats(@Body() dto: SeatCheckRequestDto) {
+        return this.seatService.checkAvailableSeats(dto);
     }
 }
