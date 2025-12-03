@@ -27,6 +27,7 @@ import { CustomerModule } from './modules/customer/customer.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { UserModule } from './modules/user/user.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
+import { RefundRequestModule } from './modules/refund-request/refund-request.module';
 
 @Module({
   imports: [
@@ -90,7 +91,8 @@ import { InvoiceModule } from './modules/invoice/invoice.module';
     CustomerModule,
     EmployeeModule,
     UserModule,
-    InvoiceModule
+    InvoiceModule,
+    RefundRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],
