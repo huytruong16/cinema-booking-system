@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { mockPromotions } from '@/lib/mockData';
+import { useEffect, useState } from 'react';
+import { promotionService } from '@/services/promotion.service';
+import type { Promotion } from '@/types/promotion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +12,25 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function PromotionsPage() {
-  
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const data = await promotionService.getAllPromotions();
+        setPromotions(data);
+      } catch (e: any) {
+        setError('Không thể tải danh sách ưu đãi.');
+        toast.error('Không thể tải danh sách ưu đãi.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPromotions();
+  }, []);
+
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("Đã sao chép mã giảm giá: " + code);
@@ -30,22 +50,28 @@ export default function PromotionsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockPromotions.map((promo) => (
-            <PromotionCard key={promo.id} promo={promo} onCopy={handleCopyCode} />
-          ))}
-          <div className="border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center p-8 text-center text-zinc-500 min-h-[200px]">
-            <p>Sắp có thêm ưu đãi mới...</p>
-            <p className="text-sm mt-2">Hãy quay lại sau nhé!</p>
+        {loading ? (
+          <div className="text-zinc-400">Đang tải ưu đãi...</div>
+        ) : error ? (
+          <div className="text-red-500">{error}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {promotions.map((promo) => (
+              <PromotionCard key={promo.id} promo={promo} onCopy={handleCopyCode} />
+            ))}
+            <div className="border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center p-8 text-center text-zinc-500 min-h-[200px]">
+              <p>Sắp có thêm ưu đãi mới...</p>
+              <p className="text-sm mt-2">Hãy quay lại sau nhé!</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-function PromotionCard({ promo, onCopy }: { promo: any, onCopy: (code: string) => void }) {
-  const isPercent = promo.type === 'PERCENT';
+function PromotionCard({ promo, onCopy }: { promo: Promotion, onCopy: (code: string) => void }) {
+  const isPercent = promo.discountType === 'PERCENTAGE';
 
   return (
     <Card className="bg-[#1C1C1C] border-zinc-800 overflow-hidden flex flex-col h-full hover:border-red-500/50 transition-all group">
@@ -78,7 +104,7 @@ function PromotionCard({ promo, onCopy }: { promo: any, onCopy: (code: string) =
           <div className="flex justify-between">
             <span className="text-zinc-500">Đơn tối thiểu:</span>
             <span className="text-white font-medium">
-              {promo.minOrder > 0 ? `${promo.minOrder.toLocaleString('vi-VN')}đ` : '0đ'}
+              {promo.minOrderValue > 0 ? `${promo.minOrderValue.toLocaleString('vi-VN')}đ` : '0đ'}
             </span>
           </div>
           {isPercent && promo.maxDiscount && (
