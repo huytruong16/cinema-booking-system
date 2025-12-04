@@ -26,4 +26,9 @@ export default () => ({
         anonKey: process.env.SUPABASE_ANON_KEY,
         serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
     },
+    payos: {
+        clientId: process.env.PAYOS_CLIENT_ID,
+        apiKey: process.env.PAYOS_API_KEY,
+        checksumKey: process.env.PAYOS_CHECKSUM_KEY,
+    }
 });

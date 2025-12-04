@@ -3,9 +3,14 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../mail/mail.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt.strategy';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
     imports: [
+        ConfigModule,
+        PassportModule,
         JwtModule.register({
             secret: process.env.JWT_SECRET,
             signOptions: { expiresIn: '1h' },
@@ -13,6 +18,7 @@ import { MailModule } from '../mail/mail.module';
         MailModule
     ],
     controllers: [AuthController],
-    providers: [AuthService],
+    providers: [AuthService, JwtStrategy],
+    exports: [AuthService]
 })
 export class AuthModule { }
