@@ -14,13 +14,15 @@ export class PayosService {
         );
     }
 
-    async getPaymentLinkUrl(amount: number, description: string): Promise<string> {
-        const orderCode = Date.now();
+    async getPaymentLinkUrl(orderCode: number, amount: number, description: string): Promise<string> {
+        const now = Math.floor(Date.now() / 1000);
+        const expiredAt = now + 5 * 60;
 
         const body = {
             orderCode,
             amount,
             description,
+            expiredAt,
             returnUrl: 'http://localhost:3000/success',
             cancelUrl: 'http://localhost:3000/cancel',
         };
