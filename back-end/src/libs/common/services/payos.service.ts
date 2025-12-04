@@ -34,7 +34,13 @@ export class PayosService {
         };
     }
 
-    verifyPaymentWebhookData(webhookBody: any) {
-        return this.payos.verifyPaymentWebhookData(webhookBody);
+    verifyPaymentWebhookData(webhookBody: any): { data: any; verified: boolean } {
+        try {
+            const res = this.payos.verifyPaymentWebhookData(webhookBody);
+            const data = (res && typeof res === 'object' && 'data' in res) ? (res as any).data : res;
+            return { data, verified: true };
+        } catch {
+            return { data: null, verified: false };
+        }
     }
 }
