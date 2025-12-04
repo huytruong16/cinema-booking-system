@@ -2,15 +2,17 @@ import { Injectable, NotFoundException, BadRequestException, Inject, Scope } fro
 import { REQUEST } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
-import { DiscountTypeEnum, PromoStatusEnum, RoleEnum, SeatStatusEnum, TransactionEnum, TransactionTypeEnum } from 'src/libs/common/enums';
+import { DiscountTypeEnum, PromoStatusEnum, RoleEnum, SeatStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from 'src/libs/common/enums';
 import { PayosService } from 'src/libs/common/services/payos.service';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
   constructor(
-    private prisma: PrismaService,
-    private payosService: PayosService,
+    private readonly prisma: PrismaService,
+    private readonly payosService: PayosService,
+    private readonly configService: ConfigService,
     @Inject(REQUEST) private readonly request: any,
   ) { }
 
@@ -123,8 +125,9 @@ export class InvoiceService {
     const totalAfterDiscount = Math.max(0, total - discountTotal);
 
     const genCode = () => Math.floor(1000000000 + Math.random() * 9000000000);
-
     const emailToUse = Email || user!.Email;
+
+    const code = genCode();
 
     const created = await prisma.$transaction(async (tx) => {
       const hoaDon = await tx.hOADON.create({
@@ -174,21 +177,23 @@ export class InvoiceService {
         }
       }
 
-      const code = genCode();
-
-      await tx.gIAODICH.create({
-        data: {
-          MaHoaDon: hoaDon.MaHoaDon,
-          PhuongThuc: TransactionEnum.TRUCTUYEN,
-          TongTien: totalAfterDiscount.toString(),
-          NgayGiaoDich: new Date(),
-          LoaiGiaoDich: TransactionTypeEnum.MUAVE,
-          Code: code.toString(),
-          GiaoDichUrl: await this.payosService.getPaymentLinkUrl(code, totalAfterDiscount, `${hoaDon.Code}`),
-        }
-      });
-
       return hoaDon;
+    });
+
+    const paymentData: { paymentLinkId: string, checkoutUrl: string } =
+      await this.payosService.getPaymentLinkUrl(code, totalAfterDiscount, `${created.Code}`);
+
+    await this.prisma.gIAODICH.create({
+      data: {
+        MaHoaDon: created.MaHoaDon,
+        PhuongThuc: TransactionEnum.TRUCTUYEN,
+        TongTien: totalAfterDiscount.toString(),
+        NgayGiaoDich: new Date(),
+        LoaiGiaoDich: TransactionTypeEnum.MUAVE,
+        Code: code.toString(),
+        LinkId: paymentData.paymentLinkId,
+        GiaoDichUrl: paymentData.checkoutUrl,
+      }
     });
 
     return this.getInvoiceById(created.MaHoaDon);
@@ -310,4 +315,35 @@ export class InvoiceService {
       return seatPrices;
     }
   }
+  async updateTransactionStatus(webhookBody: any) {
+    const data = this.payosService.verifyPaymentWebhookData(webhookBody);
+
+    if (data.code === '00') {
+      const linkId = data.paymentLinkId;
+
+      const transaction = await this.prisma.gIAODICH.findFirst({
+        where: {
+          LinkId: linkId,
+          DeletedAt: null
+        }
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Giao dịch không tồn tại');
+      }
+
+      if (transaction.TrangThai !== TransactionStatusEnum.THANHCONG) {
+        await this.prisma.gIAODICH.update({
+          where: { MaGiaoDich: transaction.MaGiaoDich },
+          data: {
+            TrangThai: TransactionStatusEnum.THANHCONG,
+            UpdatedAt: new Date()
+          }
+        });
+      }
+    }
+
+    return { success: true };
+  }
+
 }
