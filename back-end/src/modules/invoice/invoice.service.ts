@@ -316,32 +316,46 @@ export class InvoiceService {
     }
   }
   async updateTransactionStatus(webhookBody: any) {
-    const data = this.payosService.verifyPaymentWebhookData(webhookBody);
+    const { data, verified } = this.payosService.verifyPaymentWebhookData(webhookBody);
 
-    if (data.code === '00') {
-      const linkId = data.paymentLinkId;
-
-      const transaction = await this.prisma.gIAODICH.findFirst({
-        where: {
-          LinkId: linkId,
-          DeletedAt: null
-        }
-      });
-
-      if (!transaction) {
-        throw new NotFoundException('Giao dịch không tồn tại');
-      }
-
-      if (transaction.TrangThai !== TransactionStatusEnum.THANHCONG) {
-        await this.prisma.gIAODICH.update({
-          where: { MaGiaoDich: transaction.MaGiaoDich },
-          data: {
-            TrangThai: TransactionStatusEnum.THANHCONG,
-            UpdatedAt: new Date()
-          }
-        });
-      }
+    if (!verified || !data) {
+      return { success: false, message: 'Webhook không hợp lệ' };
     }
+
+    const code = data?.code ?? data?.statusCode ?? data?.status;
+    const linkId = data?.paymentLinkId ?? data?.transaction?.paymentLinkId;
+
+    if (!linkId) {
+      return { success: false, message: 'Thiếu paymentLinkId trong webhook' };
+    }
+
+    const transaction = await this.prisma.gIAODICH.findFirst({
+      where: {
+        LinkId: linkId,
+        DeletedAt: null
+      }
+    });
+
+    if (!transaction) {
+      return { success: false, message: 'Giao dịch không tồn tại' };
+    }
+
+    if (transaction.TrangThai === TransactionStatusEnum.THANHCONG) {
+      return { success: true, message: 'Giao dịch đã được cập nhật trước đó' };
+    }
+
+    const isPaid =
+      code === '00' ||
+      data?.status === 'PAID' ||
+      data?.success === true;
+
+    await this.prisma.gIAODICH.update({
+      where: { MaGiaoDich: transaction.MaGiaoDich },
+      data: {
+        TrangThai: isPaid ? TransactionStatusEnum.THANHCONG : TransactionStatusEnum.THATBAI,
+        UpdatedAt: new Date()
+      }
+    });
 
     return { success: true };
   }
