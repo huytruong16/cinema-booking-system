@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, SetMetadata, UseGuards } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
@@ -30,5 +30,13 @@ export class InvoiceController {
   @ApiOperation({ summary: 'Tạo hóa đơn mới' })
   async createInvoice(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoiceService.createInvoice(createInvoiceDto);
+  }
+
+  @ApiExcludeEndpoint()
+  @Post('payos/webhook')
+  @SetMetadata('isPublic', true)
+  @ApiOperation({ summary: 'Nhận Webhook từ PayOS để cập nhật trạng thái thanh toán' })
+  async handlePayosWebhook(@Body() body: any) {
+    return this.invoiceService.updateTransactionStatus(body);
   }
 }

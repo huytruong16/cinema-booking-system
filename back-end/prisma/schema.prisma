@@ -320,6 +320,7 @@ model GIAODICH {
   NoiDung       String?
   LoaiGiaoDich  loai_giao_dich
   Code          String
+  LinkId        String                 @unique
   GiaoDichUrl   String
   HoaDon        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   NhanVien      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])

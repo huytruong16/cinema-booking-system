@@ -14,7 +14,7 @@ export class PayosService {
         );
     }
 
-    async getPaymentLinkUrl(orderCode: number, amount: number, description: string): Promise<string> {
+    async getPaymentLinkUrl(orderCode: number, amount: number, description: string): Promise<{ paymentLinkId: string, checkoutUrl: string }> {
         const now = Math.floor(Date.now() / 1000);
         const expiredAt = now + 5 * 60;
 
@@ -27,6 +27,14 @@ export class PayosService {
             cancelUrl: 'http://localhost:3000/cancel',
         };
 
-        return (await this.payos.createPaymentLink(body)).checkoutUrl;
+        const data = await this.payos.createPaymentLink(body);
+        return {
+            paymentLinkId: data.paymentLinkId,
+            checkoutUrl: data.checkoutUrl,
+        };
+    }
+
+    verifyPaymentWebhookData(webhookBody: any) {
+        return this.payos.verifyPaymentWebhookData(webhookBody);
     }
 }
