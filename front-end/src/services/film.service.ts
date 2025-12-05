@@ -62,6 +62,8 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
     price: price,
     tags: tags, 
     views: 0,
+    startDate: new Date(film.NgayBatDauChieu),
+    endDate: new Date(film.NgayKetThucChieu),
   };
 };
 
