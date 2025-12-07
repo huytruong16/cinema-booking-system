@@ -19,6 +19,15 @@ import { FormatModule } from './modules/format/format.module';
 import { LanguageModule } from './modules/language/language.module';
 import { RatingModule } from './modules/rating/rating.module';
 import { ShowtimeModule } from './modules/showtime/showtime.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
+import { SeatTypeModule } from './modules/seat-type/seat-type.module';
+import { SeatModule } from './modules/seat/seat.module';
+import { CustomerModule } from './modules/customer/customer.module';
+import { EmployeeModule } from './modules/employee/employee.module';
+import { UserModule } from './modules/user/user.module';
+import { InvoiceModule } from './modules/invoice/invoice.module';
+import { RefundRequestModule } from './modules/refund-request/refund-request.module';
 
 @Module({
   imports: [
@@ -74,7 +83,16 @@ import { ShowtimeModule } from './modules/showtime/showtime.module';
     FormatModule,
     LanguageModule,
     RatingModule,
-    ShowtimeModule
+    ShowtimeModule,
+    StatisticsModule,
+    TicketsModule,
+    SeatTypeModule,
+    SeatModule,
+    CustomerModule,
+    EmployeeModule,
+    UserModule,
+    InvoiceModule,
+    RefundRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

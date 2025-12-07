@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsDateString, IsEnum } from 'class-validator';
 import DiscountTypeEnum from 'src/libs/common/enums/discount-type.enum';
 import DiscountStatusEnum from 'src/libs/common/enums/discount-status.enum';
+import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 
 export class CreateVoucherDto {
     @ApiProperty({ example: 'Khuyến mãi VIP', description: 'Tên khuyến mãi' })
@@ -42,6 +43,10 @@ export class CreateVoucherDto {
     @IsOptional()
     @IsNumber({}, { message: 'Giá trị giảm tối đa phải là số' })
     GiaTriGiamToiDa?: number;
+
+    @ApiProperty({ example: 'VE', description: 'Đối tượng áp dụng voucher' })
+    @IsEnum(VoucherTargetEnum, { message: 'Đối tượng áp dụng voucher không hợp lệ' })
+    DoiTuongApDung: VoucherTargetEnum;
 
     @ApiProperty({ example: '2025-10-29T00:00:00.000Z', description: 'Ngày bắt đầu khuyến mãi (ISO string)' })
     @IsDateString({}, { message: 'Ngày bắt đầu phải là định dạng ngày hợp lệ' })

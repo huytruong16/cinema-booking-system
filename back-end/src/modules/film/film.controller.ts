@@ -1,4 +1,5 @@
-import { Controller, Get, Param, NotFoundException, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body, Query, BadRequestException } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { FilmService } from './film.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
@@ -39,6 +40,7 @@ export class FilmController {
     @ApiOperation({ summary: 'Lấy chi tiết phim theo mã' })
     @ApiParam({ name: 'id', description: 'Mã phim', required: true })
     async getById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         const film = await this.filmService.getFilmById(id);
         if (!film) throw new NotFoundException('Phim không tồn tại');
         return film;

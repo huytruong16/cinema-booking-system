@@ -14,6 +14,7 @@ import {
     MaxFileSizeValidator,
     FileTypeValidator
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { ComboService } from './combo.service';
 import {
     ApiTags,
@@ -45,6 +46,7 @@ export class ComboController {
     @ApiResponse({ status: 200, description: 'Thông tin combo được trả về thành công.' })
     @ApiResponse({ status: 404, description: 'Combo không tồn tại.' })
     async getById(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.comboService.getComboById(id);
     }
 
@@ -141,6 +143,7 @@ export class ComboController {
         @Body() dto: UpdateComboDto,
         @UploadedFile() file?: Express.Multer.File
     ) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return await this.comboService.updateCombo(id, dto, file);
     }
 
@@ -150,6 +153,7 @@ export class ComboController {
     @ApiResponse({ status: 200, description: 'Xóa combo thành công.' })
     @ApiResponse({ status: 404, description: 'Combo không tồn tại.' })
     async remove(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.comboService.removeCombo(id);
     }
 }

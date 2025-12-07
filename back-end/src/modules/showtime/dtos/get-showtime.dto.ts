@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString, IsUUID } from 'class-validator';
 import { ShowtimeStatusEnum } from '../../../libs/common/enums/showtime-status.enum';
 
 export class GetShowtimeDto {
@@ -8,6 +8,7 @@ export class GetShowtimeDto {
         required: false,
     })
     @IsOptional()
+    @IsUUID()
     @IsString()
     MaPhim?: string;
 
@@ -16,6 +17,7 @@ export class GetShowtimeDto {
         required: false,
     })
     @IsOptional()
+    @IsUUID()
     @IsString()
     MaPhongChieu?: string;
 
@@ -24,6 +26,7 @@ export class GetShowtimeDto {
         required: false,
     })
     @IsOptional()
+    @IsUUID()
     @IsString()
     MaPhienBanPhim?: string;
 
@@ -32,6 +35,7 @@ export class GetShowtimeDto {
         required: false,
     })
     @IsOptional()
+    @IsUUID()
     @IsString()
     MaDinhDang?: string;
 
@@ -40,8 +44,9 @@ export class GetShowtimeDto {
         required: false,
     })
     @IsOptional()
+    @IsUUID()
     @IsString()
-    MaTheLoai?: string;
+    MaTheLoai?: string; git
 
     @ApiProperty({
         description: 'Trạng thái suất chiếu',
@@ -55,7 +60,6 @@ export class GetShowtimeDto {
     @ApiProperty({
         description: 'Ngày bắt đầu lọc (ISO 8601)',
         required: false,
-        example: '2024-01-01T00:00:00.000Z'
     })
     @IsOptional()
     @IsDateString()
@@ -64,7 +68,6 @@ export class GetShowtimeDto {
     @ApiProperty({
         description: 'Ngày kết thúc lọc (ISO 8601)',
         required: false,
-        example: '2024-12-31T23:59:59.000Z'
     })
     @IsOptional()
     @IsDateString()

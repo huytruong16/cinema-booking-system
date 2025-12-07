@@ -100,14 +100,15 @@ model PHIENBANPHIM {
 }
 
 model PHONGCHIEU {
-  MaPhongChieu   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenPhongChieu  String           @unique
+  MaPhongChieu   String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  TenPhongChieu  String                  @unique
   SoDoGhe        Json
+  TrangThai      trang_thai_phong_chieu  @default(TRONG)
   GhePhongChieus GHE_PHONGCHIEU[]
   SuatChieus     SUATCHIEU[]
-  CreatedAt      DateTime         @default(now()) @db.Timestamptz(6)
-  UpdatedAt      DateTime         @default(now()) @db.Timestamptz(6)
-  DeletedAt      DateTime?        @db.Timestamptz(6)
+  CreatedAt      DateTime                @default(now()) @db.Timestamptz(6)
+  UpdatedAt      DateTime                @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime?               @db.Timestamptz(6)
 }
 
 model LOAIGHE {
@@ -256,6 +257,7 @@ model HOADON {
   HoaDonCombos HOADONCOMBO[]
   GiaoDichs    GIAODICH[]
   Ves          VE[]
+  HoaDonKhuyenMais HOADON_KHUYENMAI[]
   CreatedAt    DateTime       @default(now()) @db.Timestamptz(6)
   UpdatedAt    DateTime       @default(now()) @db.Timestamptz(6)
   DeletedAt    DateTime?      @db.Timestamptz(6)
@@ -275,10 +277,23 @@ model KHUYENMAI {
   GiaTriDonToiThieu Decimal
   GiaTriGiamToiDa   Decimal
   TrangThai         trang_thai_khuyen_mai @default(CONHOATDONG)
+  DoiTuongApDung    doi_tuong_ap_dung_km
   KhuyenMaiKhachHangs KHUYENMAI_KHACHHANG[]
   CreatedAt         DateTime              @default(now()) @db.Timestamptz(6)
   UpdatedAt         DateTime              @default(now()) @db.Timestamptz(6)
   DeletedAt         DateTime?             @db.Timestamptz(6)
+}
+
+model HOADON_KHUYENMAI {
+  MaHoaDonKM       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaHoaDon         String    @db.Uuid
+  MaKhuyenMaiKH    String    @db.Uuid
+  GiaTriGiam       Decimal
+  CreatedAt        DateTime  @default(now()) @db.Timestamptz(6)
+  UpdatedAt        DateTime  @default(now()) @db.Timestamptz(6)
+  DeletedAt        DateTime? @db.Timestamptz(6)
+  HoaDon           HOADON    @relation(fields: [MaHoaDon], references: [MaHoaDon])
+  KhuyenMaiKH      KHUYENMAI_KHACHHANG @relation(fields: [MaKhuyenMaiKH], references: [MaKhuyenMaiKH])
 }
 
 model KHUYENMAI_KHACHHANG {
@@ -288,6 +303,7 @@ model KHUYENMAI_KHACHHANG {
   DaSuDung      Boolean     @default(false)
   KhachHang     KHACHHANG   @relation(fields: [MaKhachHang], references: [MaKhachHang])
   KhuyenMai     KHUYENMAI   @relation(fields: [MaKhuyenMai], references: [MaKhuyenMai])
+  HoaDonKhuyenMais HOADON_KHUYENMAI[]
   CreatedAt     DateTime    @default(now()) @db.Timestamptz(6)
   UpdatedAt     DateTime    @default(now()) @db.Timestamptz(6)
   DeletedAt     DateTime?   @db.Timestamptz(6)
@@ -304,6 +320,7 @@ model GIAODICH {
   NoiDung       String?
   LoaiGiaoDich  loai_giao_dich
   Code          String
+  LinkId        String                 @unique
   GiaoDichUrl   String
   HoaDon        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   NhanVien      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])
@@ -370,8 +387,8 @@ model DANHGIA {
   MaPhim     String?   @db.Uuid
   Phim       PHIM?     @relation(fields: [MaPhim], references: [MaPhim], onDelete: NoAction, onUpdate: NoAction)
   CreatedAt  DateTime  @default(now()) @db.Timestamptz(6)
-  UpdatedAt  DateTime  @default(now()) @db.Timestamp(6)
-  DeletedAt  DateTime? @db.Timestamp(6)
+  UpdatedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  DeletedAt  DateTime? @db.Timestamptz(6)
 }
 
 model THAMSO {
@@ -380,8 +397,18 @@ model THAMSO {
   GiaTri         String
   KieuDuLieu     String
   CreatedAt      DateTime  @default(now()) @db.Timestamptz(6)
-  UpdatedAt      DateTime  @default(now()) @db.Timestamp(6)
-  DeletedAt      DateTime? @db.Timestamp(6)
+  UpdatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime? @db.Timestamptz(6)
+}
+
+model BAOCAODOANHTHU {
+  MaBCDoanhThu   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  Ngay           DateTime  @unique @default(now()) @db.Timestamptz(6)
+  DoanhThuVe     Decimal   
+  DoanhThuCombo  Decimal
+  CreatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  UpdatedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime? @db.Timestamptz(6)
 }
 
 enum trang_thai_phim {
@@ -392,16 +419,22 @@ enum trang_thai_phim {
 
 enum trang_thai_suat_chieu {
   CHUACHIEU
+  SAPCHIEU
   DANGCHIEU
   DACHIEU
   DAHUY
+}
+
+enum trang_thai_phong_chieu {
+  TRONG
+  SAPCHIEU
+  DANGCHIEU
 }
 
 enum trang_thai_ghe {
   CONTRONG
   DADAT
   DANGGIU
-  BAOTRI
 }
 
 enum trang_thai_ve {
@@ -478,4 +511,9 @@ enum vaitro {
   KHACHHANG
   NHANVIEN
   ADMIN
+}
+
+enum doi_tuong_ap_dung_km {
+  VE
+  COMBO
 }

@@ -35,8 +35,9 @@ export class VoucherService {
                 GiaTriGiamToiDa: dto.GiaTriGiamToiDa ?? 0,
                 NgayBatDau: new Date(dto.NgayBatDau),
                 NgayKetThuc: new Date(dto.NgayKetThuc),
+                DoiTuongApDung: dto.DoiTuongApDung,
                 TrangThai: dto.TrangThai,
-                CreatedAt: new (Date)
+                CreatedAt: new Date()
             },
         });
     }

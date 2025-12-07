@@ -1,8 +1,9 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ShowtimeService } from './showtime.service';
 import { GetShowtimeDto } from './dtos/get-showtime.dto';
 import { ShowtimeStatusEnum } from '../../libs/common/enums/showtime-status.enum';
+import { isUUID } from 'class-validator';
 
 @ApiTags('Suất chiếu')
 @Controller('showtimes')
@@ -30,6 +31,11 @@ export class ShowtimeController {
     @ApiResponse({ status: 200 })
     @ApiResponse({ status: 404, description: 'Suất chiếu không tồn tại' })
     async getShowtimeById(@Param('id') id: string) {
-        return this.showtimeService.getShowtimeById(id);
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        const showtime = await this.showtimeService.getShowtimeById(id);
+        if (!showtime) {
+            throw new NotFoundException('Suất chiếu không tồn tại');
+        }
+        return showtime;
     }
 }
