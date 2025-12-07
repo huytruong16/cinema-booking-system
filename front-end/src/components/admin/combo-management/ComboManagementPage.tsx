@@ -1,105 +1,36 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, ShoppingCart } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, ShoppingCart, Upload, ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { comboService, Combo } from '@/services/combo.service';
 
 type TrangThaiCombo = "CONHANG" | "HETHANG";
-
-// Interface dựa theo Table COMBO
-interface Combo {
-  MaCombo: number;
-  TenCombo: string;
-  MoTa: string | null;
-  GiaTien: number;
-  TrangThai: TrangThaiCombo;
-  HinhAnh: string | null;
-}
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-const mockCombos: Combo[] = [
-  {
-    MaCombo: 1,
-    TenCombo: "Combo Bắp Lớn + 2 Nước",
-    MoTa: "1 bắp rang bơ vị mặn/ngọt lớn và 2 ly nước ngọt (L) tùy chọn (Coca, Pepsi, 7Up).",
-    GiaTien: 125000,
-    TrangThai: "CONHANG",
-    HinhAnh: "https://cellphones.com.vn/sforum/wp-content/uploads/2023/07/gia-bap-nuoc-cgv-1.jpg"
-  },
-  {
-    MaCombo: 2,
-    TenCombo: "Combo Bắp Vừa + 1 Nước",
-    MoTa: "1 bắp rang bơ vị mặn/ngọt vừa và 1 ly nước ngọt (M) tùy chọn.",
-    GiaTien: 85000,
-    TrangThai: "CONHANG",
-    HinhAnh: "https://pbs.twimg.com/media/EQJTE-dUEAEZ2DA.jpg"
-  },
-  {
-    MaCombo: 3,
-    TenCombo: "Combo Couple (2 Bắp + 2 Nước)",
-    MoTa: "2 bắp rang bơ vừa và 2 nước ngọt (M). Tiết kiệm hơn khi mua lẻ.",
-    GiaTien: 150000,
-    TrangThai: "HETHANG",
-    HinhAnh: "https://tse3.mm.bing.net/th/id/OIP.itP1ZPjuhFbzBTSJ3pw5nAHaHa?cb=ucfimg2ucfimg=1&w=1200&h=1200&rs=1&pid=ImgDetMain&o=7&rm=3"
-  },
-   {
-    MaCombo: 4,
-    TenCombo: "Combo Bắp Lẻ",
-    MoTa: "1 bắp rang bơ (M).",
-    GiaTien: 55000,
-    TrangThai: "CONHANG",
-    HinhAnh: "https://tse1.mm.bing.net/th/id/OIP.3QZRYs1JBbpHc-AS4A0HugHaHa?cb=ucfimg2ucfimg=1&rs=1&pid=ImgDetMain&o=7&rm=3"
-  },
-];
 
 const trangThaiOptions: { value: TrangThaiCombo; label: string }[] = [
   { value: "CONHANG", label: "Còn hàng" },
   { value: "HETHANG", label: "Hết hàng" },
 ];
-// --- HẾT DỮ LIỆU GIẢ ---
 
 // Helper lấy màu badge
 const getBadgeVariant = (trangThai: TrangThaiCombo) => {
@@ -113,14 +44,31 @@ const getBadgeLabel = (trangThai: TrangThaiCombo) => {
   return trangThaiOptions.find(o => o.value === trangThai)?.label || trangThai;
 };
 
-// --- COMPONENT CHÍNH ---
 export default function ComboManagementPage() {
-  const [combos, setCombos] = useState<Combo[]>(mockCombos);
+  const [combos, setCombos] = useState<Combo[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
+
+  const fetchCombos = async () => {
+    try {
+      setIsLoading(true);
+      const data = await comboService.getAll();
+      setCombos(data);
+    } catch (error) {
+      console.error("Lỗi tải combo:", error);
+      toast.error("Không thể tải danh sách combo");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCombos();
+  }, []);
 
   const filteredCombos = useMemo(() => {
     return combos.filter(combo => {
@@ -139,29 +87,35 @@ export default function ComboManagementPage() {
     setIsModalOpen(true);
   };
 
-  const handleFormSubmit = (formData: Combo) => {
-    if (editingCombo) {
-        // Cập nhật
-        setCombos(prev => prev.map(c => c.MaCombo === formData.MaCombo ? formData : c));
-    } else {
-        // Thêm mới
-        const newCombo = { 
-            ...formData, 
-            MaCombo: Math.max(...combos.map(c => c.MaCombo)) + 1 
-        };
-        setCombos(prev => [newCombo, ...prev]);
+  const handleFormSubmit = async (formData: FormData) => {
+    try {
+        if (editingCombo) {
+            await comboService.update(editingCombo.MaCombo, formData);
+            toast.success("Cập nhật combo thành công!");
+        } else {
+            await comboService.create(formData);
+            toast.success("Tạo combo mới thành công!");
+        }
+        setIsModalOpen(false);
+        fetchCombos(); 
+    } catch (error: any) {
+        console.error(error);
+        toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (maCombo: number) => {
-      setCombos(prev => prev.filter(c => c.MaCombo !== maCombo));
+  const handleDelete = async (maCombo: string) => {
+      try {
+          await comboService.delete(maCombo);
+          toast.success("Đã xóa combo");
+          fetchCombos();
+      } catch (error) {
+          toast.error("Xóa thất bại");
+      }
   };
 
   return (
     <div className="space-y-6 text-white">
-      
-      {/* Header và Filters */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <h1 className="text-2xl font-bold">Quản lý Combo</h1>
         
@@ -195,23 +149,25 @@ export default function ComboManagementPage() {
         </div>
       </div>
 
-      {/* Grid Layout (Thay cho Table) */}
       <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredCombos.map((combo) => (
-            <ComboCard
-                key={combo.MaCombo}
-                combo={combo}
-                onEdit={() => handleEdit(combo)}
-                onDelete={() => handleDelete(combo.MaCombo)}
-                getBadgeLabel={getBadgeLabel}
-                getBadgeVariant={getBadgeVariant}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+            <div className="text-center text-slate-400 py-10">Đang tải dữ liệu...</div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredCombos.map((combo) => (
+                <ComboCard
+                    key={combo.MaCombo}
+                    combo={combo}
+                    onEdit={() => handleEdit(combo)}
+                    onDelete={() => handleDelete(combo.MaCombo)}
+                    getBadgeLabel={getBadgeLabel}
+                    getBadgeVariant={getBadgeVariant}
+                />
+            ))}
+            </div>
+        )}
       </ScrollArea>
 
-      {/* Modal Form */}
       {isModalOpen && (
         <ComboFormDialog
           isOpen={isModalOpen}
@@ -224,7 +180,7 @@ export default function ComboManagementPage() {
   );
 }
 
-// --- COMPONENT CON: CARD COMBO (MỚI) ---
+// --- COMPONENT CON: CARD COMBO ---
 interface ComboCardProps {
     combo: Combo; 
     onEdit: () => void;
@@ -234,29 +190,38 @@ interface ComboCardProps {
 }
 
 function ComboCard({ combo, onEdit, onDelete, getBadgeVariant, getBadgeLabel }: ComboCardProps) {
+    const [imageError, setImageError] = useState(false);
+
     return (
         <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex flex-col">
             <CardHeader className="pb-3">
                  <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-slate-800 border border-slate-700">
-                    {combo.HinhAnh ? (
-                        <Image src={combo.HinhAnh} alt={combo.TenCombo} fill className="object-cover" />
+                    {combo.HinhAnh && !imageError ? (
+                        <Image 
+                            src={combo.HinhAnh} 
+                            alt={combo.TenCombo} 
+                            fill 
+                            className="object-cover"
+                            onError={() => setImageError(true)}
+                        />
                     ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <ShoppingCart className="size-16 text-slate-600" />
+                        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                            <ImageOff className="size-12 mb-2 opacity-50" />
+                            <span className="text-xs">Không có ảnh</span>
                         </div>
                     )}
                 </div>
             </CardHeader>
             <CardContent className="flex-1 space-y-3">
                 <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-lg font-semibold text-slate-100 leading-snug">{combo.TenCombo}</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-slate-100 leading-snug line-clamp-2">{combo.TenCombo}</CardTitle>
                     <Badge variant="outline" className={cn("text-xs flex-shrink-0", getBadgeVariant(combo.TrangThai))}>
                         {getBadgeLabel(combo.TrangThai)}
                     </Badge>
                 </div>
                 
                 <p className="text-2xl font-bold text-primary">
-                    {combo.GiaTien.toLocaleString('vi-VN')} ₫
+                    {Number(combo.GiaTien).toLocaleString('vi-VN')} ₫
                 </p>
 
                 <ScrollArea className="h-20 pr-3">
@@ -268,7 +233,7 @@ function ComboCard({ combo, onEdit, onDelete, getBadgeVariant, getBadgeLabel }: 
             <CardFooter className="grid grid-cols-2 gap-2 !pt-4 border-t border-slate-800">
                 <Button variant="outline" className="w-full bg-transparent border-slate-700 hover:bg-slate-800" onClick={onEdit}>
                     <Edit className="size-4 mr-2" />
-                    Chỉnh sửa
+                    Sửa
                 </Button>
                 
                 <AlertDialog>
@@ -301,46 +266,67 @@ function ComboCard({ combo, onEdit, onDelete, getBadgeVariant, getBadgeLabel }: 
     );
 }
 
-// --- COMPONENT CON: DIALOG FORM (Giữ nguyên) ---
+interface ComboFormState {
+    TenCombo: string;
+    MoTa: string;
+    GiaTien: number | string;
+    TrangThai: TrangThaiCombo;
+}
+
+// --- COMPONENT CON: DIALOG FORM ---
 interface ComboFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: Combo) => void;
+    onSubmit: (data: FormData) => void;
     combo: Combo | null;
 }
 
 function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogProps) {
-    
-    const [formData, setFormData] = useState<Omit<Combo, 'MaCombo'>>(
-        combo || {
-            TenCombo: "",
-            MoTa: "",
-            GiaTien: 50000,
-            TrangThai: "CONHANG",
-            HinhAnh: "",
-        }
-    );
+    const [formData, setFormData] = useState<ComboFormState>({
+        TenCombo: "",
+        MoTa: "",
+        GiaTien: 50000,
+        TrangThai: "CONHANG",
+    });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     useEffect(() => {
         if (combo) {
-            setFormData(combo);
+            setFormData({
+                TenCombo: combo.TenCombo,
+                MoTa: combo.MoTa || "",
+                GiaTien: Number(combo.GiaTien),
+                TrangThai: combo.TrangThai,
+            });
+            setPreviewUrl(combo.HinhAnh);
         } else {
             setFormData({
                 TenCombo: "",
                 MoTa: "",
                 GiaTien: 50000,
                 TrangThai: "CONHANG",
-                HinhAnh: "",
             });
+            setPreviewUrl(null);
         }
+        setSelectedFile(null);
     }, [combo, isOpen]);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: type === 'number' ? Number(value) : value,
+            [name]: type === 'number' ? (value === "" ? "" : Number(value)) : value,
         }));
+    };
+
+    // Xử lý chọn file ảnh
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
     };
     
     const handleSelectChange = (value: TrangThaiCombo) => {
@@ -349,12 +335,40 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 1. VALIDATION
+        const errors = [];
+
+        const priceRegex = /^[1-9]\d*$/;
         
-        const dataToSubmit: Combo = {
-            MaCombo: combo?.MaCombo || 0,
-            ...formData,
-        };
-        onSubmit(dataToSubmit);
+        if (!formData.TenCombo.trim()) {
+             errors.push("Tên combo không được để trống.");
+        }
+
+        if (formData.GiaTien === "" || !priceRegex.test(String(formData.GiaTien))) {
+             errors.push("Giá tiền phải là số nguyên lớn hơn 0.");
+        }
+
+        if (!combo && !selectedFile) {
+             errors.push("Vui lòng chọn hình ảnh cho combo mới.");
+        }
+
+        if (errors.length > 0) {
+             errors.forEach(err => toast.error(err));
+             return;
+        }
+
+        const data = new FormData();
+        data.append('TenCombo', formData.TenCombo);
+        data.append('MoTa', formData.MoTa);
+        data.append('GiaTien', formData.GiaTien.toString());
+        data.append('TrangThai', formData.TrangThai);
+        
+        if (selectedFile) {
+            data.append('comboFile', selectedFile); 
+        }
+
+        onSubmit(data);
     };
     
     return (
@@ -372,7 +386,7 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                         <div className="space-y-4 py-4">
                             
                             <div className="space-y-2">
-                                <Label htmlFor="TenCombo">Tên combo</Label>
+                                <Label htmlFor="TenCombo">Tên combo <span className="text-red-500">*</span></Label>
                                 <Input 
                                     id="TenCombo" 
                                     name="TenCombo" 
@@ -388,7 +402,7 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                                 <Textarea 
                                     id="MoTa" 
                                     name="MoTa" 
-                                    value={formData.MoTa || ""} 
+                                    value={formData.MoTa} 
                                     onChange={handleChange} 
                                     className="bg-transparent border-slate-700" 
                                 />
@@ -396,7 +410,7 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="GiaTien">Giá tiền (VNĐ)</Label>
+                                    <Label htmlFor="GiaTien">Giá tiền (VNĐ) <span className="text-red-500">*</span></Label>
                                     <Input 
                                         id="GiaTien" 
                                         name="GiaTien" 
@@ -429,26 +443,28 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                                 </div>
                             </div>
                             
+                            {/* Input File Upload */}
                             <div className="space-y-2">
-                                <Label htmlFor="HinhAnh">URL Hình ảnh</Label>
-                                <Input 
-                                    id="HinhAnh" 
-                                    name="HinhAnh" 
-                                    type="url"
-                                    value={formData.HinhAnh || ""} 
-                                    onChange={handleChange} 
-                                    className="bg-transparent border-slate-700"
-                                />
-                            </div>
-                            
-                            <div className="space-y-2">
-                                <Label>Xem trước</Label>
-                                <div className="aspect-[2.5] w-full rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-                                    {formData.HinhAnh ? (
-                                        <Image src={formData.HinhAnh} alt="Preview" width={300} height={169} className="object-cover" />
-                                    ) : (
-                                        <p className="text-slate-500 text-sm">Chưa có ảnh</p>
-                                    )}
+                                <Label htmlFor="HinhAnh">Hình ảnh {!combo && <span className="text-red-500">*</span>}</Label>
+                                <div className="flex gap-4 items-start">
+                                    <div className="flex-1">
+                                         <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:bg-slate-800/50 transition-colors">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-8 h-8 mb-3 text-slate-400" />
+                                                <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Nhấn để tải lên</span></p>
+                                                <p className="text-xs text-slate-500">SVG, PNG, JPG or WEBP</p>
+                                            </div>
+                                            <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+                                        </label>
+                                    </div>
+                                    {/* Preview */}
+                                    <div className="w-32 h-32 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                        {previewUrl ? (
+                                            <Image src={previewUrl} alt="Preview" fill className="object-cover" />
+                                        ) : (
+                                            <span className="text-xs text-slate-500">Preview</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

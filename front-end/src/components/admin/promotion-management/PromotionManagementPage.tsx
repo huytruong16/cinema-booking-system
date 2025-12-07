@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -38,74 +40,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, CalendarIcon, TicketPercent, X } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { toast } from 'sonner';
 
-type TrangThaiKhuyenMai = "CONHOATDONG" | "KHONGCONHOATDONG";
-type LoaiGiamGia = "CODINH" | "PHANTRAM";
-
-interface KhuyenMai {
-  MaKhuyenMai: number;
-  TenKhuyenMai: string;
-  MoTa: string | null;
-  Code: string;
-  LoaiGiamGia: LoaiGiamGia;
-  GiaTri: number;
-  NgayBatDau: Date;
-  NgayKetThuc: Date;
-  SoLuongMa: number | null; 
-  GiaTriDonToiThieu: number | null;
-  GiaTriGiamToiDa: number | null;
-  TrangThai: TrangThaiKhuyenMai;
-}
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-const mockPromotions: KhuyenMai[] = [
-  {
-    MaKhuyenMai: 1,
-    TenKhuyenMai: "Giảm 20% cho thành viên mới",
-    MoTa: "Giảm 20% tổng giá trị hóa đơn cho khách hàng đăng ký mới.",
-    Code: "HELLOMOVIX",
-    LoaiGiamGia: "PHANTRAM",
-    GiaTri: 20, // 20%
-    NgayBatDau: new Date("2025-11-01"),
-    NgayKetThuc: new Date("2025-11-30"),
-    SoLuongMa: 1000,
-    GiaTriDonToiThieu: 0,
-    GiaTriGiamToiDa: 50000,
-    TrangThai: "CONHOATDONG",
-  },
-  {
-    MaKhuyenMai: 2,
-    TenKhuyenMai: "Giảm 50K (Thứ 4 Vui Vẻ)",
-    MoTa: "Giảm ngay 50.000 ₫ cho hóa đơn bất kỳ vào ngày Thứ 4 hàng tuần.",
-    Code: "WEDNESDAY50",
-    LoaiGiamGia: "CODINH",
-    GiaTri: 50000, // 50.000 ₫
-    NgayBatDau: new Date("2025-10-01"),
-    NgayKetThuc: new Date("2025-12-31"),
-    SoLuongMa: null, // Không giới hạn
-    GiaTriDonToiThieu: 100000,
-    GiaTriGiamToiDa: 50000,
-    TrangThai: "CONHOATDONG",
-  },
-    {
-    MaKhuyenMai: 3,
-    TenKhuyenMai: "Đồng giá vé 45K (Đã hết hạn)",
-    MoTa: "Chương trình đồng giá vé 45K cho sinh viên.",
-    Code: "STUDENT45",
-    LoaiGiamGia: "CODINH",
-    GiaTri: 45000, // (Logic phức tạp hơn, nhưng tạm để 45k)
-    NgayBatDau: new Date("2024-09-01"),
-    NgayKetThuc: new Date("2024-10-30"),
-    SoLuongMa: 500,
-    GiaTriDonToiThieu: 0,
-    GiaTriGiamToiDa: null,
-    TrangThai: "KHONGCONHOATDONG",
-  },
-];
+import { 
+    voucherService, 
+    Voucher, 
+    CreateVoucherDto, 
+    LoaiGiamGia, 
+    TrangThaiKhuyenMai 
+} from '@/services/voucher.service';
 
 const trangThaiOptions: { value: TrangThaiKhuyenMai; label: string }[] = [
   { value: "CONHOATDONG", label: "Còn hoạt động" },
@@ -116,9 +63,7 @@ const loaiGiamGiaOptions: { value: LoaiGiamGia; label: string }[] = [
     { value: "PHANTRAM", label: "Phần trăm (%)" },
     { value: "CODINH", label: "Số tiền cố định (₫)" },
 ];
-// --- HẾT DỮ LIỆU GIẢ ---
 
-// Helper lấy màu badge
 const getBadgeVariant = (trangThai: TrangThaiKhuyenMai) => {
     switch (trangThai) {
         case "CONHOATDONG": return "bg-green-600 text-white";
@@ -126,18 +71,37 @@ const getBadgeVariant = (trangThai: TrangThaiKhuyenMai) => {
         default: return "outline";
     }
 };
+
 const getBadgeLabel = (trangThai: TrangThaiKhuyenMai) => {
   return trangThaiOptions.find(o => o.value === trangThai)?.label || trangThai;
 };
 
 // --- COMPONENT CHÍNH ---
 export default function PromotionManagementPage() {
-  const [promotions, setPromotions] = useState<KhuyenMai[]>(mockPromotions);
+  const [promotions, setPromotions] = useState<Voucher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPromotion, setEditingPromotion] = useState<KhuyenMai | null>(null);
+  const [editingPromotion, setEditingPromotion] = useState<Voucher | null>(null);
+
+  const fetchPromotions = async () => {
+    try {
+        setIsLoading(true);
+        const data = await voucherService.getAll();
+        setPromotions(data);
+    } catch (error) {
+        console.error("Lỗi tải khuyến mãi:", error);
+        toast.error("Không thể tải danh sách khuyến mãi");
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPromotions();
+  }, []);
 
   const filteredPromotions = useMemo(() => {
     return promotions.filter(promo => {
@@ -152,26 +116,42 @@ export default function PromotionManagementPage() {
     setEditingPromotion(null); 
     setIsModalOpen(true);
   };
-  const handleEdit = (promo: KhuyenMai) => {
+
+  const handleEdit = (promo: Voucher) => {
     setEditingPromotion(promo); 
     setIsModalOpen(true);
   };
 
-  const handleFormSubmit = (formData: KhuyenMai) => {
-    if (editingPromotion) {
-        setPromotions(prev => prev.map(p => p.MaKhuyenMai === formData.MaKhuyenMai ? formData : p));
-    } else {
-        const newPromo = { 
-            ...formData, 
-            MaKhuyenMai: Math.max(...promotions.map(p => p.MaKhuyenMai)) + 1 
-        };
-        setPromotions(prev => [newPromo, ...prev]);
+  const handleFormSubmit = async (formData: CreateVoucherDto) => {
+    try {
+        if (editingPromotion) {
+            await voucherService.update(editingPromotion.MaKhuyenMai, formData);
+            toast.success("Cập nhật khuyến mãi thành công!");
+        } else {
+            await voucherService.create(formData);
+            toast.success("Tạo khuyến mãi mới thành công!");
+        }
+        setIsModalOpen(false);
+        fetchPromotions();
+    } catch (error: any) {
+        console.error(error);
+        const msg = error.response?.data?.message || "Có lỗi xảy ra";
+        if (Array.isArray(msg)) {
+             toast.error(msg.join(", "));
+        } else {
+             toast.error(msg);
+        }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (maKhuyenMai: number) => {
-      setPromotions(prev => prev.filter(p => p.MaKhuyenMai !== maKhuyenMai));
+  const handleDelete = async (maKhuyenMai: string) => {
+      try {
+          await voucherService.delete(maKhuyenMai);
+          toast.success("Đã xóa (ẩn) khuyến mãi");
+          fetchPromotions();
+      } catch (error) {
+          toast.error("Xóa thất bại");
+      }
   };
 
   return (
@@ -210,18 +190,22 @@ export default function PromotionManagementPage() {
       </div>
 
       <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredPromotions.map((promo) => (
-            <PromotionCard
-                key={promo.MaKhuyenMai}
-                promotion={promo}
-                onEdit={() => handleEdit(promo)}
-                onDelete={() => handleDelete(promo.MaKhuyenMai)}
-                getBadgeLabel={getBadgeLabel}
-                getBadgeVariant={getBadgeVariant}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+             <div className="text-center text-slate-400 py-10">Đang tải dữ liệu...</div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredPromotions.map((promo) => (
+                <PromotionCard
+                    key={promo.MaKhuyenMai}
+                    promotion={promo}
+                    onEdit={() => handleEdit(promo)}
+                    onDelete={() => handleDelete(promo.MaKhuyenMai)}
+                    getBadgeLabel={getBadgeLabel}
+                    getBadgeVariant={getBadgeVariant}
+                />
+            ))}
+            </div>
+        )}
       </ScrollArea>
 
       {isModalOpen && (
@@ -236,8 +220,9 @@ export default function PromotionManagementPage() {
   );
 }
 
+// --- COMPONENT CARD ---
 interface PromotionCardProps {
-    promotion: KhuyenMai; 
+    promotion: Voucher; 
     onEdit: () => void;
     onDelete: () => void;
     getBadgeVariant: (trangThai: TrangThaiKhuyenMai) => string;
@@ -248,22 +233,25 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
     
     const displayValue = useMemo(() => {
         if (promotion.LoaiGiamGia === 'PHANTRAM') {
-            return `GIẢM ${promotion.GiaTri}%`;
+            return `GIẢM ${Number(promotion.GiaTri)}%`;
         }
-        return `GIẢM ${promotion.GiaTri.toLocaleString('vi-VN')} ₫`;
+        return `GIẢM ${Number(promotion.GiaTri).toLocaleString('vi-VN')} ₫`;
     }, [promotion.LoaiGiamGia, promotion.GiaTri]);
 
     const conditions = useMemo(() => {
         const parts = [];
         if (promotion.GiaTriDonToiThieu && promotion.GiaTriDonToiThieu > 0) {
-            parts.push(`Đơn tối thiểu ${promotion.GiaTriDonToiThieu.toLocaleString('vi-VN')} ₫`);
+            parts.push(`Đơn tối thiểu ${Number(promotion.GiaTriDonToiThieu).toLocaleString('vi-VN')} ₫`);
         }
         if (promotion.LoaiGiamGia === 'PHANTRAM' && promotion.GiaTriGiamToiDa) {
-            parts.push(`Giảm tối đa ${promotion.GiaTriGiamToiDa.toLocaleString('vi-VN')} ₫`);
+            parts.push(`Giảm tối đa ${Number(promotion.GiaTriGiamToiDa).toLocaleString('vi-VN')} ₫`);
         }
-        if (promotion.SoLuongMa) {
-            parts.push(`Còn ${promotion.SoLuongMa} lượt`);
+        if (promotion.SoLuongMa > 1000000) {
+             parts.push(`Không giới hạn`);
+        } else {
+             parts.push(`Tổng: ${promotion.SoLuongMa} mã`);
         }
+        
         return parts.join(' | ');
     }, [promotion]);
 
@@ -287,7 +275,7 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
                 
                 <div className="space-y-1">
                     <p className="text-sm text-slate-300">
-                        Hiệu lực: {format(promotion.NgayBatDau, "dd/MM/yy")} - {format(promotion.NgayKetThuc, "dd/MM/yy")}
+                        Hiệu lực: {format(new Date(promotion.NgayBatDau), "dd/MM/yy")} - {format(new Date(promotion.NgayKetThuc), "dd/MM/yy")}
                     </p>
                     <p className="text-xs text-slate-400">
                         {conditions || "Áp dụng cho tất cả hóa đơn."}
@@ -298,7 +286,7 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
             <CardFooter className="grid grid-cols-2 gap-2 !pt-4 border-t border-slate-800">
                 <Button variant="outline" className="w-full bg-transparent border-slate-700 hover:bg-slate-800" onClick={onEdit}>
                     <Edit className="size-4 mr-2" />
-                    Chỉnh sửa
+                    Sửa
                 </Button>
                 
                 <AlertDialog>
@@ -312,7 +300,7 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
                     <AlertDialogHeader>
                         <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-400">
-                        Hành động này không thể hoàn tác. Khuyến mãi &quot;{promotion.TenKhuyenMai}&quot; sẽ bị xóa vĩnh viễn.
+                        Hành động này không thể hoàn tác. Khuyến mãi &quot;{promotion.TenKhuyenMai}&quot; sẽ bị xóa vĩnh viễn (hoặc ẩn đi).
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -331,34 +319,61 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
     );
 }
 
+interface PromotionFormState {
+    TenKhuyenMai: string;
+    MoTa: string;
+    Code: string;
+    LoaiGiamGia: LoaiGiamGia;
+    GiaTri: number | string;     
+    NgayBatDau: string;
+    NgayKetThuc: string;
+    SoLuongMa: number | string;       
+    SoLuongSuDung: number;
+    GiaTriDonToiThieu: number | string;
+    GiaTriGiamToiDa: number | string; 
+    TrangThai: TrangThaiKhuyenMai;
+}
+
 interface PromotionFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: KhuyenMai) => void;
-    promotion: KhuyenMai | null;
+    onSubmit: (data: CreateVoucherDto) => void;
+    promotion: Voucher | null;
 }
 
 function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: PromotionFormDialogProps) {
     
-    const [formData, setFormData] = useState<Omit<KhuyenMai, 'MaKhuyenMai'>>(
-        promotion || {
+    const [formData, setFormData] = useState<PromotionFormState>({
             TenKhuyenMai: "",
             MoTa: "",
             Code: "",
             LoaiGiamGia: "PHANTRAM",
             GiaTri: 10,
-            NgayBatDau: new Date(),
-            NgayKetThuc: new Date(),
+            NgayBatDau: new Date().toISOString(),
+            NgayKetThuc: new Date().toISOString(),
             SoLuongMa: 1000,
+            SoLuongSuDung: 0,
             GiaTriDonToiThieu: 0,
-            GiaTriGiamToiDa: 50000,
+            GiaTriGiamToiDa: 0,
             TrangThai: "CONHOATDONG",
-        }
-    );
+    });
 
     useEffect(() => {
         if (promotion) {
-            setFormData(promotion);
+            setFormData({
+                TenKhuyenMai: promotion.TenKhuyenMai,
+                MoTa: promotion.MoTa || "",
+                Code: promotion.Code,
+                LoaiGiamGia: promotion.LoaiGiamGia,
+                GiaTri: Number(promotion.GiaTri),
+                NgayBatDau: promotion.NgayBatDau,
+                NgayKetThuc: promotion.NgayKetThuc,
+                SoLuongMa: Number(promotion.SoLuongMa) > 1000000 ? "" : Number(promotion.SoLuongMa),
+                SoLuongSuDung: Number(promotion.SoLuongSuDung),
+                GiaTriDonToiThieu: Number(promotion.GiaTriDonToiThieu),
+                GiaTriGiamToiDa: Number(promotion.GiaTriGiamToiDa),
+                TrangThai: promotion.TrangThai,
+            });
         } else {
             setFormData({
                 TenKhuyenMai: "",
@@ -366,11 +381,12 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                 Code: "",
                 LoaiGiamGia: "PHANTRAM",
                 GiaTri: 10,
-                NgayBatDau: new Date(),
-                NgayKetThuc: new Date(),
-                SoLuongMa: 1000,
+                NgayBatDau: new Date().toISOString(),
+                NgayKetThuc: new Date().toISOString(),
+                SoLuongMa: 100,
+                SoLuongSuDung: 0,
                 GiaTriDonToiThieu: 0,
-                GiaTriGiamToiDa: 50000,
+                GiaTriGiamToiDa: 0,
                 TrangThai: "CONHOATDONG",
             });
         }
@@ -380,7 +396,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
         const { name, value, type } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: type === 'number' ? (value === "" ? null : Number(value)) : value, // Cho phép null
+            [name]: type === 'number' ? (value === "" ? "" : Number(value)) : value,
         }));
     };
     
@@ -388,22 +404,55 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
          setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-     const handleDateChange = (name: string, date: Date | undefined) => {
+     const handleDateChange = (name: 'NgayBatDau' | 'NgayKetThuc', date: Date | undefined) => {
         if (date) {
-            setFormData(prev => ({ ...prev, [name]: date }));
+            setFormData(prev => ({ ...prev, [name]: date.toISOString() }));
         }
     };
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const errors = [];
+
+        const positiveIntegerRegex = /^[1-9]\d*$/;
+        const nonNegativeNumberRegex = /^\d+(\.\d+)?$/;
+
+        if (formData.SoLuongMa !== "" && !positiveIntegerRegex.test(String(formData.SoLuongMa))) {
+             errors.push("Số lượng mã phải là số nguyên lớn hơn 0.");
+        }
+
+        if (formData.GiaTri === "" || Number(formData.GiaTri) <= 0) {
+             errors.push("Giá trị giảm giá phải lớn hơn 0.");
+        }
         
-        const dataToSubmit: KhuyenMai = {
-            MaKhuyenMai: promotion?.MaKhuyenMai || 0,
-            ...formData,
-            GiaTri: formData.GiaTri || 0,
-            NgayBatDau: formData.NgayBatDau || new Date(),
-            NgayKetThuc: formData.NgayKetThuc || new Date(),
+        if (formData.GiaTriDonToiThieu !== "" && Number(formData.GiaTriDonToiThieu) < 0) {
+             errors.push("Giá trị đơn tối thiểu không được âm.");
+        }
+
+        if (errors.length > 0) {
+             errors.forEach(err => toast.error(err));
+             return;
+        }
+
+        const finalSoLuongMa = (formData.SoLuongMa === "" || formData.SoLuongMa === 0) 
+                                ? 999999999 
+                                : Number(formData.SoLuongMa);
+
+        const dataToSubmit: CreateVoucherDto = {
+            TenKhuyenMai: formData.TenKhuyenMai,
+            MoTa: formData.MoTa,
+            Code: formData.Code,
+            LoaiGiamGia: formData.LoaiGiamGia,
+            GiaTri: Number(formData.GiaTri),
+            NgayBatDau: formData.NgayBatDau,
+            NgayKetThuc: formData.NgayKetThuc,
+            SoLuongMa: finalSoLuongMa,
+            SoLuongSuDung: formData.SoLuongSuDung,
+            GiaTriDonToiThieu: Number(formData.GiaTriDonToiThieu) || 0,
+            GiaTriGiamToiDa: Number(formData.GiaTriGiamToiDa) || 0,
+            TrangThai: formData.TrangThai,
         };
+        
         onSubmit(dataToSubmit);
     };
     
@@ -428,7 +477,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="Code">Mã khuyến mãi (Code)</Label>
-                                    <Input id="Code" name="Code" value={formData.Code} onChange={handleChange} className="bg-transparent border-slate-700 font-mono" required />
+                                    <Input id="Code" name="Code" value={formData.Code} onChange={handleChange} className="bg-transparent border-slate-700 font-mono uppercase" required />
                                 </div>
                             </div>
                             
@@ -457,12 +506,12 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                                     <Label htmlFor="GiaTri">
                                         Giá trị ({formData.LoaiGiamGia === 'PHANTRAM' ? '%' : 'VNĐ'})
                                     </Label>
-                                    <Input id="GiaTri" name="GiaTri" type="number" value={formData.GiaTri || 0} onChange={handleChange} className="bg-transparent border-slate-700" required />
+                                    <Input id="GiaTri" name="GiaTri" type="number" value={formData.GiaTri} onChange={handleChange} className="bg-transparent border-slate-700" required />
                                 </div>
                                 {formData.LoaiGiamGia === 'PHANTRAM' && (
                                     <div className="space-y-2">
                                         <Label htmlFor="GiaTriGiamToiDa">Giảm tối đa (VNĐ)</Label>
-                                        <Input id="GiaTriGiamToiDa" name="GiaTriGiamToiDa" type="number" value={formData.GiaTriGiamToiDa || 0} onChange={handleChange} className="bg-transparent border-slate-700" />
+                                        <Input id="GiaTriGiamToiDa" name="GiaTriGiamToiDa" type="number" value={formData.GiaTriGiamToiDa} onChange={handleChange} className="bg-transparent border-slate-700" />
                                     </div>
                                 )}
                             </div>
@@ -470,11 +519,19 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="GiaTriDonToiThieu">Đơn tối thiểu (VNĐ)</Label>
-                                    <Input id="GiaTriDonToiThieu" name="GiaTriDonToiThieu" type="number" value={formData.GiaTriDonToiThieu || 0} onChange={handleChange} className="bg-transparent border-slate-700" />
+                                    <Input id="GiaTriDonToiThieu" name="GiaTriDonToiThieu" type="number" value={formData.GiaTriDonToiThieu} onChange={handleChange} className="bg-transparent border-slate-700" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="SoLuongMa">Số lượng mã (Bỏ trống = không giới hạn)</Label>
-                                    <Input id="SoLuongMa" name="SoLuongMa" type="number" value={formData.SoLuongMa || ""} onChange={handleChange} className="bg-transparent border-slate-700" />
+                                    <Label htmlFor="SoLuongMa">Số lượng mã (Bỏ trống = Không giới hạn)</Label>
+                                    <Input 
+                                        id="SoLuongMa" 
+                                        name="SoLuongMa" 
+                                        type="number" 
+                                        value={formData.SoLuongMa} 
+                                        onChange={handleChange} 
+                                        className="bg-transparent border-slate-700" 
+                                        placeholder="Không giới hạn"
+                                    />
                                 </div>
                             </div>
                             
@@ -485,11 +542,11 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                                         <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white", !formData.NgayBatDau && "text-slate-400")}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {formData.NgayBatDau ? format(formData.NgayBatDau, "PPP", { locale: vi }) : <span>Chọn ngày</span>}
+                                                {formData.NgayBatDau ? format(new Date(formData.NgayBatDau), "PPP", { locale: vi }) : <span>Chọn ngày</span>}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white">
-                                            <Calendar mode="single" selected={formData.NgayBatDau} onSelect={(date) => handleDateChange("NgayBatDau", date)} initialFocus />
+                                            <Calendar mode="single" selected={new Date(formData.NgayBatDau)} onSelect={(date) => handleDateChange("NgayBatDau", date)} initialFocus />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
@@ -499,11 +556,11 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                                         <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white", !formData.NgayKetThuc && "text-slate-400")}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {formData.NgayKetThuc ? format(formData.NgayKetThuc, "PPP", { locale: vi }) : <span>Chọn ngày</span>}
+                                                {formData.NgayKetThuc ? format(new Date(formData.NgayKetThuc), "PPP", { locale: vi }) : <span>Chọn ngày</span>}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white">
-                                            <Calendar mode="single" selected={formData.NgayKetThuc} onSelect={(date) => handleDateChange("NgayKetThuc", date)} initialFocus />
+                                            <Calendar mode="single" selected={new Date(formData.NgayKetThuc)} onSelect={(date) => handleDateChange("NgayKetThuc", date)} initialFocus />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
@@ -511,7 +568,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
 
                             <div className="space-y-2">
                                 <Label htmlFor="TrangThai">Trạng thái</Label>
-                                <Select name="TrangThai" value={formData.TrangThai} onValueChange={(v: TrangThaiKhuyenMai) => handleSelectChange('TrangThai', v)}>
+                                <Select name="TrangThai" value={formData.TrangThai} onValueChange={(v) => handleSelectChange('TrangThai', v)}>
                                     <SelectTrigger className="w-full bg-transparent border-slate-700">
                                         <SelectValue />
                                     </SelectTrigger>
