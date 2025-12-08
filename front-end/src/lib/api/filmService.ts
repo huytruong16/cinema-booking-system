@@ -16,11 +16,19 @@ export interface BackendFilm {
   NgayBatDauChieu: string;
   NgayKetThucChieu: string;
   DiemDanhGia: number;
-  TrangThaiPhim: "DANGCHIEU" | "SAPCHIEU" | "NGUNGCHIEU";
+  TrangThaiPhim: string; 
   MaNhanPhim: string;
   PhienBanPhims?: {
     GiaVe: string;
     DinhDang: { TenDinhDang: string };
+  }[];
+  PhimTheLoais?: {
+    TheLoai: { TenTheLoai: string };
+  }[];
+  DanhGias?: {
+    NoiDung: string;
+    Diem: number;
+    CreatedAt: string;
   }[];
 }
 
@@ -28,10 +36,13 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
   let status: "now_showing" | "coming_soon" | "ended" = "ended";
   if (film.TrangThaiPhim === "DANGCHIEU") status = "now_showing";
   else if (film.TrangThaiPhim === "SAPCHIEU") status = "coming_soon";
+  else if (film.TrangThaiPhim === "NGUNGCHIEU") status = "ended";
 
   const price = film.PhienBanPhims && film.PhienBanPhims.length > 0 
     ? parseInt(film.PhienBanPhims[0].GiaVe) 
     : 0;
+
+  const tags = film.PhimTheLoais?.map((item) => item.TheLoai.TenTheLoai) || [];
 
   return {
     id: film.MaPhim,
@@ -49,6 +60,7 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
     country: film.QuocGia,
     rating: film.DiemDanhGia,
     price: price,
+    tags: tags, 
     views: 0,
   };
 };
@@ -61,6 +73,16 @@ export const filmService = {
     } catch (error) {
       console.error("Lỗi khi lấy danh sách phim:", error);
       return [];
+    }
+  },
+
+  getFilmById: async (id: string): Promise<Movie | null> => {
+    try {
+      const response = await api.get<BackendFilm>(`/films/${id}`);
+      return mapToFrontendMovie(response.data);
+    } catch (error) {
+      console.error(`Lỗi get film ${id}:`, error);
+      return null;
     }
   }
 };
