@@ -4,11 +4,12 @@ import { TransactionController } from './transaction.controller';
 import { TransactionService } from './transaction.service';
 import { MailService } from 'src/modules/mail/mail.service';
 import { PayosService } from 'src/libs/common/services/payos.service';
+import { TransactionCronService } from './transaction.cron.service';
 
 @Module({
     imports: [ConfigModule],
     controllers: [TransactionController],
-    providers: [TransactionService, MailService, PayosService],
+    providers: [TransactionService, MailService, PayosService, TransactionCronService],
     exports: [TransactionService],
 })
 export class TransactionModule { }
