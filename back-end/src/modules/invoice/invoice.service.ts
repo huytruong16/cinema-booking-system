@@ -145,46 +145,58 @@ export class InvoiceService {
         }
       });
 
-      if (Combos && Combos.length > 0) {
-        for (const c of comboPrices) {
-          await tx.hOADONCOMBO.create({
-            data: {
-              MaHoaDon: hoaDon.MaHoaDon,
-              MaCombo: c.id,
-              SoLuong: Combos.find(x => x.MaCombo === c.id)?.SoLuong || 1,
-              DonGia: c.price.toString()
-            }
-          });
-        }
+      if (Combos?.length) {
+        await tx.hOADONCOMBO.createMany({
+          data: comboPrices.map((c) => ({
+            MaHoaDon: hoaDon.MaHoaDon,
+            MaCombo: c.id,
+            SoLuong: Combos.find(x => x.MaCombo === c.id)?.SoLuong || 1,
+            DonGia: c.price.toString(),
+          })),
+        });
       }
 
-      for (const s of seatPrices) {
-        await tx.vE.create({
-          data: {
+      if (seatPrices.length) {
+        await tx.vE.createMany({
+          data: seatPrices.map((s) => ({
             MaGheSuatChieu: s.id,
             GiaVe: s.price.toString(),
-            MaHoaDon: hoaDon.MaHoaDon
-          }
+            MaHoaDon: hoaDon.MaHoaDon,
+          })),
         });
-
-        await tx.gHE_SUATCHIEU.update({
-          where: { MaGheSuatChieu: s.id },
-          data: { TrangThai: SeatStatusEnum.DADAT }
-        });
-
-        for (const v of voucherPrices) {
-          await tx.hOADON_KHUYENMAI.create({
-            data: {
-              MaHoaDon: hoaDon.MaHoaDon,
-              MaKhuyenMaiKH: v.id,
-              GiaTriGiam: v.price,
-            }
-          });
-        }
       }
+
+      await tx.gHE_SUATCHIEU.updateMany({
+        where: {
+          MaGheSuatChieu: {
+            in: seatPrices.map(s => s.id),
+          },
+        },
+        data: { TrangThai: SeatStatusEnum.DADAT, UpdatedAt: new Date() },
+      });
 
       return hoaDon;
     });
+
+    if (created && voucherPrices.length) {
+      await prisma.hOADON_KHUYENMAI.createMany({
+        data: voucherPrices.map((v) => ({
+          MaHoaDon: created.MaHoaDon,
+          MaKhuyenMaiKH: v.id,
+          GiaTriGiam: v.price,
+        })),
+      });
+
+      await prisma.kHUYENMAI_KHACHHANG.updateMany({
+        where: {
+          MaKhuyenMaiKH: { in: voucherPrices.map(v => v.id) }
+        },
+        data: {
+          DaSuDung: true,
+          UpdatedAt: new Date()
+        },
+      });
+    }
 
     const paymentData: { paymentLinkId: string, checkoutUrl: string } =
       await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
@@ -273,6 +285,10 @@ export class InvoiceService {
             KhuyenMai: true
           }
         });
+
+        if (vouchers.some(v => v.KhuyenMai.TrangThai === PromoStatusEnum.KHONGCONHOATDONG || v.KhuyenMai.DeletedAt != null || new Date() < v.KhuyenMai.NgayBatDau || new Date() > v.KhuyenMai.NgayKetThuc)) {
+          throw new NotFoundException('Một hoặc vài voucher không hoạt động');
+        }
 
         if (vouchers.length !== MaVouchers.length) {
           throw new NotFoundException('Một hoặc vài voucher không tồn tại');

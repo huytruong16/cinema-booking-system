@@ -9,6 +9,66 @@ import { PrismaService } from "src/modules/prisma/prisma.service";
 export class TransactionService {
     constructor(private readonly prisma: PrismaService, private readonly payosService: PayosService, private readonly mailService: MailService) { }
 
+    private async sendInvoiceEmail(invoice: NonNullable<any>) {
+        const emailData: InvoiceMailDto = {
+            Transaction: {
+                GiaoDich: {
+                    HoaDon: {
+                        CreatedAt: invoice.CreatedAt.toLocaleDateString('vi-VN'),
+                        TongTien: invoice.TongTien,
+                        Email: invoice.Email,
+                        Code: invoice.Code,
+                        HoaDonCombos: invoice.HoaDonCombos.map(hdc => ({
+                            SoLuong: hdc.SoLuong,
+                            DonGia: hdc.DonGia,
+                            Combo: {
+                                TenCombo: hdc.Combo.TenCombo
+                            }
+                        })),
+                        Ves: invoice.Ves.map(ve => ({
+                            GiaVe: ve.GiaVe,
+                            GheSuatChieu: {
+                                GhePhongChieu: {
+                                    GheLoaiGhe: {
+                                        Ghe: {
+                                            Hang: ve.GheSuatChieu.GhePhongChieu.GheLoaiGhe.Ghe.Hang,
+                                            Cot: ve.GheSuatChieu.GhePhongChieu.GheLoaiGhe.Ghe.Cot
+                                        }
+                                    }
+                                }
+                            }
+                        }))
+                    }
+                }
+            },
+            Showtime: {
+                ThoiGianBatDau: invoice.Ves[0].GheSuatChieu.SuatChieu.ThoiGianBatDau,
+                PhienBanPhim: {
+                    Phim: {
+                        TenHienThi: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.TenHienThi,
+                        NhanPhim: {
+                            TenNhanPhim: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.NhanPhim?.TenNhanPhim
+                        },
+                        DinhDang: {
+                            TenDinhDang: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.DinhDang.TenDinhDang
+                        },
+                        NgonNgu: {
+                            TenNgonNgu: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.NgonNgu?.TenNgonNgu
+                        },
+                    }
+                },
+                PhongChieu: {
+                    TenPhongChieu: invoice.Ves[0].GheSuatChieu.SuatChieu.PhongChieu.TenPhongChieu
+                }
+            }
+        };
+        await this.mailService.sendInvoiceEmail(
+            emailData.Transaction.GiaoDich.HoaDon.Email,
+            'Xác nhận đặt vé thành công',
+            emailData
+        );
+    }
+
     async getAllTransactions() {
         return await this.prisma.gIAODICH.findMany({
             where: { DeletedAt: null },
@@ -144,101 +204,9 @@ export class TransactionService {
         });
 
         if (isPaid) {
-            await sendInvoiceEmail(transaction.HoaDon);
-        } else {
-            if (transaction.LoaiGiaoDich === TransactionTypeEnum.MUAVE) {
-                await deleteTicket(transaction);
-                await updateShowtimeSeat(transaction);
-            }
+            await this.sendInvoiceEmail(transaction.HoaDon);
         }
-
 
         return { success: true };
-
-        async function updateShowtimeSeat(transaction: NonNullable<any>) {
-            await this.prisma.gHE_SUATCHIEU.updateMany({
-                where: {
-                    MaGheSuatChieu: { in: transaction.HoaDon.Ves.map(v => v.GheSuatChieu.MaGheSuatChieu) },
-                    DeletedAt: null
-                },
-                data: {
-                    TrangThai: SeatStatusEnum.CONTRONG,
-                    UpdatedAt: new Date(),
-                }
-            });
-        }
-
-        async function deleteTicket(transaction: NonNullable<any>) {
-            await this.prisma.vE.updateMany({
-                where: {
-                    MaVe: { in: transaction.HoaDon.Ves.map(v => v.MaVe) },
-                    DeletedAt: null
-                },
-                data: {
-                    DeletedAt: new Date(),
-                }
-            });
-        }
-
-        async function sendInvoiceEmail(invoice: NonNullable<any>) {
-            const emailData: InvoiceMailDto = {
-                Transaction: {
-                    GiaoDich: {
-                        HoaDon: {
-                            CreatedAt: invoice.CreatedAt.toLocaleDateString('vi-VN'),
-                            TongTien: invoice.TongTien,
-                            Email: invoice.Email,
-                            Code: invoice.Code,
-                            HoaDonCombos: invoice.HoaDonCombos.map(hdc => ({
-                                SoLuong: hdc.SoLuong,
-                                DonGia: hdc.DonGia,
-                                Combo: {
-                                    TenCombo: hdc.Combo.TenCombo
-                                }
-                            })),
-                            Ves: invoice.Ves.map(ve => ({
-                                GiaVe: ve.GiaVe,
-                                GheSuatChieu: {
-                                    GhePhongChieu: {
-                                        GheLoaiGhe: {
-                                            Ghe: {
-                                                Hang: ve.GheSuatChieu.GhePhongChieu.GheLoaiGhe.Ghe.Hang,
-                                                Cot: ve.GheSuatChieu.GhePhongChieu.GheLoaiGhe.Ghe.Cot
-                                            }
-                                        }
-                                    }
-                                }
-                            })
-                            )
-                        }
-                    }
-                },
-                Showtime: {
-                    ThoiGianBatDau: invoice.Ves[0].GheSuatChieu.SuatChieu.ThoiGianBatDau.toLocaleDateString('vi-VN'),
-                    PhienBanPhim: {
-                        Phim: {
-                            TenHienThi: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.TenHienThi,
-                            NhanPhim: {
-                                TenNhanPhim: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.NhanPhim?.TenNhanPhim
-                            },
-                            DinhDang: {
-                                TenDinhDang: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.DinhDang.TenDinhDang
-                            },
-                            NgonNgu: {
-                                TenNgonNgu: invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.NgonNgu?.TenNgonNgu
-                            },
-                        }
-                    },
-                    PhongChieu: {
-                        TenPhongChieu: invoice.Ves[0].GheSuatChieu.SuatChieu.PhongChieu.TenPhongChieu
-                    }
-                }
-            };
-            await this.mailService.sendInvoiceEmail(
-                emailData.Transaction.GiaoDich.HoaDon.Email,
-                'Xác nhận đặt vé thành công',
-                emailData
-            );
-        }
     }
 }
