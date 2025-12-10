@@ -2,15 +2,17 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { mockMovies, mockShowtimes } from '@/lib/mockData';
+import { mockShowtimes } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Star, PlayCircle, Calendar } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { format, addDays } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { MovieReviews } from '@/components/movies/MovieReviews';
+import { filmService } from '@/services/film.service';
+import { Movie } from '@/types/movie';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,34 @@ export default function MovieDetailPage() {
   const router = useRouter();
   const movieId = params.id;
 
+  const [movie, setMovie] = useState<Movie | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchMovieDetail = async () => {
+      if (!movieId){
+        console.error("Movie ID is missing");
+        return;
+      } 
+      
+      setIsLoading(true);
+      try {
+        const id = Array.isArray(movieId) ? movieId[0] : movieId;
+        const fetchedMovie = await filmService.getFilmById(id);
+        console.log("Fetched movie:", fetchedMovie);
+        setMovie(fetchedMovie);
+      } catch (error) {
+        console.error("Failed to fetch movie details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMovieDetail();
+  }, [movieId]);
+
   const daysList = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 14 }).map((_, i) => {
@@ -53,11 +82,21 @@ export default function MovieDetailPage() {
 
   const [selectedDate, setSelectedDate] = useState(daysList[0].fullDate);
 
-  const movie = mockMovies.find(m => m.id.toString() === movieId);
 
   const currentShowtime = useMemo(() => {
     return mockShowtimes.find(show => show.date.includes(selectedDate));
   }, [selectedDate]);
+
+  if (isLoading) {
+    return (
+      <div className="dark bg-background min-h-screen text-foreground flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-muted-foreground">Đang tải thông tin phim...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!movie) {
     return (
@@ -83,12 +122,12 @@ export default function MovieDetailPage() {
           alt={`${movie.title} backdrop`}
           fill
           className="object-cover opacity-30"
+          priority 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
       </div>
 
       <div className="relative max-w-6xl mx-auto px-6 pb-20 -mt-[25vh]">
-        {/* Thông tin phim */}
         <div className="flex flex-col md:flex-row gap-8">
           <div className="w-full md:w-1/3 lg:w-1/4">
             <div className="aspect-[2/3] relative rounded-xl overflow-hidden shadow-2xl">
@@ -97,6 +136,7 @@ export default function MovieDetailPage() {
                 alt={movie.title}
                 fill
                 className="object-cover"
+                priority
               />
             </div>
           </div>
@@ -106,10 +146,10 @@ export default function MovieDetailPage() {
             <p className="text-lg text-muted-foreground mt-1">{movie.subTitle}</p>
 
             <div className="flex items-center gap-4 mt-4 text-sm">
-              <Badge className="text-base bg-primary text-primary-foreground">{movie.ageRating}</Badge>
+              <Badge className="text-base bg-primary text-primary-foreground">{movie.ageRating || 'T13'}</Badge>
               <span className="flex items-center gap-1.5">
                 <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
-                {movie.rating?.toFixed(1)}
+                {movie.rating ? movie.rating.toFixed(1) : 'N/A'}
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-muted-foreground" />
