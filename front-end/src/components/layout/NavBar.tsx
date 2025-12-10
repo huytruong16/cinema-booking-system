@@ -28,6 +28,7 @@ const Navbar = () => {
     { title: 'Trang chủ', href: '/' },
     { title: 'Tìm & Lọc', href: '/filter' },
     { title: 'Lịch chiếu', href: '/showtimes' },
+    { title: 'Ưu đãi', href: '/promotions' },
   ];
   const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchText.trim()) {
@@ -40,6 +41,8 @@ const Navbar = () => {
   const getActiveItem = () => {
     if (pathname === '/') return 'Trang chủ';
     if (pathname === '/filter') return 'Tìm & Lọc';
+    if (pathname === '/showtimes') return 'Lịch chiếu';
+    if (pathname === '/promotions') return 'Ưu đãi';
     return ''; 
   };
   const activeItem = getActiveItem();
