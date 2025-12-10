@@ -46,7 +46,7 @@ export class GetShowtimeDto {
     @IsOptional()
     @IsUUID()
     @IsString()
-    MaTheLoai?: string; git
+    MaTheLoai?: string;
 
     @ApiProperty({
         description: 'Trạng thái suất chiếu',
