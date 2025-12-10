@@ -2,7 +2,6 @@ import { Body, Controller, Get, Post, SetMetadata } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { ApiExcludeEndpoint, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MailService } from 'src/modules/mail/mail.service';
-import InvoiceMailDto from 'src/modules/mail/dto/invoice-mail.dto';
 
 @Controller('transactions')
 @ApiTags('Giao dịch')
