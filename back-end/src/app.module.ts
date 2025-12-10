@@ -28,6 +28,7 @@ import { EmployeeModule } from './modules/employee/employee.module';
 import { UserModule } from './modules/user/user.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { RefundRequestModule } from './modules/refund-request/refund-request.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { RefundRequestModule } from './modules/refund-request/refund-request.mod
     UserModule,
     InvoiceModule,
     RefundRequestModule,
+    TransactionModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -111,9 +111,14 @@ export class InvoiceService {
       where: { MaNguoiDung: userId }
     });
 
-    if ((!user || user.VaiTro !== RoleEnum.KHACHHANG) && Email) {
+    if ((!user || user.VaiTro !== RoleEnum.KHACHHANG) && !Email) {
       throw new BadRequestException('Email không được để trống');
     }
+
+    let customer = await getCustomer();
+
+    await checkSameShowtime();
+    await checkAvailableUserVoucher();
 
     let total = 0;
     let discountTotal = 0;
@@ -127,12 +132,13 @@ export class InvoiceService {
     const genCode = () => Math.floor(1000000000 + Math.random() * 9000000000);
     const emailToUse = Email || user!.Email;
 
-    const code = genCode();
+    const transactionCode = genCode();
 
     const created = await prisma.$transaction(async (tx) => {
       const hoaDon = await tx.hOADON.create({
         data: {
           Email: emailToUse,
+          MaKhachHang: (customer) ? customer.MaKhachHang : null,
           Code: genCode().toString(),
           NgayLap: new Date(),
           TongTien: totalAfterDiscount.toString(),
@@ -181,7 +187,7 @@ export class InvoiceService {
     });
 
     const paymentData: { paymentLinkId: string, checkoutUrl: string } =
-      await this.payosService.getPaymentLinkUrl(code, totalAfterDiscount, `${created.Code}`);
+      await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
 
     await this.prisma.gIAODICH.create({
       data: {
@@ -190,13 +196,70 @@ export class InvoiceService {
         TongTien: totalAfterDiscount.toString(),
         NgayGiaoDich: new Date(),
         LoaiGiaoDich: TransactionTypeEnum.MUAVE,
-        Code: code.toString(),
+        Code: transactionCode.toString(),
         LinkId: paymentData.paymentLinkId,
         GiaoDichUrl: paymentData.checkoutUrl,
+        MaNhanVien: (user && user.VaiTro === RoleEnum.NHANVIEN) ? user.MaNguoiDung : null,
       }
     });
 
     return this.getInvoiceById(created.MaHoaDon);
+
+    async function checkAvailableUserVoucher() {
+      if (MaVouchers && MaVouchers.length > 0) {
+        if (!customer) {
+          throw new BadRequestException('Chỉ khách hàng mới có thể sử dụng voucher');
+        }
+        const customerVouchers = await prisma.kHUYENMAI_KHACHHANG.findMany({
+          where: {
+            MaKhuyenMaiKH: { in: MaVouchers },
+            MaKhachHang: customer.MaKhachHang,
+            DaSuDung: false,
+            DeletedAt: null
+          }
+        });
+
+        if (MaVouchers.length !== customerVouchers.length) {
+          throw new NotFoundException('Một hoặc vài voucher không tồn tại cho khách hàng này');
+        }
+      }
+    }
+
+    async function checkSameShowtime() {
+      const seats = await prisma.gHE_SUATCHIEU.findMany({
+        where: {
+          MaGheSuatChieu: { in: MaGheSuatChieus },
+          DeletedAt: null,
+        }
+      });
+
+      const isSameShowtime: boolean = seats.every(seat => seat.MaSuatChieu === seats[0].MaSuatChieu);
+      if (!isSameShowtime) {
+        throw new BadRequestException('Các ghế phải thuộc cùng một suất chiếu');
+      }
+    }
+
+    async function getCustomer() {
+      let customer;
+      switch (user?.VaiTro) {
+        case RoleEnum.KHACHHANG:
+          customer = await prisma.kHACHHANG.findFirst({
+            where: { MaNguoiDung: user.MaNguoiDung }
+          });
+          break;
+        case RoleEnum.NHANVIEN:
+          const tmpUser = await prisma.nGUOIDUNGPHANMEM.findFirst({
+            where: { Email: Email }
+          });
+          if (tmpUser && tmpUser.VaiTro === RoleEnum.KHACHHANG) {
+            customer = await prisma.kHACHHANG.findFirst({
+              where: { MaNguoiDung: tmpUser.MaNguoiDung }
+            });
+          }
+          break;
+      }
+      return customer;
+    }
 
     async function getVoucherPrice() {
       const voucherPrices: { id: string; price: number }[] = [];
@@ -315,49 +378,4 @@ export class InvoiceService {
       return seatPrices;
     }
   }
-  async updateTransactionStatus(webhookBody: any) {
-    const { data, verified } = this.payosService.verifyPaymentWebhookData(webhookBody);
-
-    if (!verified || !data) {
-      return { success: false, message: 'Webhook không hợp lệ' };
-    }
-
-    const code = data?.code ?? data?.statusCode ?? data?.status;
-    const linkId = data?.paymentLinkId ?? data?.transaction?.paymentLinkId;
-
-    if (!linkId) {
-      return { success: false, message: 'Thiếu paymentLinkId trong webhook' };
-    }
-
-    const transaction = await this.prisma.gIAODICH.findFirst({
-      where: {
-        LinkId: linkId,
-        DeletedAt: null
-      }
-    });
-
-    if (!transaction) {
-      return { success: false, message: 'Giao dịch không tồn tại' };
-    }
-
-    if (transaction.TrangThai === TransactionStatusEnum.THANHCONG) {
-      return { success: true, message: 'Giao dịch đã được cập nhật trước đó' };
-    }
-
-    const isPaid =
-      code === '00' ||
-      data?.status === 'PAID' ||
-      data?.success === true;
-
-    await this.prisma.gIAODICH.update({
-      where: { MaGiaoDich: transaction.MaGiaoDich },
-      data: {
-        TrangThai: isPaid ? TransactionStatusEnum.THANHCONG : TransactionStatusEnum.THATBAI,
-        UpdatedAt: new Date()
-      }
-    });
-
-    return { success: true };
-  }
-
 }
