@@ -8,7 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 
-@ApiTags('YEUCAUHOANVE')
+@ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
 export class RefundRequestController {
     constructor(private readonly refundRequestService: RefundRequestService) { }
