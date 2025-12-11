@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,9 +13,9 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { MovieCard } from "@/components/movies/MovieCard";
-import { mockMovies } from '@/lib/mockData';
-import { Calendar as CalendarIcon, Search, X, Filter } from 'lucide-react';
-import { format } from 'date-fns';
+import { filmService } from '@/services/film.service'; // Import service
+import { Calendar as CalendarIcon, Search, X, Filter, Loader2 } from 'lucide-react';
+import { format, isWithinInterval, startOfDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -24,22 +24,51 @@ import type { Movie } from '@/types/movie';
 export default function FilterPage() {
     const router = useRouter();
 
+    const [movies, setMovies] = useState<Movie[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchText, setSearchText] = useState("");
     const [selectedGenre, setSelectedGenre] = useState("all");
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-    const allGenres = useMemo(() => {
-        const tags = mockMovies.flatMap(movie => movie.tags || []);
-        return ["all", ...Array.from(new Set(tags))];
+    useEffect(() => {
+        const fetchMovies = async () => {
+            setIsLoading(true);
+            try {
+                const data = await filmService.getAllFilms();
+                setMovies(data);
+            } catch (error) {
+                console.error("Failed to fetch movies", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMovies();
     }, []);
 
+    const allGenres = useMemo(() => {
+        const tags = movies.flatMap(movie => movie.tags || []);
+        return ["all", ...Array.from(new Set(tags))];
+    }, [movies]);
+
+    // Logic lọc phim
     const filteredMovies = useMemo(() => {
-        return mockMovies.filter((movie) => {
+        return movies.filter((movie) => {
             const matchName = movie.title.toLowerCase().includes(searchText.toLowerCase());
+
             const matchGenre = selectedGenre === "all" || (movie.tags && movie.tags.includes(selectedGenre));
-            const matchDate = true;
+
+
+            let matchDate = true;
+            if (selectedDate && movie.startDate && movie.endDate) {
+                const checkDate = startOfDay(selectedDate);
+                const start = startOfDay(movie.startDate);
+                const end = startOfDay(movie.endDate);
+
+                matchDate = isWithinInterval(checkDate, { start, end });
+            }
+
             return matchName && matchGenre && matchDate;
         });
-    }, [searchText, selectedGenre, selectedDate]);
+    }, [searchText, selectedGenre, selectedDate, movies]);
 
     const handleClearFilters = () => {
         setSearchText("");
@@ -125,42 +154,51 @@ export default function FilterPage() {
                     </div>
                 </div>
             </div>
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="mb-4 text-zinc-400 text-sm">
-                    Tìm thấy <strong className="text-white">{filteredMovies.length}</strong> phim phù hợp
-                </div>
 
-                {filteredMovies.length > 0 ? (
-                    <div className=" dark grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-                        {filteredMovies.map((movie) => (
-                            <MovieCard
-                                key={movie.id}
-                                movie={movie}
-                                onBook={handleBook}
-                                onDetail={handleDetail}
-                            />
-                        ))}
+            <div className="max-w-7xl mx-auto px-4">
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+                        <p className="text-zinc-500">Đang tải danh sách phim...</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                            <Search className="w-10 h-10 text-zinc-500" />
+                    <>
+                        <div className="mb-4 text-zinc-400 text-sm">
+                            Tìm thấy <strong className="text-white">{filteredMovies.length}</strong> phim phù hợp
                         </div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Không tìm thấy phim nào</h3>
-                        <p className="text-zinc-500 max-w-md">
-                            Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc thể loại của bạn.
-                        </p>
-                        <Button
-                            variant="destructive"
-                            className="text-primary mt-2 border-2 border-red-600 hover:border-red-800"
-                            onClick={handleClearFilters}
-                        >
-                            Xóa bộ lọc
-                        </Button>
-                    </div>
+
+                        {filteredMovies.length > 0 ? (
+                            <div className=" dark grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
+                                {filteredMovies.map((movie) => (
+                                    <MovieCard
+                                        key={movie.id}
+                                        movie={movie}
+                                        onBook={handleBook}
+                                        onDetail={handleDetail}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+                                    <Search className="w-10 h-10 text-zinc-500" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Không tìm thấy phim nào</h3>
+                                <p className="text-zinc-500 max-w-md">
+                                    Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc thể loại của bạn.
+                                </p>
+                                <Button
+                                    variant="destructive"
+                                    className="text-primary mt-2 border-2 border-red-600 hover:border-red-800"
+                                    onClick={handleClearFilters}
+                                >
+                                    Xóa bộ lọc
+                                </Button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
-
         </div>
     );
 }

@@ -17,5 +17,7 @@ export interface Movie {
   country?: string;        
   price?: number;         
   cinema?: string;         
-  views?: number;          
+  views?: number;
+  startDate?: Date;
+  endDate?: Date;          
 }
