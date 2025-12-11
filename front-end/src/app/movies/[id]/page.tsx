@@ -2,17 +2,20 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { mockShowtimes } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, Star, PlayCircle, Calendar } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { MovieReviews } from '@/components/movies/MovieReviews';
 import { filmService } from '@/services/film.service';
+import { showtimeService } from '@/services/showtime.service';
 import { Movie } from '@/types/movie';
+import { Showtime } from '@/types/showtime'; 
+import { DialogTitle } from "@/components/ui/dialog";
+
 import {
   Dialog,
   DialogContent,
@@ -29,35 +32,15 @@ import {
 export default function MovieDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const movieId = params.id;
+  const movieId = params.id as string;
 
   const [movie, setMovie] = useState<Movie | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMovie, setIsLoadingMovie] = useState(true);
+
+  const [showtimes, setShowtimes] = useState<Showtime[]>([]);
+  const [isLoadingShowtimes, setIsLoadingShowtimes] = useState(false);
 
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchMovieDetail = async () => {
-      if (!movieId){
-        console.error("Movie ID is missing");
-        return;
-      } 
-      
-      setIsLoading(true);
-      try {
-        const id = Array.isArray(movieId) ? movieId[0] : movieId;
-        const fetchedMovie = await filmService.getFilmById(id);
-        console.log("Fetched movie:", fetchedMovie);
-        setMovie(fetchedMovie);
-      } catch (error) {
-        console.error("Failed to fetch movie details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMovieDetail();
-  }, [movieId]);
 
   const daysList = useMemo(() => {
     const today = new Date();
@@ -80,14 +63,93 @@ export default function MovieDetailPage() {
     });
   }, []);
 
-  const [selectedDate, setSelectedDate] = useState(daysList[0].fullDate);
+  const [selectedDateStr, setSelectedDateStr] = useState(daysList[0].fullDate);
+
+  useEffect(() => {
+    const fetchMovieDetail = async () => {
+      if (!movieId) return;
+
+      setIsLoadingMovie(true);
+      try {
+        const fetchedMovie = await filmService.getFilmById(movieId);
+        setMovie(fetchedMovie);
+      } catch (error) {
+        console.error("Failed to fetch movie details:", error);
+      } finally {
+        setIsLoadingMovie(false);
+      }
+    };
+
+    fetchMovieDetail();
+  }, [movieId]);
+
+  useEffect(() => {
+    const fetchShowtimes = async () => {
+      if (!movieId) return;
+
+      const selectedDayObj = daysList.find(d => d.fullDate === selectedDateStr);
+      if (!selectedDayObj) return;
+
+      setIsLoadingShowtimes(true);
+      try {
+        const startDate = startOfDay(selectedDayObj.date).toISOString();
+        const endDate = endOfDay(selectedDayObj.date).toISOString();
+
+        const data = await showtimeService.getShowtimes({
+          MaPhim: movieId,
+          TuNgay: startDate,
+          DenNgay: endDate,
+          TrangThai: 'CHUACHIEU' 
+        });
+        setShowtimes(data);
+      } catch (error) {
+        console.error("Failed to fetch showtimes:", error);
+        setShowtimes([]);
+      } finally {
+        setIsLoadingShowtimes(false);
+      }
+    };
+
+    fetchShowtimes();
+  }, [movieId, selectedDateStr, daysList]);
+
+  const groupedShowtimes = useMemo(() => {
+    const groups: Record<string, Showtime[]> = {};
+
+    showtimes.forEach(showtime => {
+      const formatName = showtime.PhienBanPhim?.DinhDang?.TenDinhDang || '2D';
+      const language = showtime.PhienBanPhim?.NgonNgu?.TenNgonNgu || 'Phụ đề';
+      const groupName = `${formatName} - ${language}`;
+
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(showtime);
+    });
+
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) =>
+        new Date(a.ThoiGianBatDau).getTime() - new Date(b.ThoiGianBatDau).getTime()
+      );
+    });
+
+    return groups;
+  }, [showtimes]);
 
 
-  const currentShowtime = useMemo(() => {
-    return mockShowtimes.find(show => show.date.includes(selectedDate));
-  }, [selectedDate]);
+  const handleBookTicket = (showtime: Showtime) => {
+    const time = format(new Date(showtime.ThoiGianBatDau), 'HH:mm');
+    const date = format(new Date(showtime.ThoiGianBatDau), 'yyyy-MM-dd');
+    const formatType = `${showtime.PhienBanPhim?.DinhDang?.TenDinhDang} ${showtime.PhienBanPhim?.NgonNgu?.TenNgonNgu}`;
 
-  if (isLoading) {
+    router.push(
+      `/booking?showtimeId=${showtime.MaSuatChieu}&movieId=${movie?.id}&date=${encodeURIComponent(
+        date
+      )}&time=${encodeURIComponent(time)}&format=${encodeURIComponent(formatType)}`
+    );
+  };
+
+  if (isLoadingMovie) {
     return (
       <div className="dark bg-background min-h-screen text-foreground flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -106,14 +168,6 @@ export default function MovieDetailPage() {
     );
   }
 
-  const handleBookTicket = (time: string, type: string, date: string) => {
-    router.push(
-      `/booking?movieId=${movie.id}&date=${encodeURIComponent(
-        date
-      )}&time=${encodeURIComponent(time)}&format=${encodeURIComponent(type)}`
-    );
-  };
-
   return (
     <div className="dark bg-background min-h-screen text-foreground">
       <div className="relative w-full h-[50vh] min-h-[400px]">
@@ -122,7 +176,7 @@ export default function MovieDetailPage() {
           alt={`${movie.title} backdrop`}
           fill
           className="object-cover opacity-30"
-          priority 
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
       </div>
@@ -181,8 +235,16 @@ export default function MovieDetailPage() {
                     Xem Trailer
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="dark bg-background text-foreground border-border max-w-5xl p-0">
-                  <div className="aspect-video relative">
+                <DialogContent
+                  className="
+    dark bg-background text-foreground border-border 
+    p-0 
+    !max-w-none        
+    w-[95vw] md:w-[80vw] lg:w-[70vw]   
+  "
+                >
+                  <DialogTitle className="sr-only">Trailer</DialogTitle>
+                  <div className="relative w-full aspect-video rounded-lg overflow-hidden">
                     {isTrailerOpen && (
                       <iframe
                         src={movie.trailerUrl}
@@ -190,21 +252,27 @@ export default function MovieDetailPage() {
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
-                        className="absolute top-0 left-0 w-full h-full rounded-lg"
+                        className="absolute inset-0 w-full h-full"
                       ></iframe>
                     )}
                   </div>
                 </DialogContent>
+
+
+
               </Dialog>
             )}
           </div>
         </div>
+
+        {/* Lịch chiếu */}
         <div className="mt-16">
           <h2 className="text-3xl font-bold text-white mb-6">
             <Calendar className="w-7 h-7 inline-block mr-3 -mt-1" />
             Lịch chiếu
           </h2>
 
+          {/* Chọn ngày */}
           <div className="w-full px-8 md:px-10">
             <Carousel
               opts={{
@@ -215,14 +283,14 @@ export default function MovieDetailPage() {
             >
               <CarouselContent className="-ml-2 md:-ml-4">
                 {daysList.map((day) => {
-                  const isActive = selectedDate === day.fullDate;
+                  const isActive = selectedDateStr === day.fullDate;
                   return (
                     <CarouselItem
                       key={day.fullDate}
                       className="pl-2 md:pl-4 basis-1/3 md:basis-1/5 lg:basis-[14.28%]"
                     >
                       <button
-                        onClick={() => setSelectedDate(day.fullDate)}
+                        onClick={() => setSelectedDateStr(day.fullDate)}
                         className={cn(
                           "flex flex-col items-center justify-center w-full h-[80px] rounded-lg border transition-all duration-200",
                           isActive
@@ -246,24 +314,28 @@ export default function MovieDetailPage() {
             </Carousel>
           </div>
           <div className="mt-8 space-y-6 min-h-[200px]">
-            {currentShowtime ? (
+            {isLoadingShowtimes ? (
+              <div className="flex justify-center items-center h-40">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : Object.keys(groupedShowtimes).length > 0 ? (
               <div className="animate-in fade-in duration-500">
                 <div className="space-y-6">
-                  {currentShowtime.types.map(type => (
-                    <div key={type.type} className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
+                  {Object.entries(groupedShowtimes).map(([groupName, groupShowtimes]) => (
+                    <div key={groupName} className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
                       <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                         <span className="w-1.5 h-5 bg-[#C41E3A] rounded-full inline-block"></span>
-                        {type.type}
+                        {groupName}
                       </h4>
                       <div className="flex flex-wrap gap-3">
-                        {type.times.map(time => (
+                        {groupShowtimes.map(showtime => (
                           <Button
-                            key={time}
+                            key={showtime.MaSuatChieu}
                             variant="outline"
                             className="min-w-[100px] h-11 bg-transparent hover:bg-[#C41E3A] hover:text-white border-zinc-700 text-zinc-300 transition-all font-medium text-base"
-                            onClick={() => handleBookTicket(time, type.type, currentShowtime.date)}
+                            onClick={() => handleBookTicket(showtime)}
                           >
-                            {time}
+                            {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}
                           </Button>
                         ))}
                       </div>
@@ -280,6 +352,7 @@ export default function MovieDetailPage() {
             )}
           </div>
         </div>
+
         <div className='m-10'>
           <MovieReviews movieId={movie.id} movieRating={movie.rating} />
         </div>
