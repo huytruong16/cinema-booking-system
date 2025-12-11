@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsEnum, IsDateString, IsUUID } from 'class-validator';
 import { ShowtimeStatusEnum } from '../../../libs/common/enums/showtime-status.enum';
 
-export class GetShowtimeDto {
+export class GetAllShowtimeDto {
     @ApiProperty({
         description: 'Mã phim',
         required: false,
