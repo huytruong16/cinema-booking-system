@@ -1,9 +1,10 @@
 import { Controller, Get, NotFoundException, Param, Query, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ShowtimeService } from './showtime.service';
-import { GetShowtimeDto } from './dtos/get-showtime.dto';
+import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
 import { ShowtimeStatusEnum } from '../../libs/common/enums/showtime-status.enum';
 import { isUUID } from 'class-validator';
+import { GetShowtimeByMovieDto } from './dtos/get-showtime-by-movie.dto';
 
 @ApiTags('Suất chiếu')
 @Controller('showtimes')
@@ -21,8 +22,16 @@ export class ShowtimeController {
     @ApiQuery({ name: 'TuNgay', required: false, description: 'Lọc từ ngày (ISO 8601)' })
     @ApiQuery({ name: 'DenNgay', required: false, description: 'Lọc đến ngày (ISO 8601)' })
     @ApiResponse({ status: 200 })
-    async getShowtimes(@Query() filters: GetShowtimeDto) {
-        return this.showtimeService.getShowtimes(filters);
+    async getShowtimes(@Query() filters: GetAllShowtimeDto) {
+        return this.showtimeService.getAllShowtimes(filters);
+    }
+
+    @Get('movie/:movieId')
+    @ApiOperation({ summary: 'Lấy chi tiết suất chiếu theo phim' })
+    @ApiParam({ name: 'movieId', description: 'Mã phim', required: true })
+    async getShowtimeByMovieId(@Query() filters: GetShowtimeByMovieDto, @Param('movieId') movieId: string) {
+        if (!isUUID(movieId, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.showtimeService.getShowtimesByMovieId(movieId, filters);
     }
 
     @Get(':id')
