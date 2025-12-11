@@ -1,9 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircleIcon , MinusCircleIcon } from 'lucide-react';
+import { PlusCircleIcon , MinusCircleIcon, UtensilsCrossed } from 'lucide-react';
 
 interface ComboCardProps {
     combo: {
@@ -22,6 +23,7 @@ const ComboCard: React.FC<ComboCardProps> = ({
     onQuantityChange,
 }) => {
     const [quantity, setQuantity] = useState(initialQuantity);
+    const [imageError, setImageError] = useState(false);
 
     const updateQuantity = (newQuantity: number) => {
         if (newQuantity < 0) newQuantity = 0;
@@ -43,11 +45,16 @@ const ComboCard: React.FC<ComboCardProps> = ({
 
                 {/* Ảnh bên trái */}
                 <div className="relative h-[120px] w-[160px] rounded-xl overflow-hidden bg-card">
-                    <img
-                        src={combo.imageUrl}
-                        alt={combo.name}
-                        className="h-full w-full object-cover transition-all duration-200 hover:scale-105"
-                    />
+                    {!imageError && combo.imageUrl ? (
+                        <img
+                            src={combo.imageUrl}
+                            alt={combo.name}
+                            className="h-full w-full object-cover transition-all duration-200 hover:scale-105"
+                            onError={() => setImageError(true)} 
+                        />
+                    ) : (
+                        <UtensilsCrossed className="h-10 w-10 text-slate-500 opacity-50" />
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-2 w-full">
