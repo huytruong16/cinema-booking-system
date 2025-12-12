@@ -46,11 +46,19 @@ export interface Showtime {
       ThoiLuong: number;
       DiemDanhGia: number;
       TrangThaiPhim: string;
+      NgayBatDauChieu: string; 
+      NgayKetThucChieu?: string; 
       NhanPhim: {
         MaNhanPhim: string;
         TenNhanPhim: string; 
         MoTa: string;
       };
+      PhimTheLoais: {
+        TheLoai: {
+          MaTheLoai: string;
+          TenTheLoai: string;
+        };
+      }[];
     };
     DinhDang: {
       MaDinhDang: string;
