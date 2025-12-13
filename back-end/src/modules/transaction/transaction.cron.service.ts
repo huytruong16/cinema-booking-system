@@ -9,13 +9,14 @@ export class TransactionCronService {
 
     @Cron(CronExpression.EVERY_MINUTE)
     async handleCron() {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const expiredTransactions = await this.findExpiredTransactions(fiveMinutesAgo);
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const expiredTransactions = await this.findExpiredTransactions(tenMinutesAgo);
 
         for (const tx of expiredTransactions) {
             try {
                 await this.processTransaction(tx);
             } catch (error) {
+                console.error(`Error processing transaction ${tx.MaGiaoDich}:`, error);
             }
         }
     }
@@ -23,7 +24,7 @@ export class TransactionCronService {
     private async findExpiredTransactions(threshold: Date) {
         return this.prisma.gIAODICH.findMany({
             where: {
-                CreatedAt: { lt: threshold },
+                UpdatedAt: { lte: threshold },
                 TrangThai: TransactionStatusEnum.DANGCHO,
                 DeletedAt: null
             },
@@ -43,56 +44,65 @@ export class TransactionCronService {
     }
 
     private async processTransaction(transaction: any) {
-        await this.markTransactionFailed(transaction.MaGiaoDich);
-
-        if (transaction.LoaiGiaoDich === TransactionTypeEnum.MUAVE && transaction.HoaDon) {
-            await this.handleTicketRollback(transaction.HoaDon);
-        }
+        await this.rollbackTransaction(transaction.MaGiaoDich);
+        await this.rollbackTicket(transaction.HoaDon);
+        await this.rollbackInvoiceCombo(transaction.HoaDon.MaHoaDon);
+        await this.rollbackInvoice(transaction.HoaDon.MaHoaDon);
     }
 
-    private async markTransactionFailed(maGiaoDich: string) {
-        await this.prisma.gIAODICH.update({
-            where: { MaGiaoDich: maGiaoDich },
-            data: { TrangThai: TransactionStatusEnum.THATBAI, UpdatedAt: new Date() }
+    private async rollbackTransaction(transactionId: string) {
+        await this.prisma.gIAODICH.delete({
+            where: { MaGiaoDich: transactionId },
         });
     }
 
-    private async handleTicketRollback(hd: any) {
-        const ticketIds = (hd.Ves || []).map((v: any) => v.MaVe).filter(Boolean);
-        const seatIds = (hd.Ves || []).map((v: any) => v.GheSuatChieu?.MaGheSuatChieu).filter(Boolean);
-        const promoIds = (hd.HoaDonKhuyenMais || []).map((p: any) => p.MaKhuyenMaiKH).filter(Boolean);
+    private async rollbackTicket(invoice: any) {
+        const ticketIds = (invoice.Ves || []).map((v: any) => v.MaVe).filter(Boolean);
+        const seatIds = (invoice.Ves || []).map((v: any) => v.GheSuatChieu?.MaGheSuatChieu).filter(Boolean);
+        const promoIds = (invoice.HoaDonKhuyenMais || []).map((p: any) => p.MaKhuyenMaiKH).filter(Boolean);
 
         if (ticketIds.length) await this.rollbackTickets(ticketIds);
         if (seatIds.length) await this.rollbackSeats(seatIds);
         if (promoIds.length) await this.rollbackPromotions(promoIds);
-        await this.rollbackInvoicePromotions(hd.MaHoaDon);
+        await this.rollbackInvoicePromotions(invoice.MaHoaDon);
 
     }
 
-    private async rollbackTickets(maVes: string[]) {
-        await this.prisma.vE.updateMany({
-            where: { MaVe: { in: maVes }, DeletedAt: null },
-            data: { DeletedAt: new Date() }
+    private async rollbackTickets(invoiceId: string[]) {
+        await this.prisma.vE.deleteMany({
+            where: { MaVe: { in: invoiceId }, DeletedAt: null },
         });
     }
 
-    private async rollbackSeats(maGheSuatChieus: string[]) {
+    private async rollbackSeats(showSeatCodes: string[]) {
         await this.prisma.gHE_SUATCHIEU.updateMany({
-            where: { MaGheSuatChieu: { in: maGheSuatChieus }, DeletedAt: null },
+            where: { MaGheSuatChieu: { in: showSeatCodes }, DeletedAt: null },
             data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() }
         });
     }
 
-    private async rollbackPromotions(maKhuyenMaiKHs: string[]) {
+    private async rollbackPromotions(customerPromotionIds: string[]) {
         await this.prisma.kHUYENMAI_KHACHHANG.updateMany({
-            where: { MaKhuyenMaiKH: { in: maKhuyenMaiKHs } },
+            where: { MaKhuyenMaiKH: { in: customerPromotionIds } },
             data: { DaSuDung: false, UpdatedAt: new Date() }
         });
     }
 
-    private async rollbackInvoicePromotions(MaHoaDon: string) {
+    private async rollbackInvoicePromotions(invoiceId: string) {
         await this.prisma.hOADON_KHUYENMAI.deleteMany({
-            where: { MaHoaDon: MaHoaDon },
+            where: { MaHoaDon: invoiceId },
+        });
+    }
+
+    private async rollbackInvoiceCombo(invoiceId: string) {
+        await this.prisma.hOADONCOMBO.deleteMany({
+            where: { MaHoaDon: invoiceId },
+        });
+    }
+
+    private async rollbackInvoice(invoiceId: string) {
+        await this.prisma.hOADON.delete({
+            where: { MaHoaDon: invoiceId },
         });
     }
 }
