@@ -1,12 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class FilmService {
     constructor(
-        readonly prisma: PrismaService,
+        private readonly prisma: PrismaService,
+        private readonly storageService: StorageService
     ) { }
     async getAllFilms(filters?: FilterFilmDto) {
         const whereConditions: any = { DeletedAt: null };
@@ -53,22 +55,17 @@ export class FilmService {
             },
         });
     }
-    async createFilm(payload: CreateFilmDto) {
+    async createFilm(payload: CreateFilmDto, posterFile?: Express.Multer.File, backdropFile?: Express.Multer.File) {
         const prisma = this.prisma;
 
         await checkOriginalFilmNameExist(payload);
         await checkDisplayFilmNameExist(payload);
 
-        let foundDinhDangs: { MaDinhDang: string; GiaVe: any }[] = [];
-        if (payload.DinhDangs && payload.DinhDangs.length) {
-            const ddEntries: any[] = payload.DinhDangs as any[];
-            const ddIds = ddEntries.map(d => (typeof d === 'string' ? d : d.MaDinhDang));
-            foundDinhDangs = await this.prisma.dINHDANG.findMany({ where: { MaDinhDang: { in: ddIds }, DeletedAt: null }, select: { MaDinhDang: true, GiaVe: true } });
-            const foundDdIds = new Set(foundDinhDangs.map(d => d.MaDinhDang));
-            const missingDd = ddIds.filter(id => !foundDdIds.has(id));
-            if (missingDd.length) {
-                throw new BadRequestException(`Một hoặc nhiều MaDinhDang không tồn tại: ${missingDd.join(', ')}`);
-            }
+        const nhanPhim = await prisma.nHANPHIM.findFirst({
+            where: { MaNhanPhim: payload.MaNhanPhim, DeletedAt: null }
+        });
+        if (!nhanPhim) {
+            throw new BadRequestException('MaNhanPhim không tồn tại');
         }
 
         if (payload.TheLoais && payload.TheLoais.length) {
@@ -81,31 +78,49 @@ export class FilmService {
             }
         }
 
+        const uploads: { posterUrl?: string; backdropUrl?: string } = {};
+        if (posterFile) {
+            const uploaded = await this.storageService.uploadFile(posterFile, {
+                bucket: 'films',
+                folder: 'posters',
+                allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            });
+            uploads.posterUrl = uploaded.url;
+        }
+        if (backdropFile) {
+            const uploaded = await this.storageService.uploadFile(backdropFile, {
+                bucket: 'films',
+                folder: 'backdrops',
+                allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            });
+            uploads.backdropUrl = uploaded.url;
+        }
+
         const created = await this.prisma.$transaction(async (tx) => {
             const film = await addNewFilm(tx);
-            await createFilmFormatMappings(payload, foundDinhDangs, film, tx);
             await createFilmGenreMappings(film, tx);
-
             return film;
         });
 
         return created;
 
         async function addNewFilm(tx: any) {
-            return await tx.phim.create({
+            return await tx.pHIM.create({
                 data: {
                     TenGoc: payload.TenGoc,
+                    MaNhanPhim: payload.MaNhanPhim,
                     TenHienThi: payload.TenHienThi,
                     TomTatNoiDung: payload.TomTatNoiDung ?? null,
                     DaoDien: payload.DaoDien ?? null,
                     DanhSachDienVien: payload.DanhSachDienVien ?? null,
-                    PosterUrl: payload.PosterUrl ?? null,
-                    BackdropUrl: payload.BackdropUrl ?? null,
+                    PosterUrl: uploads.posterUrl ?? payload.PosterUrl ?? null,
+                    BackdropUrl: uploads.backdropUrl ?? payload.BackdropUrl ?? null,
                     QuocGia: payload.QuocGia ?? null,
                     TrailerUrl: payload.TrailerUrl ?? null,
                     ThoiLuong: payload.ThoiLuong,
                     NgayBatDauChieu: new Date(payload.NgayBatDauChieu),
                     NgayKetThucChieu: new Date(payload.NgayKetThucChieu),
+                    CreatedAt: new Date(),
                 },
             });
         }
@@ -115,51 +130,98 @@ export class FilmService {
                 const tlData = payload.TheLoais.map(ma => ({
                     MaPhim: film.MaPhim,
                     MaTheLoai: ma,
+                    CreatedAt: new Date()
                 }));
-                await tx.phimTheLoai.createMany({ data: tlData });
-            }
-        }
-
-        async function createFilmFormatMappings(payload: CreateFilmDto, foundDinhDangs: { MaDinhDang: string; GiaVe: any; }[], film: any, tx: any) {
-            if (payload.DinhDangs && payload.DinhDangs.length) {
-                const priceMap = new Map(foundDinhDangs.map(d => [d.MaDinhDang, d.GiaVe]));
-                const ddEntries: any[] = payload.DinhDangs as any[];
-                const ddData = ddEntries.map((entry) => {
-                    const ma = typeof entry === 'string' ? entry : entry.MaDinhDang;
-                    const providedGiaVe = (typeof entry === 'object' && entry.GiaVe != null) ? entry.GiaVe : undefined;
-                    return {
-                        MaPhim: film.MaPhim,
-                        MaDinhDang: ma,
-                        GiaVe: providedGiaVe ?? priceMap.get(ma) ?? 0,
-                        MaNgonNgu: (typeof entry === 'object' && entry.MaNgonNgu) ? entry.MaNgonNgu : null,
-                        LoaiPhienBan: (typeof entry === 'object' && entry.LoaiPhienBan) ? entry.LoaiPhienBan : 'LONGTIENG',
-                    };
-                });
-                await tx.phienBanPhim.createMany({ data: ddData });
+                await tx.pHIM_THELOAI.createMany({ data: tlData });
             }
         }
 
         async function checkOriginalFilmNameExist(payload: CreateFilmDto) {
-            let isOriginalFilmNameExist = await prisma.pHIM.findFirst({
-                where: {
-                    TenGoc: payload.TenGoc,
-                },
-            });
-            if (isOriginalFilmNameExist) {
-                throw new BadRequestException('Tên gốc phim đã tồn tại');
-            }
+            const isOriginalFilmNameExist = await prisma.pHIM.findFirst({ where: { TenGoc: payload.TenGoc } });
+            if (isOriginalFilmNameExist) throw new BadRequestException('Tên gốc phim đã tồn tại');
         }
 
         async function checkDisplayFilmNameExist(payload: CreateFilmDto) {
-            let isDisplayFilmNameExist = await prisma.pHIM.findFirst({
-                where: {
-                    TenHienThi: payload.TenHienThi,
-                }
-            });
-            if (isDisplayFilmNameExist) {
-                throw new BadRequestException('Tên hiển thị phim đã tồn tại');
-            }
+            const isDisplayFilmNameExist = await prisma.pHIM.findFirst({ where: { TenHienThi: payload.TenHienThi } });
+            if (isDisplayFilmNameExist) throw new BadRequestException('Tên hiển thị phim đã tồn tại');
         }
+    }
+
+    async updateFilm(id: string, updateDto: any, posterFile?: Express.Multer.File, backdropFile?: Express.Multer.File) {
+        const film = await this.prisma.pHIM.findUnique({ where: { MaPhim: id, DeletedAt: null } });
+        if (!film) throw new NotFoundException(`Phim với ID ${id} không tồn tại`);
+
+        if (updateDto.TenGoc && updateDto.TenGoc !== film.TenGoc) {
+            const exists = await this.prisma.pHIM.findFirst({ where: { TenGoc: updateDto.TenGoc, MaPhim: { not: id } } });
+            if (exists) throw new ConflictException('Tên gốc phim đã tồn tại');
+        }
+        if (updateDto.TenHienThi && updateDto.TenHienThi !== film.TenHienThi) {
+            const exists = await this.prisma.pHIM.findFirst({ where: { TenHienThi: updateDto.TenHienThi, MaPhim: { not: id } } });
+            if (exists) throw new ConflictException('Tên hiển thị phim đã tồn tại');
+        }
+
+        const updateData: any = { UpdatedAt: new Date() };
+        if (updateDto.TenGoc !== undefined) updateData.TenGoc = updateDto.TenGoc;
+        if (updateDto.TenHienThi !== undefined) updateData.TenHienThi = updateDto.TenHienThi;
+        if (updateDto.TomTatNoiDung !== undefined) updateData.TomTatNoiDung = updateDto.TomTatNoiDung;
+        if (updateDto.DaoDien !== undefined) updateData.DaoDien = updateDto.DaoDien;
+        if (updateDto.DanhSachDienVien !== undefined) updateData.DanhSachDienVien = updateDto.DanhSachDienVien;
+        if (updateDto.QuocGia !== undefined) updateData.QuocGia = updateDto.QuocGia;
+        if (updateDto.TrailerUrl !== undefined) updateData.TrailerUrl = updateDto.TrailerUrl;
+        if (updateDto.ThoiLuong !== undefined) updateData.ThoiLuong = updateDto.ThoiLuong;
+        if (updateDto.NgayBatDauChieu !== undefined) updateData.NgayBatDauChieu = new Date(updateDto.NgayBatDauChieu);
+        if (updateDto.NgayKetThucChieu !== undefined) updateData.NgayKetThucChieu = new Date(updateDto.NgayKetThucChieu);
+
+        // handle file uploads
+        if (posterFile) {
+            if (film.PosterUrl) {
+                await this.storageService.deleteFile('films', film.PosterUrl);
+            }
+            const uploaded = await this.storageService.uploadFile(posterFile, {
+                bucket: 'films',
+                folder: 'posters',
+                allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            });
+            updateData.PosterUrl = uploaded.url;
+        }
+
+        if (backdropFile) {
+            if (film.BackdropUrl) {
+                await this.storageService.deleteFile('films', film.BackdropUrl);
+            }
+            const uploaded = await this.storageService.uploadFile(backdropFile, {
+                bucket: 'films',
+                folder: 'backdrops',
+                allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            });
+            updateData.BackdropUrl = uploaded.url;
+        }
+
+        return await this.prisma.pHIM.update({
+            where: { MaPhim: id },
+            data: updateData,
+        });
+    }
+
+    async removeFilm(id: string) {
+        const film = await this.prisma.pHIM.findUnique({ where: { MaPhim: id, DeletedAt: null } });
+        if (!film) throw new NotFoundException(`Phim với ID ${id} không tồn tại`);
+
+        if (film.PosterUrl) {
+            await this.storageService.deleteFile('films', film.PosterUrl);
+        }
+        if (film.BackdropUrl) {
+            await this.storageService.deleteFile('films', film.BackdropUrl);
+        }
+
+        return await this.prisma.pHIM.update({
+            where: { MaPhim: id },
+            data: {
+                DeletedAt: new Date(),
+                PosterUrl: null,
+                BackdropUrl: null,
+            },
+        });
     }
 
     async getAllFilmFormats(filters?: FilterFilmDto) {
