@@ -1,9 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import { SeatStatusEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { SeatStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
 import { PayosService } from "src/libs/common/services/payos.service";
 import InvoiceMailDto from "src/modules/mail/dto/invoice-mail.dto";
 import { MailService } from "src/modules/mail/mail.service";
 import { PrismaService } from "src/modules/prisma/prisma.service";
+import { UpdateTransactionMethodDto } from "./dto/update-transaction-method";
 
 @Injectable()
 export class TransactionService {
@@ -208,5 +209,49 @@ export class TransactionService {
         }
 
         return { success: true };
+    }
+
+    async updateTransactionMethod(transactionId: string, request: UpdateTransactionMethodDto) {
+        const transactionMethod = request.PhuongThuc;
+
+        const transaction = await this.prisma.gIAODICH.findFirst({
+            where: { MaGiaoDich: transactionId },
+            select: {
+                Code: true,
+                PhuongThuc: true,
+                GiaoDichUrl: true,
+                HoaDon: {
+                    select: {
+                        Code: true,
+                        TongTien: true
+                    }
+                }
+            }
+        });
+
+        if (!transaction) {
+            throw new NotFoundException('Giao dịch không tồn tại');
+        }
+
+        if (transaction.PhuongThuc == transactionMethod) {
+            return;
+        }
+
+        let paymentData: { paymentLinkId: string, checkoutUrl: string } | undefined;
+
+        if (transaction.PhuongThuc == TransactionEnum.TRUCTIEP && transactionMethod == TransactionEnum.TRUCTUYEN && transaction.GiaoDichUrl.length === 0) {
+            paymentData = await this.payosService.getPaymentLinkUrl(Number(transaction.Code), Number(transaction.HoaDon.TongTien), `${transaction.HoaDon.Code}`);
+        }
+
+        await this.prisma.gIAODICH.update({
+            where: { MaGiaoDich: transactionId },
+            data: {
+                PhuongThuc: transactionMethod,
+                LinkId: paymentData && paymentData.paymentLinkId,
+                GiaoDichUrl: paymentData && paymentData.checkoutUrl,
+                TrangThai: TransactionStatusEnum.DANGCHO,
+                UpdatedAt: new Date()
+            }
+        });
     }
 }
