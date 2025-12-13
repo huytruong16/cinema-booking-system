@@ -1,6 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional, PartialType } from "@nestjs/swagger";
 import { IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, ValidateNested, IsNumber } from "class-validator";
-import { Type, Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
+import { CreateFilmDto } from "./create-film.dto";
 
 export class DinhDangDto {
     @ApiProperty({ description: 'MaDinhDang (id định dạng)', example: '298d831e-e0c4-4904-b815-24bd718a9b8f' })
@@ -15,7 +16,7 @@ export class DinhDangDto {
     GiaVe?: number;
 }
 
-export class CreateFilmDto {
+export class UpdateFilmDto extends PartialType(CreateFilmDto) {
     @ApiProperty({ description: 'Tên gốc phim', example: 'Dune: Part Two' })
     @IsString()
     @IsNotEmpty()
@@ -63,7 +64,6 @@ export class CreateFilmDto {
 
     @ApiProperty({ description: 'Thời lượng (phút)', example: 166 })
     @IsInt()
-    @Type(() => Number)
     ThoiLuong: number;
 
     @ApiProperty({ description: 'Ngày bắt đầu chiếu (ISO date string)', example: '2025-11-15T00:00:00.000Z' })
@@ -74,27 +74,16 @@ export class CreateFilmDto {
     @IsDateString()
     NgayKetThucChieu: string;
 
-    @ApiProperty({
-        description: 'Mã nhãn phim',
-        example: 'c1a2b3d4-e5f6-7890-abcd-1234567890ab'
-    })
-    @IsString()
-    @IsNotEmpty()
-    MaNhanPhim: string;
+    @ApiPropertyOptional({ description: 'Mảng MaDinhDang (id định dạng) để liên kết', type: [DinhDangDto], example: [{ "MaDinhDang": "298d831e-e0c4-4904-b815-24bd718a9b8f" }, { "MaDinhDang": "2ea7e036-6656-4fa5-82a1-9f937840df3e", "GiaVe": 75000 }] })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => DinhDangDto)
+    DinhDangs?: DinhDangDto[];
 
     @ApiPropertyOptional({ description: 'Mảng MaTheLoai để liên kết', type: [String], example: ['f6003de3-25d4-4704-a7ca-202c6b4af531'] })
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
-    @Transform(({ value }) => {
-        if (typeof value === 'string') {
-            try {
-                return JSON.parse(value);
-            } catch {
-                return value.split(',').map((v: string) => v.trim());
-            }
-        }
-        return value;
-    })
     TheLoais?: string[];
 }

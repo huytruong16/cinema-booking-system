@@ -1,5 +1,6 @@
-import { Controller, Get, Param, NotFoundException, Post, Body, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body, Query, BadRequestException, UseInterceptors, UploadedFiles, UsePipes, ValidationPipe } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { FilmService } from './film.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
@@ -9,6 +10,8 @@ import {
     ApiParam,
     ApiResponse,
     ApiQuery,
+    ApiConsumes,
+    ApiBody
 } from '@nestjs/swagger';
 
 @ApiTags('Phim')
@@ -47,8 +50,70 @@ export class FilmController {
     }
 
     @Post()
-    @ApiOperation({ summary: 'Tạo phim mới' })
-    async createFilm(@Body() payload: CreateFilmDto) {
-        return this.filmService.createFilm(payload);
+    @ApiOperation({ summary: 'Tạo phim mới (kèm poster & backdrop)' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Thông tin phim và 2 file ảnh (POSTER + BACKDROP)',
+        schema: {
+            type: 'object',
+            properties: {
+                TenGoc: { type: 'string', example: 'Dune: Part Two' },
+                TenHienThi: { type: 'string', example: 'Dune: Hành tinh cát - Phần 2' },
+                TomTatNoiDung: { type: 'string', example: 'Paul Atreides...' },
+                DaoDien: { type: 'string', example: 'Denis Villeneuve' },
+                DanhSachDienVien: { type: 'string', example: 'Timothée Chalamet, Zendaya' },
+                QuocGia: { type: 'string', example: 'Mỹ' },
+                TrailerUrl: { type: 'string', example: 'https://youtube.com/...' },
+                ThoiLuong: { type: 'number', example: 166 },
+                NgayBatDauChieu: { type: 'string', format: 'date-time' },
+                NgayKetThucChieu: { type: 'string', format: 'date-time' },
+                MaNhanPhim: {
+                    type: 'string',
+                    example: '3392dce5-2bf4-4d4e-8427-b47e4519cc61'
+                },
+
+                TheLoais: {
+                    type: 'string',
+                    description: 'JSON string của mảng MaTheLoai',
+                    example: '["644d0fe5-be9f-4660-8b31-25b47d0e4e8a"]'
+                },
+
+                posterFile: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Poster phim (jpg, jpeg, png, webp)'
+                },
+
+                backdropFile: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Backdrop phim (jpg, jpeg, png, webp)'
+                }
+            },
+            required: ['TenGoc', 'TenHienThi', 'ThoiLuong', 'NgayBatDauChieu', 'NgayKetThucChieu']
+        }
+    })
+    @ApiResponse({ status: 201, description: 'Tạo phim thành công' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ hoặc thiếu ảnh' })
+    @UseInterceptors(
+        FileFieldsInterceptor([
+            { name: 'posterFile', maxCount: 1 },
+            { name: 'backdropFile', maxCount: 1 }
+        ])
+    )
+    async createFilm(
+        @Body() dto: CreateFilmDto,
+        @UploadedFiles()
+        files: {
+            posterFile?: Express.Multer.File[];
+            backdropFile?: Express.Multer.File[];
+        }
+    ) {
+        const poster = files?.posterFile?.[0];
+        const backdrop = files?.backdropFile?.[0];
+
+        return this.filmService.createFilm(dto, poster, backdrop);
+
     }
+
 }
