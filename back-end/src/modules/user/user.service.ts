@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { quyen } from '@prisma/client';
+import { REQUEST } from '@nestjs/core';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class UserService {
     constructor(
         readonly prisma: PrismaService,
+        @Inject(REQUEST) private readonly request: any,
     ) { }
 
     async getAllUsers() {
@@ -66,5 +67,10 @@ export class UserService {
         if (!result.NhanViens || result.NhanViens.length === 0) delete result.NhanViens;
 
         return result;
+    }
+
+    async getCurrentUser() {
+        const userId = this.request?.user?.id;
+        return this.getUserById(userId);
     }
 }
