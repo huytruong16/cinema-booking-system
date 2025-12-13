@@ -4,6 +4,8 @@ import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
 import { StorageService } from '../storage/storage.service';
 import { UpdateFilmDto } from './dtos/update-film.dto';
+import { CreateFilmVersionDto } from './dtos/create-film-version.dto';
+import { UpdateFilmVersionDto } from './dtos/update-film-version.dto';
 
 @Injectable()
 export class FilmService {
@@ -361,4 +363,88 @@ export class FilmService {
             },
         });
     }
+    async createFilmVersion(payload: CreateFilmVersionDto) {
+        const { MaPhim, MaDinhDang, MaNgonNgu, GiaVe } = payload;
+
+        const film = await this.prisma.pHIM.findFirst({
+            where: { MaPhim, DeletedAt: null },
+        });
+        if (!film) throw new NotFoundException(`Phim với ID ${MaPhim} không tồn tại`);
+
+        const format = await this.prisma.dINHDANG.findFirst({
+            where: { MaDinhDang, DeletedAt: null },
+        });
+        if (!format) throw new NotFoundException(`Định dạng với ID ${MaDinhDang} không tồn tại`);
+
+        const language = await this.prisma.nGONNGU.findFirst({
+            where: { MaNgonNgu, DeletedAt: null },
+        });
+        if (!language) throw new NotFoundException(`Ngôn ngữ với ID ${MaNgonNgu} không tồn tại`);
+
+        const exists = await this.prisma.pHIENBANPHIM.findFirst({
+            where: {
+                MaPhim,
+                MaDinhDang,
+                MaNgonNgu,
+                DeletedAt: null,
+            },
+        });
+        if (exists) throw new BadRequestException('Phiên bản phim này đã tồn tại');
+
+        const filmVersion = await this.prisma.pHIENBANPHIM.create({
+            data: {
+                MaPhim,
+                MaDinhDang,
+                MaNgonNgu,
+                GiaVe,
+                CreatedAt: new Date(),
+            },
+        });
+
+        return { message: 'Tạo phiên bản phim thành công', filmVersion };
+    }
+
+    async updateFilmVersion(id: string, updateDto: UpdateFilmVersionDto) {
+        const version = await this.prisma.pHIENBANPHIM.findFirst({ where: { MaPhienBanPhim: id, DeletedAt: null } });
+        if (!version) throw new NotFoundException(`Phiên bản phim với ID ${id} không tồn tại`);
+
+        const updateData: any = { UpdatedAt: new Date() };
+
+        if (updateDto.MaDinhDang) {
+            const format = await this.prisma.dINHDANG.findFirst({ where: { MaDinhDang: updateDto.MaDinhDang, DeletedAt: null } });
+            if (!format) throw new BadRequestException('Định dạng không tồn tại');
+            updateData.MaDinhDang = updateDto.MaDinhDang;
+        }
+
+        if (updateDto.MaNgonNgu) {
+            const language = await this.prisma.nGONNGU.findFirst({ where: { MaNgonNgu: updateDto.MaNgonNgu, DeletedAt: null } });
+            if (!language) throw new BadRequestException('Ngôn ngữ không tồn tại');
+            updateData.MaNgonNgu = updateDto.MaNgonNgu;
+        }
+
+        if (updateDto.GiaVe !== undefined) {
+            updateData.GiaVe = updateDto.GiaVe;
+        }
+
+        const updated = await this.prisma.pHIENBANPHIM.update({
+            where: { MaPhienBanPhim: id },
+            data: updateData,
+            include: { Phim: true, DinhDang: true, NgonNgu: true },
+        });
+
+        return { message: 'Cập nhật phiên bản phim thành công', filmVersion: updated };
+    }
+
+    async removeFilmVersion(id: string) {
+        const version = await this.prisma.pHIENBANPHIM.findFirst({ where: { MaPhienBanPhim: id, DeletedAt: null } });
+        if (!version) throw new NotFoundException(`Phiên bản phim với ID ${id} không tồn tại`);
+
+        await this.prisma.pHIENBANPHIM.update({
+            where: { MaPhienBanPhim: id },
+            data: { DeletedAt: new Date() },
+        });
+
+        return { message: 'Xóa phiên bản phim thành công' };
+    }
+
 }
