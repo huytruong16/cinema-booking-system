@@ -2,19 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsArray, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, ValidateNested, IsNumber } from "class-validator";
 import { Type, Transform } from 'class-transformer';
 
-export class DinhDangDto {
-    @ApiProperty({ description: 'MaDinhDang (id định dạng)', example: '298d831e-e0c4-4904-b815-24bd718a9b8f' })
-    @IsString()
-    @IsNotEmpty()
-    MaDinhDang: string;
-
-    @ApiPropertyOptional({ description: 'Giá vé cho định dạng (nếu muốn override giá mặc định)', example: 75000 })
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    GiaVe?: number;
-}
-
 export class CreateFilmDto {
     @ApiProperty({ description: 'Tên gốc phim', example: 'Dune: Part Two' })
     @IsString()
