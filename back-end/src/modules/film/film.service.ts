@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
 import { StorageService } from '../storage/storage.service';
+import { UpdateFilmDto } from './dtos/update-film.dto';
 
 @Injectable()
 export class FilmService {
@@ -102,7 +103,7 @@ export class FilmService {
             return film;
         });
 
-        return created;
+        return { message: "Tạo phim thành công", film: created };
 
         async function addNewFilm(tx: any) {
             return await tx.pHIM.create({
@@ -147,32 +148,88 @@ export class FilmService {
         }
     }
 
-    async updateFilm(id: string, updateDto: any, posterFile?: Express.Multer.File, backdropFile?: Express.Multer.File) {
-        const film = await this.prisma.pHIM.findUnique({ where: { MaPhim: id, DeletedAt: null } });
+    async updateFilm(
+        id: string,
+        updateDto: UpdateFilmDto,
+        posterFile?: Express.Multer.File,
+        backdropFile?: Express.Multer.File
+    ) {
+        const prisma = this.prisma;
+
+        const film = await prisma.pHIM.findUnique({
+            where: { MaPhim: id, DeletedAt: null },
+        });
         if (!film) throw new NotFoundException(`Phim với ID ${id} không tồn tại`);
 
         if (updateDto.TenGoc && updateDto.TenGoc !== film.TenGoc) {
-            const exists = await this.prisma.pHIM.findFirst({ where: { TenGoc: updateDto.TenGoc, MaPhim: { not: id } } });
+            const exists = await prisma.pHIM.findFirst({
+                where: { TenGoc: updateDto.TenGoc, MaPhim: { not: id } },
+            });
             if (exists) throw new ConflictException('Tên gốc phim đã tồn tại');
         }
+
         if (updateDto.TenHienThi && updateDto.TenHienThi !== film.TenHienThi) {
-            const exists = await this.prisma.pHIM.findFirst({ where: { TenHienThi: updateDto.TenHienThi, MaPhim: { not: id } } });
+            const exists = await prisma.pHIM.findFirst({
+                where: { TenHienThi: updateDto.TenHienThi, MaPhim: { not: id } },
+            });
             if (exists) throw new ConflictException('Tên hiển thị phim đã tồn tại');
         }
 
-        const updateData: any = { UpdatedAt: new Date() };
-        if (updateDto.TenGoc !== undefined) updateData.TenGoc = updateDto.TenGoc;
-        if (updateDto.TenHienThi !== undefined) updateData.TenHienThi = updateDto.TenHienThi;
-        if (updateDto.TomTatNoiDung !== undefined) updateData.TomTatNoiDung = updateDto.TomTatNoiDung;
-        if (updateDto.DaoDien !== undefined) updateData.DaoDien = updateDto.DaoDien;
-        if (updateDto.DanhSachDienVien !== undefined) updateData.DanhSachDienVien = updateDto.DanhSachDienVien;
-        if (updateDto.QuocGia !== undefined) updateData.QuocGia = updateDto.QuocGia;
-        if (updateDto.TrailerUrl !== undefined) updateData.TrailerUrl = updateDto.TrailerUrl;
-        if (updateDto.ThoiLuong !== undefined) updateData.ThoiLuong = updateDto.ThoiLuong;
-        if (updateDto.NgayBatDauChieu !== undefined) updateData.NgayBatDauChieu = new Date(updateDto.NgayBatDauChieu);
-        if (updateDto.NgayKetThucChieu !== undefined) updateData.NgayKetThucChieu = new Date(updateDto.NgayKetThucChieu);
+        if (updateDto.MaNhanPhim && updateDto.MaNhanPhim !== film.MaNhanPhim) {
+            const nhanPhim = await prisma.nHANPHIM.findFirst({
+                where: { MaNhanPhim: updateDto.MaNhanPhim, DeletedAt: null },
+            });
+            if (!nhanPhim) {
+                throw new BadRequestException('MaNhanPhim không tồn tại');
+            }
+        }
 
-        // handle file uploads
+        if (Array.isArray(updateDto.TheLoais)) {
+            const tlIds = updateDto.TheLoais;
+            if (tlIds.length) {
+                const found = await prisma.tHELOAI.findMany({
+                    where: { MaTheLoai: { in: tlIds }, DeletedAt: null },
+                    select: { MaTheLoai: true },
+                });
+
+                const foundIds = new Set(found.map(t => t.MaTheLoai));
+                const missing = tlIds.filter(id => !foundIds.has(id));
+
+                if (missing.length) {
+                    throw new BadRequestException(
+                        `Một hoặc nhiều MaTheLoai không tồn tại: ${missing.join(', ')}`
+                    );
+                }
+            }
+        }
+
+        const updateData: any = { UpdatedAt: new Date() };
+
+        const fields = [
+            'TenGoc',
+            'TenHienThi',
+            'TomTatNoiDung',
+            'DaoDien',
+            'DanhSachDienVien',
+            'QuocGia',
+            'TrailerUrl',
+            'ThoiLuong',
+            'MaNhanPhim',
+        ];
+
+        fields.forEach(field => {
+            if (updateDto[field] !== undefined) {
+                updateData[field] = updateDto[field];
+            }
+        });
+
+        if (updateDto.NgayBatDauChieu !== undefined) {
+            updateData.NgayBatDauChieu = new Date(updateDto.NgayBatDauChieu);
+        }
+        if (updateDto.NgayKetThucChieu !== undefined) {
+            updateData.NgayKetThucChieu = new Date(updateDto.NgayKetThucChieu);
+        }
+
         if (posterFile) {
             if (film.PosterUrl) {
                 await this.storageService.deleteFile('films', film.PosterUrl);
@@ -197,9 +254,30 @@ export class FilmService {
             updateData.BackdropUrl = uploaded.url;
         }
 
-        return await this.prisma.pHIM.update({
-            where: { MaPhim: id },
-            data: updateData,
+        return await prisma.$transaction(async (tx) => {
+            const updatedFilm = await tx.pHIM.update({
+                where: { MaPhim: id },
+                data: updateData,
+            });
+
+            if (Array.isArray(updateDto.TheLoais)) {
+
+                await tx.pHIM_THELOAI.updateMany({
+                    where: { MaPhim: id, DeletedAt: null },
+                    data: { DeletedAt: new Date() },
+                });
+
+                if (updateDto.TheLoais.length) {
+                    const data = updateDto.TheLoais.map((ma: string) => ({
+                        MaPhim: id,
+                        MaTheLoai: ma,
+                        CreatedAt: new Date(),
+                    }));
+                    await tx.pHIM_THELOAI.createMany({ data });
+                }
+            }
+
+            return { message: "Cập nhật phim thành công", film: updatedFilm };
         });
     }
 
@@ -214,7 +292,7 @@ export class FilmService {
             await this.storageService.deleteFile('films', film.BackdropUrl);
         }
 
-        return await this.prisma.pHIM.update({
+        await this.prisma.pHIM.update({
             where: { MaPhim: id },
             data: {
                 DeletedAt: new Date(),
@@ -222,6 +300,7 @@ export class FilmService {
                 BackdropUrl: null,
             },
         });
+        return { message: "Xóa phim thành công" };
     }
 
     async getAllFilmFormats(filters?: FilterFilmDto) {

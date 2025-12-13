@@ -1,9 +1,10 @@
-import { Controller, Get, Param, NotFoundException, Post, Body, Query, BadRequestException, UseInterceptors, UploadedFiles, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, Post, Body, Query, BadRequestException, UseInterceptors, UploadedFiles, UsePipes, ValidationPipe, Patch, Delete } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { FilmService } from './film.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
+import { UpdateFilmDto } from './dtos/update-film.dto';
 import {
     ApiTags,
     ApiOperation,
@@ -114,6 +115,85 @@ export class FilmController {
 
         return this.filmService.createFilm(dto, poster, backdrop);
 
+    }
+
+    @Patch(':id')
+    @ApiOperation({ summary: 'Cập nhật thông tin phim (partial)' })
+    @ApiParam({ name: 'id', description: 'Mã phim (UUID v4)' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Cập nhật thông tin phim',
+        schema: {
+            type: 'object',
+            properties: {
+                TenGoc: { type: 'string' },
+                TenHienThi: { type: 'string' },
+                TomTatNoiDung: { type: 'string' },
+                DaoDien: { type: 'string' },
+                DanhSachDienVien: { type: 'string' },
+                QuocGia: { type: 'string' },
+                TrailerUrl: { type: 'string' },
+                ThoiLuong: { type: 'number' },
+                NgayBatDauChieu: { type: 'string', format: 'date-time' },
+                NgayKetThucChieu: { type: 'string', format: 'date-time' },
+                MaNhanPhim: { type: 'string' },
+
+                TheLoais: {
+                    type: 'string',
+                    description: 'JSON string của mảng MaTheLoai',
+                    example: '["id1","id2"]'
+                },
+
+                posterFile: {
+                    type: 'string',
+                    format: 'binary'
+                },
+                backdropFile: {
+                    type: 'string',
+                    format: 'binary'
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 200, description: 'Cập nhật phim thành công' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    @ApiResponse({ status: 404, description: 'Phim không tồn tại' })
+    @UseInterceptors(
+        FileFieldsInterceptor([
+            { name: 'posterFile', maxCount: 1 },
+            { name: 'backdropFile', maxCount: 1 }
+        ])
+    )
+    async updateFilm(
+        @Param('id') id: string,
+        @Body() dto: UpdateFilmDto,
+        @UploadedFiles()
+        files: {
+            posterFile?: Express.Multer.File[];
+            backdropFile?: Express.Multer.File[];
+        }
+    ) {
+        if (!isUUID(id, '4')) {
+            throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        }
+
+        const poster = files?.posterFile?.[0];
+        const backdrop = files?.backdropFile?.[0];
+
+        return this.filmService.updateFilm(id, dto, poster, backdrop);
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Xóa phim (soft delete)' })
+    @ApiParam({ name: 'id', description: 'Mã phim (UUID v4)' })
+    @ApiResponse({ status: 200, description: 'Xóa phim thành công' })
+    @ApiResponse({ status: 404, description: 'Phim không tồn tại' })
+    async removeFilm(@Param('id') id: string) {
+        if (!isUUID(id, '4')) {
+            throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        }
+
+        return this.filmService.removeFilm(id);
     }
 
 }
