@@ -5,6 +5,8 @@ import { FilmService } from './film.service';
 import { CreateFilmDto } from './dtos/create-film.dto';
 import { FilterFilmDto } from './dtos/filter-film.dto';
 import { UpdateFilmDto } from './dtos/update-film.dto';
+import { CreateFilmVersionDto } from './dtos/create-film-version.dto';
+import { UpdateFilmVersionDto } from './dtos/update-film-version.dto';
 import {
     ApiTags,
     ApiOperation,
@@ -194,6 +196,36 @@ export class FilmController {
         }
 
         return this.filmService.removeFilm(id);
+    }
+
+    @Post('/version')
+    @ApiOperation({ summary: 'Tạo mới phiên bản phim' })
+    @ApiBody({ type: CreateFilmVersionDto })
+    @ApiResponse({ status: 201, description: 'Tạo phiên bản phim thành công' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ hoặc phiên bản đã tồn tại' })
+    async create(@Body() dto: CreateFilmVersionDto) {
+        return this.filmService.createFilmVersion(dto);
+    }
+
+    @Patch('/version/:id')
+    @ApiOperation({ summary: 'Cập nhật phiên bản phim (partial)' })
+    @ApiParam({ name: 'id', description: 'Mã phiên bản phim (UUID v4)' })
+    @ApiBody({ type: UpdateFilmVersionDto })
+    @ApiResponse({ status: 200, description: 'Cập nhật phiên bản phim thành công' })
+    @ApiResponse({ status: 404, description: 'Phiên bản phim không tồn tại' })
+    async update(@Param('id') id: string, @Body() dto: UpdateFilmVersionDto) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.filmService.updateFilmVersion(id, dto);
+    }
+
+    @Delete('/version/:id')
+    @ApiOperation({ summary: 'Xóa phiên bản phim (soft delete)' })
+    @ApiParam({ name: 'id', description: 'Mã phiên bản phim (UUID v4)' })
+    @ApiResponse({ status: 200, description: 'Xóa phiên bản phim thành công' })
+    @ApiResponse({ status: 404, description: 'Phiên bản phim không tồn tại' })
+    async remove(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.filmService.removeFilmVersion(id);
     }
 
 }
