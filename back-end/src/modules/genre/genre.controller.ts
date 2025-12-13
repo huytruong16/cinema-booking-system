@@ -52,7 +52,7 @@ export class GenreController {
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Xóa mềm thể loại (Cập nhật trạng thái)' })
+    @ApiOperation({ summary: 'Xóa mềm thể loại' })
     @ApiParam({ name: 'id', description: 'Mã thể loại cần xóa', required: true })
     @ApiResponse({ status: 200, description: 'Xóa thể loại thành công.' })
     @ApiResponse({ status: 404, description: 'thể loại không tồn tại.' })
