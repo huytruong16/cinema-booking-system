@@ -198,6 +198,7 @@ model VE {
   MaVe           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   MaGheSuatChieu String          @db.Uuid
   GiaVe          Decimal
+  Code           String          @unique
   MaHoaDon       String          @db.Uuid
   TrangThaiVe    trang_thai_ve   @default(CHUASUDUNG)
   GheSuatChieu   GHE_SUATCHIEU    @relation(fields: [MaGheSuatChieu], references: [MaGheSuatChieu])

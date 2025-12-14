@@ -166,6 +166,7 @@ export class InvoiceService {
             MaGheSuatChieu: s.id,
             GiaVe: s.price.toString(),
             MaHoaDon: hoaDon.MaHoaDon,
+            Code: genCode().toString(),
           })),
         });
       }
