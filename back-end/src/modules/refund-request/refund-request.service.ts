@@ -30,9 +30,24 @@ export class RefundRequestService {
 
         await validateBankExistence();
 
+        const invoiceId = ves[0]?.MaHoaDon;
+
         validateRefundRequest();
 
         await checkTicketVoucherEligibility();
+
+        const param = await prisma.tHAMSO.findUnique({ where: { TenThamSo: 'RefundWindowHours' } });
+        let refundWindowHours = 0;
+        if (param && param?.KieuDuLieu === 'int') {
+            refundWindowHours = parseInt(param.GiaTri);
+        }
+        const invoice = await prisma.hOADON.findUnique({ where: { MaHoaDon: invoiceId } });
+        const refundWindow = new Date(invoice?.CreatedAt || new Date());
+        refundWindow.setHours(refundWindow.getHours() + refundWindowHours);
+        if (new Date() > refundWindow) {
+            throw new BadRequestException('Vé đã vượt quá thời gian hoàn vé cho phép');
+        }
+
 
         const seatIds = ves.map(v => v.MaGheSuatChieu).filter(Boolean);
 
@@ -74,7 +89,7 @@ export class RefundRequestService {
         async function checkTicketVoucherEligibility() {
             const appliedTicketVouchers = await prisma.hOADON_KHUYENMAI.findMany({
                 where: {
-                    MaHoaDon: ves[0].MaHoaDon,
+                    MaHoaDon: invoiceId,
                     KhuyenMaiKH: {
                         KhuyenMai: {
                             DoiTuongApDung: VoucherTargetEnum.VE
@@ -104,7 +119,7 @@ export class RefundRequestService {
                 throw new BadRequestException('Một hoặc nhiều vé không tồn tại');
             }
 
-            if (ves.some(ve => ve.MaHoaDon !== ves[0].MaHoaDon)) {
+            if (ves.some(ve => ve.MaHoaDon !== invoiceId)) {
                 throw new BadRequestException('Các vé phải thuộc cùng một hóa đơn để có thể hoàn vé');
             }
 
