@@ -12,6 +12,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { FilmModule } from './modules/film/film.module';
 import { VoucherModule } from './modules/voucher/voucher.module';
 import { ComboModule } from './modules/combo/combo.module';
+import { BankModule } from './modules/bank/bank.module';
 import { ScreeningRoomModule } from './modules/screening-room/screening-room.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { GenreModule } from './modules/genre/genre.module';
@@ -78,6 +79,7 @@ import { TransactionModule } from './modules/transaction/transaction.module';
     FilmModule,
     VoucherModule,
     ComboModule,
+    BankModule,
     ScreeningRoomModule,
     StorageModule,
     GenreModule,

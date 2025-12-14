@@ -1,4 +1,4 @@
-import { Controller, Get, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException, Post, Body } from '@nestjs/common';
 import { RefundRequestService } from './refund-request.service';
 import {
     ApiTags,
@@ -7,6 +7,7 @@ import {
     ApiResponse,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
+import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
 
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
@@ -28,5 +29,11 @@ export class RefundRequestController {
     async getById(@Param('id') id: string) {
         if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.refundRequestService.getRefundRequestById(id);
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Tạo yêu cầu hoàn vé' })
+    async createRefundRequest(@Body() createRefundRequestDto: CreateRefundRequestDto) {
+        return this.refundRequestService.createNewRefundRequest(createRefundRequestDto);
     }
 }
