@@ -51,7 +51,8 @@ import {
     Voucher, 
     CreateVoucherDto, 
     LoaiGiamGia, 
-    TrangThaiKhuyenMai 
+    TrangThaiKhuyenMai,
+    DoiTuongApDung
 } from '@/services/voucher.service';
 
 const trangThaiOptions: { value: TrangThaiKhuyenMai; label: string }[] = [
@@ -62,6 +63,11 @@ const trangThaiOptions: { value: TrangThaiKhuyenMai; label: string }[] = [
 const loaiGiamGiaOptions: { value: LoaiGiamGia; label: string }[] = [
     { value: "PHANTRAM", label: "Phần trăm (%)" },
     { value: "CODINH", label: "Số tiền cố định (₫)" },
+];
+
+const doiTuongOptions: { value: DoiTuongApDung; label: string }[] = [
+    { value: "VE", label: "Vé xem phim" },
+    { value: "COMBO", label: "Bắp nước (Combo)" },
 ];
 
 const getBadgeVariant = (trangThai: TrangThaiKhuyenMai) => {
@@ -255,11 +261,18 @@ function PromotionCard({ promotion, onEdit, onDelete, getBadgeVariant, getBadgeL
         return parts.join(' | ');
     }, [promotion]);
 
+    const targetLabel = promotion.DoiTuongApDung === 'VE' ? 'Vé phim' : 'Combo';
+
     return (
         <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex flex-col">
             <CardHeader className="pb-3">
                  <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-lg font-semibold text-slate-100 leading-snug">{promotion.TenKhuyenMai}</CardTitle>
+                    <div className="flex flex-col gap-1">
+                        <CardTitle className="text-lg font-semibold text-slate-100 leading-snug">{promotion.TenKhuyenMai}</CardTitle>
+                        <Badge variant="secondary" className="w-fit text-[10px] bg-blue-900/50 text-blue-200 border-blue-800">
+                            Áp dụng: {targetLabel}
+                        </Badge>
+                    </div>
                     <Badge variant="outline" className={cn("text-xs flex-shrink-0", getBadgeVariant(promotion.TrangThai))}>
                         {getBadgeLabel(promotion.TrangThai)}
                     </Badge>
@@ -332,6 +345,7 @@ interface PromotionFormState {
     GiaTriDonToiThieu: number | string;
     GiaTriGiamToiDa: number | string; 
     TrangThai: TrangThaiKhuyenMai;
+    DoiTuongApDung: DoiTuongApDung;
 }
 
 interface PromotionFormDialogProps {
@@ -356,6 +370,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
             GiaTriDonToiThieu: 0,
             GiaTriGiamToiDa: 0,
             TrangThai: "CONHOATDONG",
+            DoiTuongApDung: "VE",
     });
 
     useEffect(() => {
@@ -373,6 +388,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                 GiaTriDonToiThieu: Number(promotion.GiaTriDonToiThieu),
                 GiaTriGiamToiDa: Number(promotion.GiaTriGiamToiDa),
                 TrangThai: promotion.TrangThai,
+                DoiTuongApDung: promotion.DoiTuongApDung
             });
         } else {
             setFormData({
@@ -388,9 +404,11 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                 GiaTriDonToiThieu: 0,
                 GiaTriGiamToiDa: 0,
                 TrangThai: "CONHOATDONG",
+                DoiTuongApDung: "VE"
             });
         }
     }, [promotion, isOpen]);
+    
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -400,7 +418,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
         }));
     };
     
-    const handleSelectChange = (name: 'LoaiGiamGia' | 'TrangThai', value: string) => {
+    const handleSelectChange = (name: 'LoaiGiamGia' | 'TrangThai' | 'DoiTuongApDung', value: string) => {
          setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -451,6 +469,7 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
             GiaTriDonToiThieu: Number(formData.GiaTriDonToiThieu) || 0,
             GiaTriGiamToiDa: Number(formData.GiaTriGiamToiDa) || 0,
             TrangThai: formData.TrangThai,
+            DoiTuongApDung: formData.DoiTuongApDung
         };
         
         onSubmit(dataToSubmit);
@@ -484,6 +503,22 @@ function PromotionFormDialog({ isOpen, onClose, onSubmit, promotion }: Promotion
                             <div className="space-y-2">
                                 <Label htmlFor="MoTa">Mô tả chi tiết</Label>
                                 <Textarea id="MoTa" name="MoTa" value={formData.MoTa || ""} onChange={handleChange} className="bg-transparent border-slate-700" />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="DoiTuongApDung">Đối tượng áp dụng</Label>
+                                <Select name="DoiTuongApDung" value={formData.DoiTuongApDung} onValueChange={(v: DoiTuongApDung) => handleSelectChange('DoiTuongApDung', v)}>
+                                    <SelectTrigger className="w-full bg-transparent border-slate-700">
+                                        <SelectValue placeholder="Chọn đối tượng" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
+                                        {doiTuongOptions.map(opt => (
+                                            <SelectItem key={opt.value} value={opt.value} className="cursor-pointer focus:bg-slate-700">
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

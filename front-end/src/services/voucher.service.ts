@@ -2,6 +2,7 @@ import apiClient from '@/lib/apiClient';
 
 export type LoaiGiamGia = "CODINH" | "PHANTRAM";
 export type TrangThaiKhuyenMai = "CONHOATDONG" | "KHONGCONHOATDONG";
+export type DoiTuongApDung = "VE" | "COMBO";
 
 export interface Voucher {
   MaKhuyenMai: string; 
@@ -17,6 +18,7 @@ export interface Voucher {
   GiaTriDonToiThieu: number;
   GiaTriGiamToiDa: number;
   TrangThai: TrangThaiKhuyenMai;
+  DoiTuongApDung: DoiTuongApDung;
 }
 
 export interface CreateVoucherDto {
@@ -32,6 +34,7 @@ export interface CreateVoucherDto {
   NgayBatDau: string; 
   NgayKetThuc: string; 
   TrangThai: TrangThaiKhuyenMai;
+  DoiTuongApDung: DoiTuongApDung;
 }
 
 export const voucherService = {
