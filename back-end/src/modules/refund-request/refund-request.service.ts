@@ -1,13 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
-import { TicketStatusEnum, SeatStatusEnum } from 'src/libs/common/enums';
+import { TicketStatusEnum, SeatStatusEnum, RefundRequestStatusEnum, RoleEnum } from 'src/libs/common/enums';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
+import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
+import { REQUEST } from '@nestjs/core';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class RefundRequestService {
     constructor(
         readonly prisma: PrismaService,
+        @Inject(REQUEST) private readonly request: any,
     ) { }
     async getAllRefundRequests() {
         return await this.prisma.yEUCAUHOANVE.findMany({
@@ -155,5 +158,109 @@ export class RefundRequestService {
             throw new NotFoundException('Yêu cầu hoàn vé không tồn tại');
         }
         return refundRequest;
+    }
+
+    async updateRefundRequestStatus(id: string, payload: UpdateRefundRequestStatusDto): Promise<any> {
+        const vaitro = this.request?.user?.vaitro;
+        const userId = this.request?.user?.id;
+
+        const newStatus = payload.TrangThai;
+        const refundRequest = await this.prisma.yEUCAUHOANVE.findUnique({
+            where: { MaYeuCau: id, DeletedAt: null },
+            select: {
+                TrangThai: true,
+                Ve: {
+                    select: {
+                        MaVe: true,
+                        Code: true,
+                        GheSuatChieu: {
+                            select: {
+                                MaGheSuatChieu: true,
+                                SuatChieu: {
+                                    select: {
+                                        ThoiGianBatDau: true,
+                                        ThoiGianKetThuc: true,
+                                    }
+                                }
+                            }
+                        },
+                        HoaDon: {
+                            select: {
+                                KhachHang: {
+                                    select: {
+                                        MaNguoiDung: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                MaGiaoDich: true
+            },
+        });
+
+        if (!refundRequest) {
+            throw new NotFoundException('Yêu cầu hoàn vé không tồn tại');
+        }
+
+        if (vaitro === RoleEnum.KHACHHANG && userId !== refundRequest?.Ve.HoaDon.KhachHang?.MaNguoiDung) {
+            throw new BadRequestException('Bạn không có quyền cập nhật trạng thái yêu cầu hoàn vé này');
+        }
+
+        if (refundRequest!.TrangThai === RefundRequestStatusEnum.DAHOAN) {
+            throw new BadRequestException(`Vé ${refundRequest!.Ve.Code} đã được hoàn tiền, không thể cập nhật trạng thái`);
+        }
+
+        switch (newStatus) {
+            case RefundRequestStatusEnum.DAHOAN:
+                if (vaitro === RoleEnum.KHACHHANG) {
+                    throw new BadRequestException('Khách hàng không có quyền cập nhật trạng thái này');
+                }
+                if (refundRequest!.TrangThai === RefundRequestStatusEnum.DAHUY) {
+                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đã bị hủy, không thể hoàn tiền`);
+                }
+                if (refundRequest!.MaGiaoDich === null) {
+                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} chưa có giao dịch hoàn tiền, không thể hoàn tiền`);
+                }
+
+                await this.prisma.vE.update({
+                    where: { MaVe: refundRequest!.Ve.MaVe },
+                    data: { TrangThaiVe: TicketStatusEnum.DAHOAN, UpdatedAt: new Date() },
+                });
+
+                await this.prisma.gHE_SUATCHIEU.update({
+                    where: { MaGheSuatChieu: refundRequest!.Ve.GheSuatChieu.MaGheSuatChieu, DeletedAt: null },
+                    data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() }
+                });
+                break;
+            case RefundRequestStatusEnum.DAHUY:
+                if (refundRequest!.TrangThai !== RefundRequestStatusEnum.DANGCHO) {
+                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} không ở trạng thái đang chờ, không thể hủy`);
+                }
+                if (refundRequest!.MaGiaoDich !== null) {
+                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đang được xử lý hoàn tiền, không thể hủy`);
+                }
+
+                let tiketStatus;
+                if (new Date() < refundRequest!.Ve.GheSuatChieu.SuatChieu.ThoiGianKetThuc) {
+                    tiketStatus = TicketStatusEnum.CHUASUDUNG;
+                } else tiketStatus = tiketStatus.DAHETHAN;
+
+
+                await this.prisma.vE.update({
+                    where: { MaVe: refundRequest!.Ve.MaVe },
+                    data: { TrangThaiVe: tiketStatus, UpdatedAt: new Date() },
+                });
+                break;
+            case RefundRequestStatusEnum.DANGCHO:
+                throw new BadRequestException('Không thể chuyển trạng thái về đang chờ');
+        }
+
+        await this.prisma.yEUCAUHOANVE.update({
+            where: { MaYeuCau: id },
+            data: { TrangThai: newStatus, UpdatedAt: new Date() },
+        });
+
+        return await this.getRefundRequestById(id);
     }
 }

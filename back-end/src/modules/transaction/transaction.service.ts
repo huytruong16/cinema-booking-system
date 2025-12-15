@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, Scope } from "@nestjs/common";
-import { RoleEnum, SeatStatusEnum, TicketStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
+import { RefundRequestStatusEnum, RoleEnum, SeatStatusEnum, TicketStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
 import { PayosService } from "src/libs/common/services/payos.service";
 import InvoiceMailDto from "src/modules/mail/dto/invoice-mail.dto";
 import { MailService } from "src/modules/mail/mail.service";
@@ -7,6 +7,8 @@ import { PrismaService } from "src/modules/prisma/prisma.service";
 import { UpdateTransactionMethodDto } from "./dto/update-transaction-method";
 import { CreateRefundTransactionDto } from "./dto/create-refund-transaction.dto";
 import { REQUEST } from "@nestjs/core";
+import { UpdateRefundTransactionStatusDto } from "./dto/update-refund-transaction-status.dto";
+import { RefundRequestService } from "../refund-request/refund-request.service";
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -14,6 +16,7 @@ export class TransactionService {
         private readonly prisma: PrismaService,
         private readonly payosService: PayosService,
         private readonly mailService: MailService,
+        private readonly refundRequestService: RefundRequestService,
         @Inject(REQUEST) private readonly request: any
     ) { }
 
@@ -339,5 +342,45 @@ export class TransactionService {
             return transaction;
         });
         return await this.getTransactionById(ts.MaGiaoDich);
+    }
+
+    async updateRefundTransactionStatus(transactionId: string, request: UpdateRefundTransactionStatusDto) {
+        const transaction = await this.prisma.gIAODICH.findFirst({
+            where: { MaGiaoDich: transactionId, DeletedAt: null },
+            include: {
+                YeuCauHoanVes: true
+            }
+        });
+
+        if (!transaction) {
+            throw new NotFoundException('Giao dịch không tồn tại');
+        }
+
+        if (transaction.LoaiGiaoDich !== TransactionTypeEnum.HOANTIEN) {
+            throw new BadRequestException('Giao dịch không phải là giao dịch hoàn tiền, không thể cập nhật trạng thái hoàn tiền');
+        }
+
+        const newStatus = request.TrangThai;
+        if (newStatus === TransactionStatusEnum.THANHCONG) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHOAN });
+            }
+        }
+        if (newStatus === TransactionStatusEnum.THATBAI) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHUY });
+            }
+        }
+
+        await this.prisma.gIAODICH.update({
+            where: { MaGiaoDich: transactionId },
+            data: {
+                TrangThai: newStatus,
+                UpdatedAt: new Date()
+            }
+        });
+
+        return await this.getTransactionById(transactionId);
+
     }
 }
