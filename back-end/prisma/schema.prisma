@@ -408,7 +408,7 @@ model DANHGIA {
 
 model THAMSO {
   MaThamSo       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenThamSo      String    
+  TenThamSo      String     @unique
   GiaTri         String
   KieuDuLieu     String
   CreatedAt      DateTime  @default(now()) @db.Timestamptz(6)

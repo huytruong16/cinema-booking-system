@@ -1,14 +1,24 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { SeatStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
+import { BadRequestException, Inject, Injectable, NotFoundException, Scope } from "@nestjs/common";
+import { RefundRequestStatusEnum, RoleEnum, SeatStatusEnum, TicketStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from "src/libs/common/enums";
 import { PayosService } from "src/libs/common/services/payos.service";
 import InvoiceMailDto from "src/modules/mail/dto/invoice-mail.dto";
 import { MailService } from "src/modules/mail/mail.service";
 import { PrismaService } from "src/modules/prisma/prisma.service";
 import { UpdateTransactionMethodDto } from "./dto/update-transaction-method";
+import { CreateRefundTransactionDto } from "./dto/create-refund-transaction.dto";
+import { REQUEST } from "@nestjs/core";
+import { UpdateRefundTransactionStatusDto } from "./dto/update-refund-transaction-status.dto";
+import { RefundRequestService } from "../refund-request/refund-request.service";
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
-    constructor(private readonly prisma: PrismaService, private readonly payosService: PayosService, private readonly mailService: MailService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly payosService: PayosService,
+        private readonly mailService: MailService,
+        private readonly refundRequestService: RefundRequestService,
+        @Inject(REQUEST) private readonly request: any
+    ) { }
 
     private async sendInvoiceEmail(invoice: NonNullable<any>) {
         const emailData: InvoiceMailDto = {
@@ -73,6 +83,12 @@ export class TransactionService {
     async getAllTransactions() {
         return await this.prisma.gIAODICH.findMany({
             where: { DeletedAt: null },
+        });
+    }
+
+    async getTransactionById(id: string) {
+        return await this.prisma.gIAODICH.findUnique({
+            where: { MaGiaoDich: id, DeletedAt: null },
         });
     }
 
@@ -220,6 +236,7 @@ export class TransactionService {
                 Code: true,
                 PhuongThuc: true,
                 GiaoDichUrl: true,
+                LoaiGiaoDich: true,
                 HoaDon: {
                     select: {
                         Code: true,
@@ -239,7 +256,7 @@ export class TransactionService {
 
         let paymentData: { paymentLinkId: string, checkoutUrl: string } | undefined;
 
-        if (transaction.PhuongThuc == TransactionEnum.TRUCTIEP && transactionMethod == TransactionEnum.TRUCTUYEN && transaction.GiaoDichUrl.length === 0) {
+        if (transaction.LoaiGiaoDich === TransactionTypeEnum.MUAVE && transaction.PhuongThuc == TransactionEnum.TRUCTIEP && transactionMethod == TransactionEnum.TRUCTUYEN && transaction.GiaoDichUrl.length === 0) {
             paymentData = await this.payosService.getPaymentLinkUrl(Number(transaction.Code), Number(transaction.HoaDon.TongTien), `${transaction.HoaDon.Code}`);
         }
 
@@ -253,5 +270,117 @@ export class TransactionService {
                 UpdatedAt: new Date()
             }
         });
+    }
+
+    async createRefundTransaction(payload: CreateRefundTransactionDto) {
+        const { MaYeuCaus, PhuongThuc } = payload;
+
+        if (this.request?.user?.vaitro !== RoleEnum.NHANVIEN) {
+            throw new BadRequestException('Chỉ nhân viên mới có quyền tạo giao dịch hoàn tiền');
+        }
+
+        const userId = this.request?.user?.id;
+
+        const staff = await this.prisma.nHANVIEN.findFirst({
+            where: { MaNguoiDung: userId, DeletedAt: null },
+        });
+
+        if (!staff) {
+            throw new NotFoundException('Nhân viên không tồn tại');
+        }
+
+        const refundRequests = await this.prisma.yEUCAUHOANVE.findMany({
+            where: {
+                MaYeuCau: { in: MaYeuCaus },
+                DeletedAt: null,
+                MaGiaoDich: null
+            },
+            include: {
+                Ve: true
+            }
+        });
+
+        if (refundRequests.length !== MaYeuCaus.length) {
+            throw new BadRequestException('Một số yêu cầu hoàn vé không tồn tại hoặc đã được xử lý.');
+        }
+
+        const invoiceIds = refundRequests.map(req => req.Ve.MaHoaDon);
+        const uniqueInvoiceIds = [...new Set(invoiceIds)];
+
+        if (uniqueInvoiceIds.length > 1) {
+            throw new BadRequestException('Các yêu cầu hoàn vé phải thuộc cùng một hóa đơn để gộp giao dịch.');
+        }
+
+        const invoiceId = uniqueInvoiceIds[0];
+
+        const totalAmount = refundRequests.reduce((sum, req) => sum + Number(req.SoTien), 0);
+
+        const ts = await this.prisma.$transaction(async (tx) => {
+            const transaction = await tx.gIAODICH.create({
+                data: {
+                    MaHoaDon: invoiceId,
+                    TongTien: totalAmount,
+                    LoaiGiaoDich: TransactionTypeEnum.HOANTIEN,
+                    PhuongThuc: PhuongThuc,
+                    NgayGiaoDich: new Date(),
+                    TrangThai: TransactionStatusEnum.DANGCHO,
+                    MaNhanVien: staff!.MaNhanVien,
+                    Code: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
+                    GiaoDichUrl: '',
+                    LinkId: ''
+                }
+            });
+
+            await tx.yEUCAUHOANVE.updateMany({
+                where: { MaYeuCau: { in: MaYeuCaus } },
+                data: {
+                    MaGiaoDich: transaction.MaGiaoDich,
+                    UpdatedAt: new Date()
+                }
+            });
+
+            return transaction;
+        });
+        return await this.getTransactionById(ts.MaGiaoDich);
+    }
+
+    async updateRefundTransactionStatus(transactionId: string, request: UpdateRefundTransactionStatusDto) {
+        const transaction = await this.prisma.gIAODICH.findFirst({
+            where: { MaGiaoDich: transactionId, DeletedAt: null },
+            include: {
+                YeuCauHoanVes: true
+            }
+        });
+
+        if (!transaction) {
+            throw new NotFoundException('Giao dịch không tồn tại');
+        }
+
+        if (transaction.LoaiGiaoDich !== TransactionTypeEnum.HOANTIEN) {
+            throw new BadRequestException('Giao dịch không phải là giao dịch hoàn tiền, không thể cập nhật trạng thái hoàn tiền');
+        }
+
+        const newStatus = request.TrangThai;
+        if (newStatus === TransactionStatusEnum.THANHCONG) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHOAN });
+            }
+        }
+        if (newStatus === TransactionStatusEnum.THATBAI) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHUY });
+            }
+        }
+
+        await this.prisma.gIAODICH.update({
+            where: { MaGiaoDich: transactionId },
+            data: {
+                TrangThai: newStatus,
+                UpdatedAt: new Date()
+            }
+        });
+
+        return await this.getTransactionById(transactionId);
+
     }
 }
