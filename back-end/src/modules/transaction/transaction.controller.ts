@@ -1,16 +1,17 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, SetMetadata } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, SetMetadata, UseGuards } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
-import { ApiExcludeEndpoint, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { MailService } from 'src/modules/mail/mail.service';
 import { UpdateTransactionMethodDto } from './dto/update-transaction-method';
 import { isUUID } from 'class-validator';
+import { CreateRefundTransactionDto } from './dto/create-refund-transaction.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
 @Controller('transactions')
 @ApiTags('Giao dịch')
 export class TransactionController {
     constructor(
         private readonly transactionService: TransactionService,
-        private readonly mailService: MailService
     ) { }
 
     @Get()
@@ -25,6 +26,16 @@ export class TransactionController {
     @ApiOperation({ summary: 'Nhận Webhook từ PayOS để cập nhật trạng thái thanh toán' })
     async handlePayosWebhook(@Body() body: any) {
         return this.transactionService.updateTransactionStatus(body);
+    }
+
+    @Post('refund')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Tạo giao dịch hoàn tiền cho danh sách yêu cầu hoàn vé' })
+    async createRefundTransaction(
+        @Body() body: CreateRefundTransactionDto,
+    ) {
+        return this.transactionService.createRefundTransaction(body);
     }
 
     @Patch('/method/:id')

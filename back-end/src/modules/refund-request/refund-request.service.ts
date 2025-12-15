@@ -48,9 +48,6 @@ export class RefundRequestService {
             throw new BadRequestException('Vé đã vượt quá thời gian hoàn vé cho phép');
         }
 
-
-        const seatIds = ves.map(v => v.MaGheSuatChieu).filter(Boolean);
-
         const createdRefunds = await this.prisma.$transaction(async (tx) => {
             await Promise.all(
                 refundRequestData.Code.map(code =>
@@ -71,13 +68,6 @@ export class RefundRequestService {
                 where: { Code: { in: refundRequestData.Code } },
                 data: { TrangThaiVe: TicketStatusEnum.CHOHOANTIEN, UpdatedAt: new Date() },
             });
-
-            if (seatIds.length) {
-                await tx.gHE_SUATCHIEU.updateMany({
-                    where: { MaGheSuatChieu: { in: seatIds } },
-                    data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() },
-                });
-            }
 
             return await tx.yEUCAUHOANVE.findMany({
                 where: { MaVe: { in: ves.map(ve => ve.MaVe) }, DeletedAt: null },
