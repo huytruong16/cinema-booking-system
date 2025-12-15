@@ -73,7 +73,7 @@ export class TransactionService {
                 }
             }
         };
-        await this.mailService.sendInvoiceEmail(
+        this.mailService.sendInvoiceEmail(
             emailData.Transaction.GiaoDich.HoaDon.Email,
             'Xác nhận đặt vé thành công',
             emailData
@@ -346,7 +346,11 @@ export class TransactionService {
 
     async updateRefundTransactionStatus(transactionId: string, request: UpdateRefundTransactionStatusDto) {
         const transaction = await this.prisma.gIAODICH.findFirst({
-            where: { MaGiaoDich: transactionId, DeletedAt: null },
+            where: {
+                MaGiaoDich: transactionId,
+                LoaiGiaoDich: TransactionTypeEnum.HOANTIEN,
+                DeletedAt: null
+            },
             include: {
                 YeuCauHoanVes: true
             }
@@ -361,16 +365,6 @@ export class TransactionService {
         }
 
         const newStatus = request.TrangThai;
-        if (newStatus === TransactionStatusEnum.THANHCONG) {
-            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
-                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHOAN });
-            }
-        }
-        if (newStatus === TransactionStatusEnum.THATBAI) {
-            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
-                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHUY });
-            }
-        }
 
         await this.prisma.gIAODICH.update({
             where: { MaGiaoDich: transactionId },
@@ -379,6 +373,17 @@ export class TransactionService {
                 UpdatedAt: new Date()
             }
         });
+
+        if (newStatus === TransactionStatusEnum.THANHCONG) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHOAN }, TransactionEnum.TRUCTUYEN);
+            }
+        }
+        if (newStatus === TransactionStatusEnum.THATBAI) {
+            for (const refundRequestId of transaction.YeuCauHoanVes.map(req => req.MaYeuCau)) {
+                await this.refundRequestService.updateRefundRequestStatus(refundRequestId, { TrangThai: RefundRequestStatusEnum.DAHUY }, TransactionEnum.TRUCTUYEN);
+            }
+        }
 
         return await this.getTransactionById(transactionId);
 
