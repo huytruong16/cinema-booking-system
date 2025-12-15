@@ -244,7 +244,7 @@ export class RefundRequestService {
                 let tiketStatus;
                 if (new Date() < refundRequest!.Ve.GheSuatChieu.SuatChieu.ThoiGianKetThuc) {
                     tiketStatus = TicketStatusEnum.CHUASUDUNG;
-                } else tiketStatus = tiketStatus.DAHETHAN;
+                } else tiketStatus = TicketStatusEnum.DAHETHAN;
 
 
                 await this.prisma.vE.update({
