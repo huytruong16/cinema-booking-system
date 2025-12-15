@@ -1,16 +1,19 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, Scope } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
-import { TicketStatusEnum, SeatStatusEnum, RefundRequestStatusEnum, RoleEnum } from 'src/libs/common/enums';
+import { TicketStatusEnum, SeatStatusEnum, RefundRequestStatusEnum, RoleEnum, TransactionEnum } from 'src/libs/common/enums';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
 import { REQUEST } from '@nestjs/core';
+import { MailService } from '../mail/mail.service';
+import formatCurrency from 'src/libs/common/helpers/format-vn-currency';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RefundRequestService {
     constructor(
         readonly prisma: PrismaService,
         @Inject(REQUEST) private readonly request: any,
+        private readonly mailService: MailService,
     ) { }
     async getAllRefundRequests() {
         return await this.prisma.yEUCAUHOANVE.findMany({
@@ -160,15 +163,27 @@ export class RefundRequestService {
         return refundRequest;
     }
 
-    async updateRefundRequestStatus(id: string, payload: UpdateRefundRequestStatusDto): Promise<any> {
-        const vaitro = this.request?.user?.vaitro;
+    async updateRefundRequestStatus(id: string, payload: UpdateRefundRequestStatusDto, transactionMethod?: TransactionEnum): Promise<any> {
+        const userRole = this.request?.user?.vaitro;
         const userId = this.request?.user?.id;
+
+        const prisma = this.prisma;
+        const mailService = this.mailService;
 
         const newStatus = payload.TrangThai;
         const refundRequest = await this.prisma.yEUCAUHOANVE.findUnique({
             where: { MaYeuCau: id, DeletedAt: null },
             select: {
                 TrangThai: true,
+                SoTien: true,
+                SoTaiKhoan: true,
+                TenChuTaiKhoan: true,
+                NganHang: {
+                    select: {
+                        TenNganHang: true,
+                        Code: true
+                    }
+                },
                 Ve: {
                     select: {
                         MaVe: true,
@@ -180,15 +195,39 @@ export class RefundRequestService {
                                     select: {
                                         ThoiGianBatDau: true,
                                         ThoiGianKetThuc: true,
+                                        PhienBanPhim: {
+                                            select: {
+                                                Phim: { select: { TenHienThi: true } }
+                                            }
+                                        },
+                                        PhongChieu: {
+                                            select: { TenPhongChieu: true }
+                                        }
+                                    }
+                                },
+                                GhePhongChieu: {
+                                    select: {
+                                        GheLoaiGhe: {
+                                            select: {
+                                                Ghe: { select: { Hang: true, Cot: true } }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         },
                         HoaDon: {
                             select: {
+                                Email: true,
+                                Code: true,
                                 KhachHang: {
                                     select: {
-                                        MaNguoiDung: true
+                                        NguoiDungPhanMem: {
+                                            select: {
+                                                MaNguoiDung: true,
+                                                HoTen: true,
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -203,7 +242,7 @@ export class RefundRequestService {
             throw new NotFoundException('Yêu cầu hoàn vé không tồn tại');
         }
 
-        if (vaitro === RoleEnum.KHACHHANG && userId !== refundRequest?.Ve.HoaDon.KhachHang?.MaNguoiDung) {
+        if (userRole === RoleEnum.KHACHHANG && userId !== refundRequest?.Ve.HoaDon.KhachHang?.NguoiDungPhanMem?.MaNguoiDung) {
             throw new BadRequestException('Bạn không có quyền cập nhật trạng thái yêu cầu hoàn vé này');
         }
 
@@ -211,56 +250,92 @@ export class RefundRequestService {
             throw new BadRequestException(`Vé ${refundRequest!.Ve.Code} đã được hoàn tiền, không thể cập nhật trạng thái`);
         }
 
-        switch (newStatus) {
-            case RefundRequestStatusEnum.DAHOAN:
-                if (vaitro === RoleEnum.KHACHHANG) {
-                    throw new BadRequestException('Khách hàng không có quyền cập nhật trạng thái này');
-                }
-                if (refundRequest!.TrangThai === RefundRequestStatusEnum.DAHUY) {
-                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đã bị hủy, không thể hoàn tiền`);
-                }
-                if (refundRequest!.MaGiaoDich === null) {
-                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} chưa có giao dịch hoàn tiền, không thể hoàn tiền`);
-                }
-
-                await this.prisma.vE.update({
-                    where: { MaVe: refundRequest!.Ve.MaVe },
-                    data: { TrangThaiVe: TicketStatusEnum.DAHOAN, UpdatedAt: new Date() },
-                });
-
-                await this.prisma.gHE_SUATCHIEU.update({
-                    where: { MaGheSuatChieu: refundRequest!.Ve.GheSuatChieu.MaGheSuatChieu, DeletedAt: null },
-                    data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() }
-                });
-                break;
-            case RefundRequestStatusEnum.DAHUY:
-                if (refundRequest!.TrangThai !== RefundRequestStatusEnum.DANGCHO) {
-                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} không ở trạng thái đang chờ, không thể hủy`);
-                }
-                if (refundRequest!.MaGiaoDich !== null) {
-                    throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đang được xử lý hoàn tiền, không thể hủy`);
-                }
-
-                let tiketStatus;
-                if (new Date() < refundRequest!.Ve.GheSuatChieu.SuatChieu.ThoiGianKetThuc) {
-                    tiketStatus = TicketStatusEnum.CHUASUDUNG;
-                } else tiketStatus = TicketStatusEnum.DAHETHAN;
-
-
-                await this.prisma.vE.update({
-                    where: { MaVe: refundRequest!.Ve.MaVe },
-                    data: { TrangThaiVe: tiketStatus, UpdatedAt: new Date() },
-                });
-                break;
-            case RefundRequestStatusEnum.DANGCHO:
-                throw new BadRequestException('Không thể chuyển trạng thái về đang chờ');
-        }
+        await handleRefundRequestStatus();
 
         await this.prisma.yEUCAUHOANVE.update({
             where: { MaYeuCau: id },
             data: { TrangThai: newStatus, UpdatedAt: new Date() },
         });
 
+        sendRefundEmailNotification();
         return await this.getRefundRequestById(id);
+
+        function sendRefundEmailNotification() {
+            if ((newStatus === RefundRequestStatusEnum.DAHOAN || newStatus === RefundRequestStatusEnum.DAHUY) &&
+                transactionMethod === TransactionEnum.TRUCTUYEN &&
+                userRole !== RoleEnum.KHACHHANG) {
+                const email = refundRequest!.Ve.HoaDon.Email;
+
+                const seatInfo = refundRequest!.Ve.GheSuatChieu.GhePhongChieu?.GheLoaiGhe?.Ghe;
+                const seatCode = seatInfo ? `${seatInfo.Hang}${seatInfo.Cot}` : 'N/A';
+
+                const showTime = new Date(refundRequest!.Ve.GheSuatChieu.SuatChieu.ThoiGianBatDau);
+                const showTimeFormatted = `${showTime.getHours()}:${String(showTime.getMinutes()).padStart(2, '0')} - ${showTime.toLocaleDateString('vi-VN')}`;
+
+                const mailData = {
+                    TicketCode: refundRequest!.Ve.Code,
+                    BookingCode: refundRequest!.Ve.HoaDon.Code,
+                    MovieName: refundRequest!.Ve.GheSuatChieu.SuatChieu.PhienBanPhim.Phim.TenHienThi,
+                    CinemaRoom: refundRequest!.Ve.GheSuatChieu.SuatChieu.PhongChieu.TenPhongChieu,
+                    SeatCode: seatCode,
+                    ShowTime: showTimeFormatted,
+
+                    RefundAmount: formatCurrency(Number(refundRequest!.SoTien)),
+                    BankAccount: refundRequest!.SoTaiKhoan,
+                    BankName: refundRequest!.NganHang?.TenNganHang ?? 'N/A',
+                    AccountHolder: refundRequest!.TenChuTaiKhoan,
+                    RefundDate: new Date().toLocaleDateString('vi-VN')
+                };
+
+                mailService.sendRefundDecisionEmail(email, mailData, newStatus);
+            }
+        }
+
+        async function handleRefundRequestStatus() {
+            switch (newStatus) {
+                case RefundRequestStatusEnum.DAHOAN:
+                    if (userRole === RoleEnum.KHACHHANG) {
+                        throw new BadRequestException('Khách hàng không có quyền cập nhật trạng thái này');
+                    }
+                    if (refundRequest!.TrangThai === RefundRequestStatusEnum.DAHUY) {
+                        throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đã bị hủy, không thể hoàn tiền`);
+                    }
+                    if (refundRequest!.MaGiaoDich === null) {
+                        throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} chưa có giao dịch hoàn tiền, không thể hoàn tiền`);
+                    }
+
+                    await prisma.vE.update({
+                        where: { MaVe: refundRequest!.Ve.MaVe },
+                        data: { TrangThaiVe: TicketStatusEnum.DAHOAN, UpdatedAt: new Date() },
+                    });
+
+                    await prisma.gHE_SUATCHIEU.update({
+                        where: { MaGheSuatChieu: refundRequest!.Ve.GheSuatChieu.MaGheSuatChieu, DeletedAt: null },
+                        data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() }
+                    });
+                    break;
+                case RefundRequestStatusEnum.DAHUY:
+                    if (refundRequest!.TrangThai !== RefundRequestStatusEnum.DANGCHO) {
+                        throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} không ở trạng thái đang chờ, không thể hủy`);
+                    }
+                    if (refundRequest!.MaGiaoDich !== null) {
+                        throw new BadRequestException(`Yêu cầu hoàn vé cho vé ${refundRequest!.Ve.Code} đang được xử lý hoàn tiền, không thể hủy`);
+                    }
+
+                    let tiketStatus;
+                    if (new Date() < refundRequest!.Ve.GheSuatChieu.SuatChieu.ThoiGianKetThuc) {
+                        tiketStatus = TicketStatusEnum.CHUASUDUNG;
+                    } else tiketStatus = TicketStatusEnum.DAHETHAN;
+
+
+                    await prisma.vE.update({
+                        where: { MaVe: refundRequest!.Ve.MaVe },
+                        data: { TrangThaiVe: tiketStatus, UpdatedAt: new Date() },
+                    });
+                    break;
+                case RefundRequestStatusEnum.DANGCHO:
+                    throw new BadRequestException('Không thể chuyển trạng thái về đang chờ');
+            }
+        }
     }
 }
