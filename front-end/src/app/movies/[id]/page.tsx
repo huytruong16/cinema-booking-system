@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Clock, Star, PlayCircle, Calendar } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { format, addDays, startOfDay, endOfDay } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay, parseISO, isSameDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { MovieReviews } from '@/components/movies/MovieReviews';
 import { filmService } from '@/services/film.service';
 import { showtimeService } from '@/services/showtime.service';
 import { Movie } from '@/types/movie';
-import { Showtime } from '@/types/showtime'; 
+import { Showtime, SuatChieuSimple, SuatChieuTheoNgay, PhienBanPhimGroup, PhongChieuGroup } from '@/types/showtime';
 import { DialogTitle } from "@/components/ui/dialog";
 
 import {
@@ -37,7 +37,7 @@ export default function MovieDetailPage() {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoadingMovie, setIsLoadingMovie] = useState(true);
 
-  const [showtimes, setShowtimes] = useState<Showtime[]>([]);
+  const [suatChieuTheoNgay, setSuatChieuTheoNgay] = useState<SuatChieuTheoNgay[]>([]);
   const [isLoadingShowtimes, setIsLoadingShowtimes] = useState(false);
 
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
@@ -87,60 +87,44 @@ export default function MovieDetailPage() {
     const fetchShowtimes = async () => {
       if (!movieId) return;
 
-      const selectedDayObj = daysList.find(d => d.fullDate === selectedDateStr);
-      if (!selectedDayObj) return;
-
       setIsLoadingShowtimes(true);
       try {
-        const startDate = startOfDay(selectedDayObj.date).toISOString();
-        const endDate = endOfDay(selectedDayObj.date).toISOString();
+        const response = await showtimeService.getShowtimesByMovieId(movieId);
 
-        const data = await showtimeService.getShowtimes({
-          MaPhim: movieId,
-          TuNgay: startDate,
-          DenNgay: endDate,
-          TrangThai: 'CHUACHIEU' 
-        });
-        setShowtimes(data);
+        if (response && response.SuatChieuTheoNgay) {
+          setSuatChieuTheoNgay(response.SuatChieuTheoNgay);
+        } else {
+          setSuatChieuTheoNgay([]);
+        }
+
       } catch (error) {
         console.error("Failed to fetch showtimes:", error);
-        setShowtimes([]);
+        setSuatChieuTheoNgay([]);
       } finally {
         setIsLoadingShowtimes(false);
       }
     };
 
     fetchShowtimes();
-  }, [movieId, selectedDateStr, daysList]);
-
-  const groupedShowtimes = useMemo(() => {
-    const groups: Record<string, Showtime[]> = {};
-
-    showtimes.forEach(showtime => {
-      const formatName = showtime.PhienBanPhim?.DinhDang?.TenDinhDang || '2D';
-      const language = showtime.PhienBanPhim?.NgonNgu?.TenNgonNgu || 'Phụ đề';
-      const groupName = `${formatName} - ${language}`;
-
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(showtime);
-    });
-
-    Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) =>
-        new Date(a.ThoiGianBatDau).getTime() - new Date(b.ThoiGianBatDau).getTime()
-      );
-    });
-
-    return groups;
-  }, [showtimes]);
+  }, [movieId]);
 
 
-  const handleBookTicket = (showtime: Showtime) => {
+  const currentDayShowtimes = useMemo(() => {
+    const selectedDayObj = daysList.find(d => d.fullDate === selectedDateStr);
+    if (!selectedDayObj) return null;
+
+    const items = suatChieuTheoNgay.find(item =>
+      isSameDay(parseISO(item.NgayChieu), selectedDayObj.date)
+    );
+
+    return items ? items.PhienBanPhim : [];
+  }, [suatChieuTheoNgay, selectedDateStr, daysList]);
+
+
+  const handleBookTicket = (showtime: SuatChieuSimple, phienBan: PhienBanPhimGroup, phong: PhongChieuGroup) => {
     const time = format(new Date(showtime.ThoiGianBatDau), 'HH:mm');
     const date = format(new Date(showtime.ThoiGianBatDau), 'yyyy-MM-dd');
-    const formatType = `${showtime.PhienBanPhim?.DinhDang?.TenDinhDang} ${showtime.PhienBanPhim?.NgonNgu?.TenNgonNgu}`;
+    const formatType = `${phienBan.DinhDang.TenDinhDang} ${phienBan.NgonNgu.TenNgonNgu}`;
 
     router.push(
       `/booking?showtimeId=${showtime.MaSuatChieu}&movieId=${movie?.id}&date=${encodeURIComponent(
@@ -318,29 +302,49 @@ export default function MovieDetailPage() {
               <div className="flex justify-center items-center h-40">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
-            ) : Object.keys(groupedShowtimes).length > 0 ? (
+            ) : currentDayShowtimes && currentDayShowtimes.length > 0 ? (
               <div className="animate-in fade-in duration-500">
                 <div className="space-y-6">
-                  {Object.entries(groupedShowtimes).map(([groupName, groupShowtimes]) => (
-                    <div key={groupName} className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
-                      <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-5 bg-[#C41E3A] rounded-full inline-block"></span>
-                        {groupName}
-                      </h4>
-                      <div className="flex flex-wrap gap-3">
-                        {groupShowtimes.map(showtime => (
-                          <Button
-                            key={showtime.MaSuatChieu}
-                            variant="outline"
-                            className="min-w-[100px] h-11 bg-transparent hover:bg-[#C41E3A] hover:text-white border-zinc-700 text-zinc-300 transition-all font-medium text-base"
-                            onClick={() => handleBookTicket(showtime)}
-                          >
-                            {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}
-                          </Button>
-                        ))}
+                  {currentDayShowtimes.map((phienBan) => {
+                    const groupName = `${phienBan.DinhDang.TenDinhDang} - ${phienBan.NgonNgu.TenNgonNgu}`;
+
+                    return (
+                      <div key={phienBan.MaPhienBanPhim} className="bg-zinc-900/50 p-5 rounded-xl border border-zinc-800">
+                        <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <span className="w-1.5 h-5 bg-[#C41E3A] rounded-full inline-block"></span>
+                          {groupName}
+                        </h4>
+
+                        <div className="space-y-4">
+                          {phienBan.PhongChieu.map(phong => (
+                            <div key={phong.MaPhongChieu} className="flex flex-col gap-2">
+                              <span className="text-sm text-zinc-400 font-medium ml-1">{phong.TenPhongChieu}</span>
+                              <div className="flex flex-wrap gap-3">
+                                {phong.SuatChieus.map(suat => (
+                                  <Button
+                                    key={suat.MaSuatChieu}
+                                    variant="outline"
+                                    className={cn(
+                                      "min-w-[100px] h-11 border-zinc-700 text-zinc-300 transition-all font-medium text-base",
+                                      suat.TrangThai === 'CHUACHIEU'
+                                        ? "bg-transparent hover:bg-[#C41E3A] hover:text-white"
+                                        : "bg-zinc-800/50 text-zinc-500 cursor-not-allowed border-zinc-800"
+                                    )}
+                                    onClick={() => {
+                                      if (suat.TrangThai === 'CHUACHIEU') handleBookTicket(suat, phienBan, phong)
+                                    }}
+                                    disabled={suat.TrangThai !== 'CHUACHIEU'}
+                                  >
+                                    {format(new Date(suat.ThoiGianBatDau), 'HH:mm')}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : (

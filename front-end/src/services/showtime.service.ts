@@ -1,5 +1,5 @@
 import api from "@/lib/apiClient";
-import { Showtime, GetShowtimesParams } from "@/types/showtime";
+import { Showtime, GetShowtimesParams, SeatType } from "@/types/showtime";
 
 export const showtimeService = {
     getShowtimes: async (params?: GetShowtimesParams): Promise<Showtime[]> => {
@@ -23,4 +23,26 @@ export const showtimeService = {
             return null;
         }
     },
+
+    getSeatTypes: async (): Promise<SeatType[]> => {
+        try {
+            const response = await api.get<SeatType[]>('/seat-types');
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách loại ghế:", error);
+            return [];
+        }
+    },
+
+    getShowtimesByMovieId: async (movieId: string, params?: { TrangThai?: string, NgayChieu?: string }): Promise<import("@/types/showtime").ShowtimeByMovieResponse | null> => {
+        try {
+            const response = await api.get<import("@/types/showtime").ShowtimeByMovieResponse>(`/showtimes/movie/${movieId}`, {
+                params
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Lỗi khi lấy lịch chiếu cho phim ${movieId}:`, error);
+            return null;
+        }
+    }
 };

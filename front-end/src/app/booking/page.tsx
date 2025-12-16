@@ -3,23 +3,16 @@
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { mockMovies, mockCombos, mockShowtimes } from '@/lib/mockData';
+import { mockCombos } from '@/lib/mockData';
 import ComboCard from '@/components/combo/ComboCard';
-import BookingSeatMap, { SelectedSeat } from '@/components/booking/BookingSeatMap';
+import BookingSeatMap, { SelectedSeat, SeatRenderMeta } from '@/components/booking/BookingSeatMap';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ShoppingCart, Loader2, Calendar, Clock, Film } from 'lucide-react';
+import { Ticket, ShoppingCart, Loader2, Calendar, Clock, MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -33,15 +26,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { format } from 'date-fns';
 
-const getAvailableDates = () => mockShowtimes.map(d => d.date);
-const getAvailableFormats = () => [...new Set(mockShowtimes.flatMap(d => d.types.map(t => t.type)))];
+// Import Service và Type
+import { showtimeService } from '@/services/showtime.service';
+import { comboService, Combo } from '@/services/combo.service';
+import { Showtime } from '@/types/showtime';
 
-const getAvailableTimes = (date: string, format: string) => {
-  const day = mockShowtimes.find(d => d.date === date);
-  if (!day) return [];
-  const type = day.types.find(t => t.type === format);
-  return type ? type.times : [];
+type CustomerInfo = {
+  name: string;
+  email: string;
+  phone: string;
+  isGuest: boolean;
 };
 
 function BookingPageContent() {
@@ -49,29 +45,53 @@ function BookingPageContent() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
-  const [movieId] = useState(() => searchParams.get('movieId'));
-  const movie = useMemo(() => mockMovies.find(m => m.id.toString() === movieId), [movieId]);
+  // 1. Lấy tham số từ URL
+  const showtimeId = searchParams.get('showtimeId'); // Cần showtimeId để gọi API
 
-  const [selectedDate, setSelectedDate] = useState(() => searchParams.get('date') || getAvailableDates()[0]);
-  const [selectedFormat, setSelectedFormat] = useState(() => searchParams.get('format') || getAvailableFormats()[0]);
-  const [selectedTime, setSelectedTime] = useState(() => searchParams.get('time') || "");
+  // 2. State dữ liệu
+  const [showtime, setShowtime] = useState<Showtime | null>(null);
+  const [seatTypes, setSeatTypes] = useState<any[]>([]); // Sẽ update type sau
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const availableTimes = useMemo(() => getAvailableTimes(selectedDate, selectedFormat), [selectedDate, selectedFormat]);
-  useEffect(() => {
-    if (!selectedTime || (!availableTimes.includes(selectedTime) && availableTimes.length > 0)) {
-      setSelectedTime(availableTimes[0]);
-    }
-  }, [availableTimes, selectedTime]);
-
+  // State booking
   const [selectedSeats, setSelectedSeats] = useState<SelectedSeat[]>([]);
   const [comboQuantities, setComboQuantities] = useState<{ [key: string]: number }>({});
-  const [timeLeft, setTimeLeft] = useState(300);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 phút
   const [isTimerActive, setIsTimerActive] = useState(false);
-
-  const [showGuestModal, setShowGuestModal] = useState(false);
-  const [guestInfo, setGuestInfo] = useState({ fullName: "", email: "", phone: "", agreed: false });
   const [isNavigating, setIsNavigating] = useState(false);
 
+  // State Guest
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [guestInfo, setGuestInfo] = useState({ fullName: "", email: "", phone: "", agreed: false });
+
+  // 3. Fetch dữ liệu thật từ API
+  useEffect(() => {
+    if (!showtimeId) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [showtimeData, seatTypesData, combosData] = await Promise.all([
+          showtimeService.getShowtimeById(showtimeId),
+          showtimeService.getSeatTypes(),
+          comboService.getAll()
+        ]);
+        setShowtime(showtimeData);
+        setSeatTypes(seatTypesData);
+        setCombos(combosData);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
+        toast.error("Không thể tải thông tin suất chiếu hoặc combo. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [showtimeId]);
+
+  // Logic đếm ngược
   useEffect(() => {
     if (!isTimerActive || timeLeft <= 0) return;
     const timer = setInterval(() => {
@@ -90,30 +110,49 @@ function BookingPageContent() {
 
   const formatCountdown = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
+  // Xử lý Click Ghế (Chọn/Bỏ chọn)
   const handleSeatClick = (seat: SelectedSeat) => {
-    if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
-    setSelectedSeats(prev => [...prev, seat]);
-  };
+    const isSelected = selectedSeats.some(s => s.id === seat.id);
 
-  const handleSeatRemove = (id: string) => {
-    setSelectedSeats(prev => prev.filter(s => s.id !== id));
+    if (isSelected) {
+      // Bỏ chọn
+      const newSeats = selectedSeats.filter(s => s.id !== seat.id);
+      setSelectedSeats(newSeats);
+      if (newSeats.length === 0) {
+        setIsTimerActive(false);
+        setTimeLeft(300);
+      }
+    } else {
+      // Chọn mới
+      if (selectedSeats.length >= 8) {
+        toast.warning("Bạn chỉ được chọn tối đa 8 ghế.");
+        return;
+      }
+      if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
+      setSelectedSeats([...selectedSeats, seat]);
+    }
   };
 
   const handleQuantityChange = (id: string, qty: number) => {
     setComboQuantities(prev => ({ ...prev, [id]: qty }));
   };
 
-  const totalTicketPrice = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats]);
-
   const selectedCombosList = useMemo(() => {
     return Object.entries(comboQuantities)
       .map(([id, q]) => {
-        const c = mockCombos.find(mc => mc.id === id);
-        return c ? { ...c, quantity: q } : null;
+        const c = combos.find(mc => mc.MaCombo === id);
+        return c ? {
+          id: c.MaCombo,
+          name: c.TenCombo,
+          price: c.GiaTien,
+          quantity: q,
+          imageUrl: c.HinhAnh
+        } : null;
       })
-      .filter(c => c && c.quantity > 0) as (typeof mockCombos[0] & { quantity: number })[];
-  }, [comboQuantities]);
+      .filter(c => c && c.quantity > 0) as { id: string, name: string, price: number, quantity: number, imageUrl?: string }[];
+  }, [comboQuantities, combos]);
 
+  const totalTicketPrice = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats]);
   const totalComboPrice = useMemo(() => selectedCombosList.reduce((sum, c) => sum + (c.price * c.quantity), 0), [selectedCombosList]);
   const totalPrice = totalTicketPrice + totalComboPrice;
 
@@ -126,41 +165,99 @@ function BookingPageContent() {
   };
 
   const handleGuestSubmit = () => {
-    if (!guestInfo.fullName || !guestInfo.email || !guestInfo.phone) {
-      toast.error("Vui lòng nhập đủ thông tin.");
-      return;
-    }
-    if (!guestInfo.agreed) {
-      toast.error("Vui lòng đồng ý điều khoản.");
+    if (!guestInfo.fullName || !guestInfo.email || !guestInfo.phone || !guestInfo.agreed) {
+      toast.error("Vui lòng nhập đầy đủ thông tin và đồng ý điều khoản.");
       return;
     }
     proceedToPayment({ name: guestInfo.fullName, email: guestInfo.email, phone: guestInfo.phone, isGuest: true });
   };
 
-  const proceedToPayment = (customerInfo: any) => {
+  const proceedToPayment = (customerInfo: CustomerInfo) => {
+    if (!showtime) return;
     setIsNavigating(true);
+
     const bookingData = {
-      movie,
-      date: selectedDate,
-      time: selectedTime,
-      format: selectedFormat,
+      showtime,
+      movieTitle: showtime.PhienBanPhim.Phim.TenHienThi,
+      posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
       seats: selectedSeats,
       combos: selectedCombosList,
       totalPrice,
       customerInfo
     };
+
     sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
     router.push('/payment');
   };
 
-  if (!movie) {
+  const basePrice = useMemo(() => Number(showtime?.PhienBanPhim?.GiaVe ?? 0), [showtime]);
+
+  const seatMetaById = useMemo<Record<string, SeatRenderMeta>>(() => {
+    if (!showtime) return {};
+
+    const rank = (t: SeatRenderMeta['type']) => (t === 'doi' ? 3 : t === 'vip' ? 2 : 1);
+    const mergeType = (a: SeatRenderMeta['type'], b: SeatRenderMeta['type']) => (rank(a) >= rank(b) ? a : b);
+
+    const normalizeType = (raw?: string): SeatRenderMeta['type'] => {
+      const v = (raw ?? '').trim().toUpperCase();
+      if (v.includes('DOI') || v.includes('ĐÔI')) return 'doi';
+      if (v.includes('VIP')) return 'vip';
+      return 'thuong';
+    };
+
+    const meta: Record<string, SeatRenderMeta> = {};
+    for (const gs of showtime.GheSuatChieus ?? []) {
+      const ghe = gs.GhePhongChieu?.GheLoaiGhe?.Ghe;
+      if (!ghe?.Hang || !ghe?.Cot) continue;
+
+      const seatId = `${ghe.Hang}${ghe.Cot}`;
+      const loai = gs.GhePhongChieu?.GheLoaiGhe?.LoaiGhe;
+      const type = normalizeType(loai?.LoaiGhe);
+
+      const heSo = Number(loai?.HeSoGiaGhe ?? 1);
+      const multiplier = Number.isFinite(heSo) && heSo > 0 ? heSo : 1;
+      const price = Math.round(basePrice * multiplier);
+
+      const existing = meta[seatId];
+      if (!existing) {
+        meta[seatId] = { type, price, status: gs.TrangThai };
+        continue;
+      }
+
+      meta[seatId] = {
+        type: mergeType(existing.type, type),
+        price: Math.max(existing.price, price),
+        status: existing.status === 'CONTRONG' && gs.TrangThai === 'CONTRONG' ? 'CONTRONG' : (existing.status !== 'CONTRONG' ? existing.status : gs.TrangThai),
+      };
+    }
+    return meta;
+  }, [showtime, basePrice]);
+
+  const bookedSeats = useMemo(() => {
+    return Object.entries(seatMetaById)
+      .filter(([, v]) => v.status && v.status !== 'CONTRONG')
+      .map(([k]) => k);
+  }, [seatMetaById]);
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F0F] text-white gap-4">
-        <p className="text-red-500 text-lg">Không tìm thấy thông tin phim hoặc đường dẫn bị lỗi.</p>
-        <Button onClick={() => router.push('/')} variant="outline">Về trang chủ</Button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F0F] text-white">
+        <Loader2 className="animate-spin size-10 text-primary mb-4" />
+        <p>Đang tải dữ liệu phòng chiếu...</p>
       </div>
     );
   }
+
+  if (!showtime) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F0F] text-white gap-4">
+        <p className="text-red-500 text-lg">Không tìm thấy thông tin suất chiếu.</p>
+        <Button onClick={() => router.back()} variant="outline">Quay lại</Button>
+      </div>
+    );
+  }
+
+  const movie = showtime.PhienBanPhim.Phim;
 
   return (
     <div className="dark bg-background min-h-screen text-foreground pb-20 relative">
@@ -175,44 +272,18 @@ function BookingPageContent() {
       )}
 
       <div className="sticky top-0 z-30 bg-[#1C1C1C] border-b border-zinc-800 shadow-md py-3 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              </Button>
-              <h2 className="text-lg font-bold text-white truncate max-w-[200px]">{movie.title}</h2>
-            </div>
-            <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-              <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700 text-xs">
-                  <Calendar className="w-3 h-3 mr-2 text-zinc-400" />
-                  <SelectValue placeholder="Ngày" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                  {getAvailableDates().map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                <SelectTrigger className="w-[180px] h-9 bg-zinc-800 border-zinc-700 text-xs">
-                  <Film className="w-3 h-3 mr-2 text-zinc-400" />
-                  <SelectValue placeholder="Định dạng" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                  {getAvailableFormats().map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger className="w-[150px] h-9 bg-zinc-800 border-zinc-700 text-xs">
-                  <Clock className="w-3 h-3 mr-2 text-zinc-400" />
-                  <SelectValue placeholder="Giờ" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-800 text-white border-zinc-700">
-                  {availableTimes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </Button>
+            <div>
+              <h2 className="text-lg font-bold text-white truncate max-w-[300px]">{movie.TenHienThi}</h2>
+              <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
+                <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'dd/MM/yyyy')}</span>
+                <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}</span>
+                <span className="flex items-center"><MapPin className="w-3 h-3 mr-1" /> {showtime.PhongChieu.TenPhongChieu}</span>
+              </div>
             </div>
           </div>
 
@@ -222,29 +293,35 @@ function BookingPageContent() {
           )}>
             {isTimerActive ? `Giữ ghế: ${formatCountdown(timeLeft)}` : "Thời gian giữ ghế: 05:00"}
           </div>
-
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-8">
         <div className="lg:col-span-2 space-y-8">
           <BookingSeatMap
+            seatMap={showtime.PhongChieu.SoDoGhe}
+            bookedSeats={bookedSeats}
+            seatMetaById={seatMetaById}
+            basePrice={basePrice}
             selectedSeats={selectedSeats}
             onSeatClick={handleSeatClick}
-            onSeatRemove={handleSeatRemove}
+            seatTypes={seatTypes}
           />
 
           <Card className="bg-card/50 border border-border text-white">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-white">Chọn Combo</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Chọn Combo</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {mockCombos.map(combo => (
+                {combos.map(combo => (
                   <ComboCard
-                    key={combo.id}
-                    combo={combo}
-                    initialQuantity={comboQuantities[combo.id] || 0}
+                    key={combo.MaCombo}
+                    combo={{
+                      id: combo.MaCombo,
+                      name: combo.TenCombo,
+                      price: combo.GiaTien,
+                      imageUrl: combo.HinhAnh || ''
+                    }}
+                    initialQuantity={comboQuantities[combo.MaCombo] || 0}
                     onQuantityChange={handleQuantityChange}
                   />
                 ))}
@@ -260,36 +337,28 @@ function BookingPageContent() {
                 <CardTitle className="text-xl font-bold text-white">Tóm tắt hóa đơn</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[40vh] pr-4">
-                  <div className="flex items-center gap-4">
-                    <Image src={movie.posterUrl} alt={movie.title} width={80} height={120} className="rounded-md" />
+                <ScrollArea className="h-[50vh] pr-4">
+                  <div className="flex gap-4">
+                    <Image src={movie.PosterUrl} alt={movie.TenHienThi} width={80} height={120} className="rounded-md object-cover" />
                     <div>
-                      <h3 className="font-semibold text-white">{movie.title}</h3>
-                      <Badge variant="outline" className="mt-1">{movie.ageRating}</Badge>
+                      <h3 className="font-semibold text-white">{movie.TenHienThi}</h3>
+                      <Badge variant="outline" className="mt-1">{movie.NhanPhim?.TenNhanPhim || 'T13'}</Badge>
+                      <p className="text-xs text-zinc-400 mt-1">{showtime.PhienBanPhim.DinhDang.TenDinhDang} - {showtime.PhienBanPhim.NgonNgu.TenNgonNgu}</p>
                     </div>
                   </div>
 
                   <Separator className="my-4 bg-border" />
 
                   <div className="space-y-2">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Ticket className="size-5 text-primary" />
-                      Vé đã chọn ({selectedSeats.length})
+                    <h4 className="font-semibold flex items-center gap-2 text-primary">
+                      <Ticket className="size-4" /> Ghế đang chọn ({selectedSeats.length})
                     </h4>
-                    {selectedSeats.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Vui lòng chọn ghế...</p>
-                    ) : (
-                      <div className="space-y-1 text-sm">
+                    {selectedSeats.length === 0 ? <p className="text-xs text-muted-foreground italic">Vui lòng chọn ghế...</p> : (
+                      <div className="grid grid-cols-2 gap-2 text-sm">
                         {selectedSeats.map(seat => (
-                          <div key={seat.id} className="flex justify-between items-center">
-                            <span className={cn(
-                              "font-medium",
-                              seat.type === 'vip' && "text-yellow-400",
-                              seat.type === 'doi' && "text-purple-400",
-                            )}>
-                              Ghế {seat.id} ({seat.type === 'doi' ? 'Đôi' : seat.type === 'vip' ? 'VIP' : 'Thường'})
-                            </span>
-                            <span className="text-muted-foreground">{seat.price.toLocaleString('vi-VN')} ₫</span>
+                          <div key={seat.id} className="bg-zinc-800 p-2 rounded flex justify-between">
+                            <span className="font-bold">{seat.id}</span>
+                            <span>{seat.price.toLocaleString()}đ</span>
                           </div>
                         ))}
                       </div>
@@ -333,7 +402,6 @@ function BookingPageContent() {
                   <span>TỔNG CỘNG</span>
                   <span>{totalPrice.toLocaleString('vi-VN')} ₫</span>
                 </div>
-
                 <Button
                   size="lg"
                   className="w-full text-lg h-12 bg-red-600 hover:bg-red-700 text-white"
@@ -412,14 +480,12 @@ function BookingPageContent() {
               </Label>
             </div>
           </div>
-
           <DialogFooter>
             <Button onClick={() => setShowGuestModal(false)} className="bg-foreground">Hủy</Button>
             <Button onClick={handleGuestSubmit} className="bg-primary hover:bg-primary/90">Tiếp tục</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
