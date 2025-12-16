@@ -1,11 +1,14 @@
 import { Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { REQUEST } from '@nestjs/core';
+import { StorageService } from '../storage/storage.service';
+import { UpdateProfileDto } from './dtos/update-profile.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
     constructor(
         readonly prisma: PrismaService,
+        private readonly storageService: StorageService,
         @Inject(REQUEST) private readonly request: any,
     ) { }
 
@@ -72,5 +75,51 @@ export class UserService {
     async getCurrentUser() {
         const userId = this.request?.user?.id;
         return this.getUserById(userId);
+    }
+
+    async updateProfile(
+        dto: UpdateProfileDto,
+        file?: Express.Multer.File,
+    ) {
+        const userId = this.request?.user?.id;
+
+        const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({
+            where: {
+                MaNguoiDung: userId,
+                DeletedAt: null,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('Người dùng không tồn tại');
+        }
+
+        const updateData: any = {
+            UpdatedAt: new Date(),
+        };
+
+        if (dto.HoTen !== undefined) updateData.HoTen = dto.HoTen;
+        if (dto.SoDienThoai !== undefined) updateData.SoDienThoai = dto.SoDienThoai;
+
+        if (file) {
+            if (user.AvatarUrl) {
+                await this.storageService.deleteFile('users', user.AvatarUrl);
+            }
+
+            const uploaded = await this.storageService.uploadFile(file, {
+                bucket: 'users',
+                folder: 'avatars',
+                allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+            });
+
+            updateData.AvatarUrl = uploaded.url;
+        }
+
+        const updateProfile = await this.prisma.nGUOIDUNGPHANMEM.update({
+            where: { MaNguoiDung: userId },
+            data: updateData
+        });
+
+        return { message: 'Cập nhật thông tin cá nhân thành công', user: updateProfile };
     }
 }
