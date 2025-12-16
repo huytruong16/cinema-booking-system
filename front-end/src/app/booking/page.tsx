@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 
 // Import Service và Type
 import { showtimeService } from '@/services/showtime.service';
+import { comboService, Combo } from '@/services/combo.service';
 import { Showtime } from '@/types/showtime';
 
 type CustomerInfo = {
@@ -50,6 +51,7 @@ function BookingPageContent() {
   // 2. State dữ liệu
   const [showtime, setShowtime] = useState<Showtime | null>(null);
   const [seatTypes, setSeatTypes] = useState<any[]>([]); // Sẽ update type sau
+  const [combos, setCombos] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
 
   // State booking
@@ -70,15 +72,17 @@ function BookingPageContent() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [showtimeData, seatTypesData] = await Promise.all([
+        const [showtimeData, seatTypesData, combosData] = await Promise.all([
           showtimeService.getShowtimeById(showtimeId),
-          showtimeService.getSeatTypes()
+          showtimeService.getSeatTypes(),
+          comboService.getAll()
         ]);
         setShowtime(showtimeData);
         setSeatTypes(seatTypesData);
+        setCombos(combosData);
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
-        toast.error("Không thể tải thông tin suất chiếu. Vui lòng thử lại.");
+        toast.error("Không thể tải thông tin suất chiếu hoặc combo. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
@@ -136,11 +140,17 @@ function BookingPageContent() {
   const selectedCombosList = useMemo(() => {
     return Object.entries(comboQuantities)
       .map(([id, q]) => {
-        const c = mockCombos.find(mc => mc.id === id);
-        return c ? { ...c, quantity: q } : null;
+        const c = combos.find(mc => mc.MaCombo === id);
+        return c ? {
+          id: c.MaCombo,
+          name: c.TenCombo,
+          price: c.GiaTien,
+          quantity: q,
+          imageUrl: c.HinhAnh
+        } : null;
       })
-      .filter(c => c && c.quantity > 0) as (typeof mockCombos[0] & { quantity: number })[];
-  }, [comboQuantities]);
+      .filter(c => c && c.quantity > 0) as { id: string, name: string, price: number, quantity: number, imageUrl?: string }[];
+  }, [comboQuantities, combos]);
 
   const totalTicketPrice = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats]);
   const totalComboPrice = useMemo(() => selectedCombosList.reduce((sum, c) => sum + (c.price * c.quantity), 0), [selectedCombosList]);
@@ -302,11 +312,16 @@ function BookingPageContent() {
             <CardHeader><CardTitle>Chọn Combo</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {mockCombos.map(combo => (
+                {combos.map(combo => (
                   <ComboCard
-                    key={combo.id}
-                    combo={combo}
-                    initialQuantity={comboQuantities[combo.id] || 0}
+                    key={combo.MaCombo}
+                    combo={{
+                      id: combo.MaCombo,
+                      name: combo.TenCombo,
+                      price: combo.GiaTien,
+                      imageUrl: combo.HinhAnh || ''
+                    }}
+                    initialQuantity={comboQuantities[combo.MaCombo] || 0}
                     onQuantityChange={handleQuantityChange}
                   />
                 ))}
