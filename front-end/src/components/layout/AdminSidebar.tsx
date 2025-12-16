@@ -43,7 +43,7 @@ type NavItem = {
 
 const operationalNavItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid },
-  { id: "pos", label: "Bán vé & Soát vé (POS)", href: "/admin/pos", icon: Ticket }, 
+  { id: "pos", label: "Bán & Soát vé (POS)", href: "/admin/pos", icon: Ticket }, 
   { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt },
   { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign }, 
 ];

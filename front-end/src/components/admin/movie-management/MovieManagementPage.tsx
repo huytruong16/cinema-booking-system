@@ -204,6 +204,8 @@ function FilmCard({ film, onEdit, onDelete }: { film: BackendFilm, onEdit: () =>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                     <CalendarIcon className="size-3 shrink-0" />
                     <span className="truncate">{format(new Date(film.NgayBatDauChieu), 'dd/MM/yyyy')}</span>
+                    <span> - </span>
+                    <span className="truncate">{format(new Date(film.NgayKetThucChieu), 'dd/MM/yyyy')}</span>
                 </div>
 
                 <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
@@ -366,25 +368,19 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            {/* Sử dụng w-full và max-w responsive */}
             <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white w-full max-w-[95vw] sm:max-w-4xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-lg">
                 
-                {/* Header - Cố định (Không cuộn) */}
                 <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
                     <DialogTitle className="text-lg sm:text-xl">
                         {film ? "Cập nhật phim" : "Thêm phim mới"}
                     </DialogTitle>
                 </DialogHeader>
 
-                {/* Body - Có thể cuộn */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-0">
                     <form id="film-form" onSubmit={handleSubmit} className="space-y-6">
-                        {/* Grid: 1 cột mobile, 3 cột desktop */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             
-                            {/* Cột trái: Upload ảnh */}
                             <div className="lg:col-span-1 space-y-4">
-                                {/* Poster Upload */}
                                 <div className="space-y-2">
                                     <Label>Poster (Dọc) *</Label>
                                     <div 
@@ -406,7 +402,6 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                                     </div>
                                 </div>
 
-                                {/* Backdrop Upload */}
                                 <div className="space-y-2">
                                     <Label>Backdrop (Ngang)</Label>
                                     <div 
@@ -429,7 +424,6 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                                 </div>
                             </div>
 
-                            {/* Cột phải: Form nhập liệu */}
                             <div className="lg:col-span-2 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -513,7 +507,6 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        {/* FIX POPPER WIDTH ON MOBILE */}
                                         <PopoverContent className="w-[280px] sm:w-[400px] p-0 bg-[#1C1C1C] border-slate-700 text-white">
                                             <Command>
                                                 <CommandList>
