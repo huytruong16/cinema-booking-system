@@ -198,6 +198,7 @@ model VE {
   MaVe           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   MaGheSuatChieu String          @db.Uuid
   GiaVe          Decimal
+  Code           String          @unique
   MaHoaDon       String          @db.Uuid
   TrangThaiVe    trang_thai_ve   @default(CHUASUDUNG)
   GheSuatChieu   GHE_SUATCHIEU    @relation(fields: [MaGheSuatChieu], references: [MaGheSuatChieu])
@@ -209,15 +210,29 @@ model VE {
 }
 
 model YEUCAUHOANVE {
-  MaYeuCau     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  MaVe         String                 @db.Uuid
-  MaGiaoDich   String?                @db.Uuid
-  TrangThai    trang_thai_yeu_cau     @default(DANGCHO)
-  Ve           VE                     @relation(fields: [MaVe], references: [MaVe])
-  GiaoDich     GIAODICH?              @relation(fields: [MaGiaoDich], references: [MaGiaoDich])
-  CreatedAt    DateTime               @default(now()) @db.Timestamptz(6)
-  UpdatedAt    DateTime               @default(now()) @db.Timestamptz(6)
-  DeletedAt    DateTime?              @db.Timestamptz(6)
+  MaYeuCau       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  MaVe           String                 @db.Uuid
+  MaGiaoDich     String?                @db.Uuid
+  TrangThai      trang_thai_yeu_cau     @default(DANGCHO)
+  LyDoHoan       String                 
+  MaNganHang     String?                @db.Uuid
+  NganHang       NGANHANG?              @relation(fields: [MaNganHang], references: [MaNganHang])
+  SoTaiKhoan     String
+  TenChuTaiKhoan String
+  SoTien         Decimal
+  Ve             VE                     @relation(fields: [MaVe], references: [MaVe])
+  GiaoDich       GIAODICH?              @relation(fields: [MaGiaoDich], references: [MaGiaoDich])
+  CreatedAt      DateTime               @default(now()) @db.Timestamptz(6)
+  UpdatedAt      DateTime               @default(now()) @db.Timestamptz(6)
+  DeletedAt      DateTime?              @db.Timestamptz(6)
+}
+
+model NGANHANG {
+  MaNganHang     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  TenNganHang    String                 @unique
+  Code           String                 @unique
+  Logo           String                 
+  YeuCauHoanVes  YEUCAUHOANVE[]
 }
 
 model COMBO {
@@ -320,7 +335,7 @@ model GIAODICH {
   NoiDung       String?
   LoaiGiaoDich  loai_giao_dich
   Code          String
-  LinkId        String                 @unique
+  LinkId        String                 
   GiaoDichUrl   String
   HoaDon        HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   NhanVien      NHANVIEN?              @relation(fields: [MaNhanVien], references: [MaNhanVien])
@@ -393,7 +408,7 @@ model DANHGIA {
 
 model THAMSO {
   MaThamSo       String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  TenThamSo      String    
+  TenThamSo      String     @unique
   GiaTri         String
   KieuDuLieu     String
   CreatedAt      DateTime  @default(now()) @db.Timestamptz(6)
@@ -480,6 +495,7 @@ enum loai_giao_dich {
 enum trang_thai_yeu_cau {
   DANGCHO
   DAHOAN
+  DAHUY
 }
 
 enum trang_thai_nhan_vien {

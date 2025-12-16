@@ -1,12 +1,16 @@
-import { Controller, Get, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException, Post, Body, Patch, UseGuards } from '@nestjs/common';
 import { RefundRequestService } from './refund-request.service';
 import {
     ApiTags,
     ApiOperation,
     ApiParam,
     ApiResponse,
+    ApiBearerAuth,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
+import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
+import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
@@ -18,6 +22,25 @@ export class RefundRequestController {
     @ApiResponse({ status: 200, description: 'Danh sách yêu cầu hoàn vé' })
     async getAllRefundRequests() {
         return this.refundRequestService.getAllRefundRequests();
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Tạo yêu cầu hoàn vé' })
+    async createRefundRequest(@Body() createRefundRequestDto: CreateRefundRequestDto) {
+        return this.refundRequestService.createNewRefundRequest(createRefundRequestDto);
+    }
+
+    @Patch('status/:id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Cập nhật trạng thái yêu cầu hoàn vé' })
+    @ApiParam({ name: 'id', description: 'Mã yêu cầu hoàn vé', required: true })
+    async updateRefundRequestStatus(
+        @Param('id') id: string,
+        @Body() body: UpdateRefundRequestStatusDto,
+    ) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.refundRequestService.updateRefundRequestStatus(id, body);
     }
 
     @Get(':id')

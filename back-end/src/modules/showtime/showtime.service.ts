@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
 import { GetShowtimeByMovieDto } from './dtos/get-showtime-by-movie.dto';
+import { CreateShowtimeDto } from './dtos/create-showtime.dto';
+import { UpdateShowtimeDto } from './dtos/update-showtime.dto';
 
 @Injectable()
 export class ShowtimeService {
@@ -273,5 +275,107 @@ export class ShowtimeService {
         }
 
         return showtime;
+    }
+
+    async createShowtime(payload: CreateShowtimeDto) {
+        const phienBan = await this.prisma.pHIENBANPHIM.findFirst({
+            where: {
+                MaPhienBanPhim: payload.MaPhienBanPhim,
+                DeletedAt: null,
+            },
+        });
+
+        if (!phienBan) {
+            throw new NotFoundException('Phiên bản phim không tồn tại');
+        }
+
+        const phong = await this.prisma.pHONGCHIEU.findFirst({
+            where: {
+                MaPhongChieu: payload.MaPhongChieu,
+                DeletedAt: null,
+            },
+        });
+
+        if (!phong) {
+            throw new NotFoundException('Phòng chiếu không tồn tại');
+        }
+
+        const showtime = await this.prisma.sUATCHIEU.create({
+            data: {
+                MaPhienBanPhim: payload.MaPhienBanPhim,
+                MaPhongChieu: payload.MaPhongChieu,
+                ThoiGianBatDau: new Date(payload.ThoiGianBatDau),
+                ThoiGianKetThuc: new Date(payload.ThoiGianKetThuc),
+                CreatedAt: new Date(),
+            },
+        });
+
+        return {
+            message: 'Tạo suất chiếu thành công',
+            showtime,
+        };
+    }
+
+    async updateShowtime(id: string, updateDto: UpdateShowtimeDto) {
+        const showtime = await this.prisma.sUATCHIEU.findFirst({
+            where: { MaSuatChieu: id, DeletedAt: null },
+        });
+
+        if (!showtime) {
+            throw new NotFoundException(`Suất chiếu với ID ${id} không tồn tại`);
+        }
+
+        const updateData: any = {
+            UpdatedAt: new Date(),
+        };
+
+        if (updateDto.MaPhienBanPhim !== undefined) {
+            updateData.MaPhienBanPhim = updateDto.MaPhienBanPhim;
+        }
+
+        if (updateDto.MaPhongChieu !== undefined) {
+            updateData.MaPhongChieu = updateDto.MaPhongChieu;
+        }
+
+        if (updateDto.ThoiGianBatDau !== undefined) {
+            updateData.ThoiGianBatDau = new Date(updateDto.ThoiGianBatDau);
+        }
+
+        if (updateDto.ThoiGianKetThuc !== undefined) {
+            updateData.ThoiGianKetThuc = new Date(updateDto.ThoiGianKetThuc);
+        }
+
+        if (updateDto.TrangThai !== undefined) {
+            updateData.TrangThai = updateDto.TrangThai;
+        }
+
+        const updated = await this.prisma.sUATCHIEU.update({
+            where: { MaSuatChieu: id },
+            data: updateData,
+        });
+
+        return {
+            message: 'Cập nhật suất chiếu thành công',
+            showtime: updated,
+        };
+    }
+
+    async removeShowtime(id: string) {
+        const showtime = await this.prisma.sUATCHIEU.findFirst({
+            where: { MaSuatChieu: id, DeletedAt: null },
+        });
+
+        if (!showtime) {
+            throw new NotFoundException(`Suất chiếu với ID ${id} không tồn tại`);
+        }
+
+        await this.prisma.sUATCHIEU.update({
+            where: { MaSuatChieu: id },
+            data: {
+                DeletedAt: new Date(),
+            },
+        });
+
+        return { message: 'Xóa suất chiếu thành công' };
     }
 }

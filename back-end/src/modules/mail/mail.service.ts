@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer';
 import { join } from 'path';
 import formatCurrency from 'src/libs/common/helpers/format-vn-currency';
 import InvoiceMailDto from './dto/invoice-mail.dto';
+import { RefundRequestStatusEnum } from 'src/libs/common/enums';
 
 
 @Injectable()
@@ -178,4 +179,86 @@ export class MailService {
         });
     }
 
+    async sendRefundDecisionEmail(
+        to: string,
+        data: {
+            TicketCode: string;
+            BookingCode: string;
+            MovieName: string;
+            CinemaRoom: string;
+            SeatCode: string;
+            ShowTime: string;
+            RefundAmount: string;
+            BankAccount: string;
+            BankName: string;
+            AccountHolder: string;
+            RefundDate: string;
+        },
+        status: RefundRequestStatusEnum
+    ) {
+        const smtpConfig = this.configService.get('smtp');
+
+        const htmlTemplate = readFileSync(
+            join(__dirname, '..', '..', '..', 'templates', 'email-refund-decision.hbs'),
+            'utf-8'
+        );
+
+        const isRefunded = status === RefundRequestStatusEnum.DAHOAN;
+        const subject = isRefunded
+            ? `[Movix] Xác nhận hoàn tiền thành công - Mã vé ${data.TicketCode}`
+            : `[Movix] Thông báo hủy yêu cầu hoàn vé - Mã vé ${data.TicketCode}`;
+
+        const title = isRefunded ? 'YÊU CẦU HOÀN VÉ ĐÃ ĐƯỢC CHẤP NHẬN' : 'YÊU CẦU HOÀN VÉ BỊ TỪ CHỐI';
+
+        let transactionDetailsHtml = '';
+        if (isRefunded) {
+            transactionDetailsHtml = `
+                <div style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 15px;">
+                    <h3 style="color: #28a745; margin-bottom: 10px;">Chi tiết giao dịch hoàn tiền</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 5px 0; color: #666;">Số tiền hoàn:</td>
+                            <td style="padding: 5px 0; font-weight: bold; text-align: right;">${data.RefundAmount}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0; color: #666;">Thời gian hoàn:</td>
+                            <td style="padding: 5px 0; text-align: right;">${data.RefundDate}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0; color: #666;">Ngân hàng thụ hưởng:</td>
+                            <td style="padding: 5px 0; text-align: right;">${data.BankName}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0; color: #666;">Số tài khoản:</td>
+                            <td style="padding: 5px 0; text-align: right;">${data.BankAccount}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px 0; color: #666;">Chủ tài khoản:</td>
+                            <td style="padding: 5px 0; text-align: right; text-transform: uppercase;">${data.AccountHolder}</td>
+                        </tr>
+                    </table>
+                    <p style="font-size: 13px; color: #888; margin-top: 10px; font-style: italic;">
+                        *Lưu ý: Tiền sẽ về tài khoản của bạn trong vòng 1-3 ngày làm việc tùy thuộc vào ngân hàng thụ hưởng.
+                    </p>
+                </div>
+            `;
+        }
+
+        let htmlContent = htmlTemplate
+            .replace('{{title}}', title)
+            .replace('{{booking_code}}', data.BookingCode)
+            .replace('{{ticket_code}}', data.TicketCode)
+            .replace('{{movie_name}}', data.MovieName)
+            .replace('{{show_time}}', data.ShowTime)
+            .replace('{{cinema_room}}', data.CinemaRoom)
+            .replace('{{seat_code}}', data.SeatCode)
+            .replace('{{{transaction_details}}}', transactionDetailsHtml);
+
+        await this.transporter.sendMail({
+            from: `"Movix Support" <${smtpConfig.from}>`,
+            to,
+            subject,
+            html: htmlContent
+        });
+    }
 }

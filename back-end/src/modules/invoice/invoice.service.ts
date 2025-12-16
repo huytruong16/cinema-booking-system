@@ -115,6 +115,10 @@ export class InvoiceService {
       throw new BadRequestException('Email không được để trống');
     }
 
+    if (user && request.LoaiGiaoDich === TransactionEnum.TRUCTIEP && user.VaiTro === RoleEnum.KHACHHANG) {
+      throw new BadRequestException('Khách hàng mua vé trực tuyến chỉ được phép giao dịch trực tuyến');
+    }
+
     let customer = await getCustomer();
 
     await checkSameShowtime();
@@ -162,6 +166,7 @@ export class InvoiceService {
             MaGheSuatChieu: s.id,
             GiaVe: s.price.toString(),
             MaHoaDon: hoaDon.MaHoaDon,
+            Code: genCode().toString(),
           })),
         });
       }
@@ -198,19 +203,23 @@ export class InvoiceService {
       });
     }
 
-    const paymentData: { paymentLinkId: string, checkoutUrl: string } =
-      await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
+    let paymentData: { paymentLinkId: string, checkoutUrl: string } | undefined;
+
+    if (request.LoaiGiaoDich === TransactionEnum.TRUCTUYEN) {
+      paymentData =
+        await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
+    }
 
     await this.prisma.gIAODICH.create({
       data: {
         MaHoaDon: created.MaHoaDon,
-        PhuongThuc: TransactionEnum.TRUCTUYEN,
+        PhuongThuc: request.LoaiGiaoDich,
         TongTien: totalAfterDiscount.toString(),
         NgayGiaoDich: new Date(),
         LoaiGiaoDich: TransactionTypeEnum.MUAVE,
         Code: transactionCode.toString(),
-        LinkId: paymentData.paymentLinkId,
-        GiaoDichUrl: paymentData.checkoutUrl,
+        LinkId: paymentData ? paymentData.paymentLinkId : '',
+        GiaoDichUrl: paymentData ? paymentData.checkoutUrl : '',
         MaNhanVien: (user && user.VaiTro === RoleEnum.NHANVIEN) ? user.MaNguoiDung : null,
       }
     });
