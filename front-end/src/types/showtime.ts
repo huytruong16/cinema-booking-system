@@ -11,6 +11,8 @@ export interface Ghe {
   DeletedAt?: string | null;
 }
 
+export type SeatType = LoaiGhe;
+
 export interface LoaiGhe {
   MaLoaiGhe: string;
   LoaiGhe: string;
@@ -129,7 +131,6 @@ export interface GetShowtimesParams {
   MaPhongChieu?: string;
   MaPhienBanPhim?: string;
   MaDinhDang?: string;
-  MaTheLoai?: string;
   MaTheLoai?: string;
   TrangThai?: string;
   TuNgay?: string;

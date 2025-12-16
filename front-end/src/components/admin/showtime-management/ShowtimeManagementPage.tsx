@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -39,19 +40,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit, Trash2, CalendarIcon, ChevronsRight, ChevronsLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, addDays, subDays, startOfDay, addMinutes, getMinutes, getHours } from "date-fns";
+import { format, addDays, subDays, startOfDay, addMinutes, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
+import { toast } from "sonner";
+
+import { showtimeService } from "@/services/showtime.service";
+import { roomService } from "@/services/room.service";
+import { movieVersionService } from "@/services/movie-version.service";
 
 type TrangThaiSuatChieu = "CHUACHIEU" | "DANGCHIEU" | "DACHIEU" | "DAHUY";
 
 interface SuatChieuView {
-  MaSuatChieu: number;
-  MaPhimDinhDang: number;
+  MaSuatChieu: string;
+  MaPhimDinhDang: string; 
   TenPhim: string;
   TenDinhDang: string;
   PosterUrl: string | null;
   ThoiLuong: number;
-  MaPhongChieu: number;
+  MaPhongChieu: string;
   TenPhongChieu: string;
   ThoiGianBatDau: Date;
   ThoiGianKetThuc: Date;
@@ -59,7 +65,7 @@ interface SuatChieuView {
 }
 
 interface PhimDinhDang {
-  MaPhimDinhDang: number;
+  MaPhimDinhDang: string; 
   TenPhim: string;
   TenDinhDang: string;
   PosterUrl: string | null;
@@ -67,87 +73,9 @@ interface PhimDinhDang {
 }
 
 interface PhongChieu {
-  MaPhongChieu: number;
+  MaPhongChieu: string;
   TenPhongChieu: string;
 }
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-const mockPhimDinhDangList: PhimDinhDang[] = [
-  { MaPhimDinhDang: 1, TenPhim: "Inside Out 2", TenDinhDang: "2D Phụ đề", PosterUrl: "https://upload.wikimedia.org/wikipedia/vi/thumb/a/a3/Inside_Out_2_VN_poster.jpg/375px-Inside_Out_2_VN_poster.jpg", ThoiLuong: 96 },
-  { MaPhimDinhDang: 2, TenPhim: "Inside Out 2", TenDinhDang: "3D Lồng tiếng", PosterUrl: "https://upload.wikimedia.org/wikipedia/vi/thumb/a/a3/Inside_Out_2_VN_poster.jpg/375px-Inside_Out_2_VN_poster.jpg", ThoiLuong: 96 },
-  { MaPhimDinhDang: 3, TenPhim: "Deadpool & Wolverine", TenDinhDang: "IMAX 2D", PosterUrl: "https://upload.wikimedia.org/wikipedia/en/4/4c/Deadpool_%26_Wolverine_poster.jpg", ThoiLuong: 127 },
-  { MaPhimDinhDang: 4, TenPhim: "Kẻ Trộm Mặt Trăng 4", TenDinhDang: "2D Lồng tiếng", PosterUrl: "https://upload.wikimedia.org/wikipedia/en/e/ed/Despicable_Me_4_Theatrical_Release_Poster.jpeg", ThoiLuong: 95 },
-];
-
-const mockPhongChieuList: PhongChieu[] = [
-  { MaPhongChieu: 1, TenPhongChieu: "Phòng 1 (IMAX)" },
-  { MaPhongChieu: 2, TenPhongChieu: "Phòng 2 (2D)" },
-  { MaPhongChieu: 3, TenPhongChieu: "Phòng 3 (3D)" },
-  { MaPhongChieu: 4, TenPhongChieu: "Phòng 4 (CINE FOREST)" },
-];
-
-const today = startOfDay(new Date());
-const mockShowtimes: SuatChieuView[] = [
-  // Phòng 1
-  {
-    MaSuatChieu: 101, 
-    ...mockPhimDinhDangList[2], // Đã chứa MaPhimDinhDang: 3
-    MaPhongChieu: 1, TenPhongChieu: "Phòng 1 (IMAX)",
-    ThoiGianBatDau: addMinutes(today, 9 * 60 + 30), // 9:30
-    ThoiGianKetThuc: addMinutes(today, 9 * 60 + 30 + 127), // 11:37
-    TrangThai: "DANGCHIEU",
-  },
-  {
-    MaSuatChieu: 102, 
-    ...mockPhimDinhDangList[2], // Đã chứa MaPhimDinhDang: 3
-    MaPhongChieu: 1, TenPhongChieu: "Phòng 1 (IMAX)",
-    ThoiGianBatDau: addMinutes(today, 12 * 60), // 12:00
-    ThoiGianKetThuc: addMinutes(today, 12 * 60 + 127), // 14:07
-    TrangThai: "CHUACHIEU",
-  },
-    {
-    MaSuatChieu: 103, 
-    ...mockPhimDinhDangList[2], // Đã chứa MaPhimDinhDang: 3
-    MaPhongChieu: 1, TenPhongChieu: "Phòng 1 (IMAX)",
-    ThoiGianBatDau: addMinutes(today, 15 * 60), // 15:00
-    ThoiGianKetThuc: addMinutes(today, 15 * 60 + 127), // 17:07
-    TrangThai: "CHUACHIEU",
-  },
-  // Phòng 2
-  {
-    MaSuatChieu: 104, 
-    ...mockPhimDinhDangList[0], // Đã chứa MaPhimDinhDang: 1
-    MaPhongChieu: 2, TenPhongChieu: "Phòng 2 (2D)",
-    ThoiGianBatDau: addMinutes(today, 10 * 60), // 10:00
-    ThoiGianKetThuc: addMinutes(today, 10 * 60 + 96), // 11:36
-    TrangThai: "CHUACHIEU",
-  },
-    {
-    MaSuatChieu: 105, 
-    ...mockPhimDinhDangList[0], // Đã chứa MaPhimDinhDang: 1
-    MaPhongChieu: 2, TenPhongChieu: "Phòng 2 (2D)",
-    ThoiGianBatDau: addMinutes(today, 14 * 60 + 30), // 14:30
-    ThoiGianKetThuc: addMinutes(today, 14 * 60 + 30 + 96), // 16:06
-    TrangThai: "CHUACHIEU",
-  },
-  // Phòng 3
-  {
-    MaSuatChieu: 106, 
-    ...mockPhimDinhDangList[3], // Đã chứa MaPhimDinhDang: 4
-    MaPhongChieu: 3, TenPhongChieu: "Phòng 3 (3D)",
-    ThoiGianBatDau: addMinutes(subDays(today, 1), 20 * 60), // 20:00 hôm qua
-    ThoiGianKetThuc: addMinutes(subDays(today, 1), 20 * 60 + 95), // 21:35 hôm qua
-    TrangThai: "DACHIEU",
-  },
-    {
-    MaSuatChieu: 107, 
-    ...mockPhimDinhDangList[3], // Đã chứa MaPhimDinhDang: 4
-    MaPhongChieu: 3, TenPhongChieu: "Phòng 3 (3D)",
-    ThoiGianBatDau: addMinutes(today, 18 * 60), // 18:00
-    ThoiGianKetThuc: addMinutes(today, 18 * 60 + 95), // 19:35
-    TrangThai: "DAHUY",
-  },
-];
 
 const trangThaiOptions: { value: TrangThaiSuatChieu; label: string }[] = [
   { value: "CHUACHIEU", label: "Chưa chiếu" },
@@ -155,13 +83,9 @@ const trangThaiOptions: { value: TrangThaiSuatChieu; label: string }[] = [
   { value: "DACHIEU", label: "Đã chiếu" },
   { value: "DAHUY", label: "Đã hủy" },
 ];
-// --- HẾT DỮ LIỆU GIẢ ---
 
-// --- LOGIC CHO TIMELINE ---
-// Chúng ta sẽ hiển thị 18 tiếng, từ 8:00 sáng đến 2:00 sáng hôm sau (8*60 = 480 -> 26*60 = 1560)
 const DAY_START_MINUTES = 8 * 60;
-const DAY_TOTAL_MINUTES = (26 - 8) * 60; // 18 giờ * 60 phút = 1080 phút
-
+const DAY_TOTAL_MINUTES = (26 - 8) * 60; 
 
 function calculateTimelineStyle(showtime: SuatChieuView, selectedDate: Date) {
   const dayStart = startOfDay(selectedDate).getTime() + DAY_START_MINUTES * 60000;
@@ -171,14 +95,12 @@ function calculateTimelineStyle(showtime: SuatChieuView, selectedDate: Date) {
 
   const startMinutes = (startTime - dayStart) / 60000;
   const endMinutes = (endTime - dayStart) / 60000;
-  const durationMinutes = (endTime - startTime) / 60000;
 
   if (endMinutes < 0 || startMinutes > DAY_TOTAL_MINUTES) {
     return null;
   }
 
   const left = Math.max(0, (startMinutes / DAY_TOTAL_MINUTES) * 100);
-
   const effectiveStartMinutes = Math.max(0, startMinutes);
   const effectiveEndMinutes = Math.min(DAY_TOTAL_MINUTES, endMinutes);
   const width = ((effectiveEndMinutes - effectiveStartMinutes) / DAY_TOTAL_MINUTES) * 100;
@@ -203,11 +125,137 @@ const getBadgeLabel = (trangThai: TrangThaiSuatChieu) => {
 };
 
 export default function ShowtimeManagementPage() {
-  const [allShowtimes, setAllShowtimes] = useState<SuatChieuView[]>(mockShowtimes);
+  const [allShowtimes, setAllShowtimes] = useState<SuatChieuView[]>([]);
+  const [phimDinhDangList, setPhimDinhDangList] = useState<PhimDinhDang[]>([]);
+  const [phongChieuList, setPhongChieuList] = useState<PhongChieu[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
   const [selectedShowtime, setSelectedShowtime] = useState<SuatChieuView | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShowtime, setEditingShowtime] = useState<SuatChieuView | null>(null);
+
+  const fetchMasterData = async () => {
+    try {
+      const [roomsRes, filmsRes] = await Promise.all([
+        roomService.getAll(),
+        movieVersionService.getFilms()
+      ]);
+
+      setPhongChieuList((roomsRes as any[]).map((r: any) => ({
+        MaPhongChieu: r.MaPhongChieu,
+        TenPhongChieu: r.TenPhongChieu
+      })));
+
+      const flatList: PhimDinhDang[] = [];
+      (filmsRes as any[]).forEach((film: any) => {
+        if (film.PhienBanPhims) {
+          film.PhienBanPhims.forEach((pv: any) => {
+             if (pv.MaPhienBanPhim) {
+                flatList.push({
+                    MaPhimDinhDang: pv.MaPhienBanPhim,
+                    TenPhim: film.TenHienThi,
+                    TenDinhDang: `${pv.DinhDang?.TenDinhDang || '2D'} ${pv.NgonNgu?.TenNgonNgu || ''}`.trim(),
+                    PosterUrl: film.PosterUrl,
+                    ThoiLuong: film.ThoiLuong
+                });
+             }
+          });
+        }
+      });
+      setPhimDinhDangList(flatList);
+
+    } catch (error) {
+      console.error("Lỗi master data:", error);
+      toast.error("Không thể tải dữ liệu phòng/phim");
+    }
+  };
+
+  const fetchShowtimes = async () => {
+      setLoading(true);
+      try {
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const res = await showtimeService.getAll({ NgayChieu: dateStr });
+        
+        const mappedShowtimes: SuatChieuView[] = (res as any[]).map((st: any) => ({
+            MaSuatChieu: st.MaSuatChieu,
+            MaPhimDinhDang: st.MaPhienBanPhim,
+            TenPhim: st.PhienBanPhim?.Phim?.TenHienThi || "Unknown",
+            TenDinhDang: `${st.PhienBanPhim?.DinhDang?.TenDinhDang} ${st.PhienBanPhim?.NgonNgu?.TenNgonNgu}`,
+            PosterUrl: st.PhienBanPhim?.Phim?.PosterUrl || null,
+            ThoiLuong: st.PhienBanPhim?.Phim?.ThoiLuong || 0,
+            MaPhongChieu: st.MaPhongChieu,
+            TenPhongChieu: st.PhongChieu?.TenPhongChieu || "Unknown",
+            ThoiGianBatDau: parseISO(st.ThoiGianBatDau),
+            ThoiGianKetThuc: parseISO(st.ThoiGianKetThuc),
+            TrangThai: st.TrangThai as TrangThaiSuatChieu
+        }));
+        
+        setAllShowtimes(mappedShowtimes);
+      } catch (error) {
+          console.error("Lỗi fetch showtime:", error);
+          toast.error("Lỗi tải lịch chiếu");
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
+
+  useEffect(() => {
+    fetchShowtimes();
+    setSelectedShowtime(null); 
+  }, [selectedDate]);
+
+
+  const handleAddNew = () => {
+    setEditingShowtime(null); 
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (showtime: SuatChieuView) => {
+    setEditingShowtime(showtime); 
+    setIsModalOpen(true);
+  };
+
+  const handleFormSubmit = async (formData: SuatChieuView) => {
+    try {
+        const payload = {
+            MaPhienBanPhim: formData.MaPhimDinhDang,
+            MaPhongChieu: formData.MaPhongChieu,
+            ThoiGianBatDau: formData.ThoiGianBatDau.toISOString(), 
+        };
+
+        if (editingShowtime) {
+            await showtimeService.update(editingShowtime.MaSuatChieu, payload);
+            toast.info("Chức năng cập nhật đang được Backend hoàn thiện");
+        } else {
+            await showtimeService.create(payload);
+            toast.success("Tạo suất chiếu thành công");
+        }
+        
+        setIsModalOpen(false);
+        fetchShowtimes(); 
+    } catch (error) {
+        console.error(error);
+        toast.error("Lỗi khi lưu (Kiểm tra trùng lịch/kết nối)");
+    }
+  };
+
+  const handleDelete = async (maSuatChieu: string) => {
+      try {
+          await showtimeService.delete(maSuatChieu);
+          toast.success("Xóa thành công");
+          if (selectedShowtime?.MaSuatChieu === maSuatChieu) {
+            setSelectedShowtime(null);
+          }
+          fetchShowtimes();
+      } catch (error) {
+          toast.error("Xóa thất bại");
+      }
+  };
 
   const showtimesForSelectedDate = useMemo(() => {
     const selectedDayStart = selectedDate.getTime();
@@ -218,38 +266,6 @@ export default function ShowtimeManagementPage() {
         return scTime >= selectedDayStart && scTime < selectedDayEnd;
     });
   }, [allShowtimes, selectedDate]);
-
-  const handleAddNew = () => {
-    setEditingShowtime(null); 
-    setIsModalOpen(true);
-  };
-  const handleEdit = (showtime: SuatChieuView) => {
-    setEditingShowtime(showtime); 
-    setIsModalOpen(true);
-  };
-
-  const handleFormSubmit = (formData: SuatChieuView) => {
-    if (editingShowtime) {
-        setAllShowtimes(prev => prev.map(sc => sc.MaSuatChieu === formData.MaSuatChieu ? formData : sc));
-        if (selectedShowtime?.MaSuatChieu === formData.MaSuatChieu) {
-            setSelectedShowtime(formData);
-        }
-    } else {
-        const newShowtime = { 
-            ...formData, 
-            MaSuatChieu: Math.max(...allShowtimes.map(sc => sc.MaSuatChieu)) + 1 
-        };
-        setAllShowtimes(prev => [newShowtime, ...prev]);
-    }
-    setIsModalOpen(false);
-  };
-
-  const handleDelete = (maSuatChieu: number) => {
-      setAllShowtimes(prev => prev.filter(sc => sc.MaSuatChieu !== maSuatChieu));
-      if (selectedShowtime?.MaSuatChieu === maSuatChieu) {
-          setSelectedShowtime(null);
-      }
-  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-white h-[calc(100vh-120px)]">
@@ -287,7 +303,7 @@ export default function ShowtimeManagementPage() {
             <div className="space-y-4">
                 <TimelineGrid />
                 
-                {mockPhongChieuList.map(room => {
+                {phongChieuList.map(room => {
                     const showtimesForRoom = showtimesForSelectedDate.filter(sc => sc.MaPhongChieu === room.MaPhongChieu);
                     return (
                         <RoomTimeline
@@ -301,6 +317,9 @@ export default function ShowtimeManagementPage() {
                         />
                     );
                 })}
+                {phongChieuList.length === 0 && !loading && (
+                    <div className="text-center text-slate-500 py-10">Chưa có dữ liệu phòng chiếu</div>
+                )}
             </div>
         </ScrollArea>
       </div>
@@ -327,11 +346,14 @@ export default function ShowtimeManagementPage() {
           onSubmit={handleFormSubmit}
           showtime={editingShowtime}
           selectedDate={selectedDate} 
+          phimList={phimDinhDangList}
+          phongList={phongChieuList}
         />
       )}
     </div>
   );
 }
+
 
 interface RoomTimelineProps {
     room: PhongChieu;
@@ -339,7 +361,7 @@ interface RoomTimelineProps {
     selectedDate: Date;
     onSelectShowtime: (showtime: SuatChieuView) => void;
     onEditShowtime: (showtime: SuatChieuView) => void;
-    selectedShowtimeId?: number | null;
+    selectedShowtimeId?: string | null; 
 }
 
 function RoomTimeline({ room, showtimes, selectedDate, onSelectShowtime, onEditShowtime, selectedShowtimeId }: RoomTimelineProps) {
@@ -402,7 +424,7 @@ function TimelineGrid({ isBackground = false }) {
                 >
                     {!isBackground && (
 
-                        <span className="text-xs text-slate-2 00 relative left-1 top-1.5">
+                        <span className="text-xs text-slate-200 relative left-1 top-1.5">
                             {hour > 23 ? hour - 24 : hour}h
                         </span>
                     )}
@@ -416,7 +438,7 @@ interface DetailPanelProps {
     showtime: SuatChieuView; 
     onClose: () => void; 
     onEdit: () => void;
-    onDelete: (maSuatChieu: number) => void;
+    onDelete: (maSuatChieu: string) => void; 
 }
 
 function ShowtimeDetailPanel({ showtime, onEdit, onDelete }: DetailPanelProps) {
@@ -497,12 +519,15 @@ function InfoRow({ label, value }: { label: string, value: string | null | undef
     );
 }
 
+
 interface ShowtimeFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: SuatChieuView) => void;
     showtime: SuatChieuView | null;
     selectedDate: Date;
+    phimList: PhimDinhDang[]; 
+    phongList: PhongChieu[]; 
 }
 
 const splitDateTime = (date: Date) => {
@@ -520,21 +545,21 @@ const combineDateTime = (date: Date, timeStr: string): Date => {
 };
 
 
-function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate }: ShowtimeFormDialogProps) {
-    const [maPhimDinhDang, setMaPhimDinhDang] = useState<number | undefined>(showtime?.MaPhimDinhDang);
-    const [maPhongChieu, setMaPhongChieu] = useState<number | undefined>(showtime?.MaPhongChieu);
+function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate, phimList, phongList }: ShowtimeFormDialogProps) {
+    const [maPhimDinhDang, setMaPhimDinhDang] = useState<string | undefined>(showtime?.MaPhimDinhDang);
+    const [maPhongChieu, setMaPhongChieu] = useState<string | undefined>(showtime?.MaPhongChieu);
     const [ngayChieu, setNgayChieu] = useState<Date | undefined>(
         showtime ? splitDateTime(showtime.ThoiGianBatDau).dateObj : selectedDate
     );
     const [gioBatDau, setGioBatDau] = useState<string>(showtime ? splitDateTime(showtime.ThoiGianBatDau).timeStr : "12:00");
-    const [trangThai, setTrangThai] = useState<TrangThaiSuatChieu>(showtime?.TrangThai || "CHUACHIEU");
+    const [trangThai, setTrangThai] = useState<TrangThaiSuatChieu>(showtime?.TrangThai || "CHUACHIEU"); 
 
     const [gioKetThuc, setGioKetThuc] = useState<string>(showtime ? splitDateTime(showtime.ThoiGianKetThuc).timeStr : "14:00");
 
     useEffect(() => {
         if (!maPhimDinhDang || !ngayChieu || !gioBatDau) return;
 
-        const selectedPhim = mockPhimDinhDangList.find(p => p.MaPhimDinhDang === maPhimDinhDang);
+        const selectedPhim = phimList.find(p => p.MaPhimDinhDang === maPhimDinhDang);
         if (selectedPhim) {
             try {
                 const batDau = combineDateTime(ngayChieu, gioBatDau);
@@ -544,7 +569,7 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
                 console.error("Lỗi tính giờ kết thúc:", e);
             }
         }
-    }, [maPhimDinhDang, ngayChieu, gioBatDau]);
+    }, [maPhimDinhDang, ngayChieu, gioBatDau, phimList]);
 
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -555,8 +580,8 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
             return;
         }
         
-        const selectedPhim = mockPhimDinhDangList.find(p => p.MaPhimDinhDang === maPhimDinhDang);
-        const selectedPhong = mockPhongChieuList.find(p => p.MaPhongChieu === maPhongChieu);
+        const selectedPhim = phimList.find(p => p.MaPhimDinhDang === maPhimDinhDang);
+        const selectedPhong = phongList.find(p => p.MaPhongChieu === maPhongChieu);
 
         if (!selectedPhim || !selectedPhong) {
             alert("Thông tin Phim hoặc Phòng chiếu không hợp lệ.");
@@ -567,7 +592,7 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
         const thoiGianKetThuc = combineDateTime(ngayChieu, gioKetThuc);
 
         const formData: SuatChieuView = {
-            MaSuatChieu: showtime?.MaSuatChieu || 0,
+            MaSuatChieu: showtime?.MaSuatChieu || "",
             MaPhimDinhDang: selectedPhim.MaPhimDinhDang,
             TenPhim: selectedPhim.TenPhim,
             TenDinhDang: selectedPhim.TenDinhDang,
@@ -600,15 +625,15 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
                                 <Label htmlFor="MaPhimDinhDang">Phim & Định dạng</Label>
                                 <Select 
                                     name="MaPhimDinhDang" 
-                                    value={maPhimDinhDang?.toString()} 
-                                    onValueChange={(val) => setMaPhimDinhDang(Number(val))}
+                                    value={maPhimDinhDang} 
+                                    onValueChange={(val) => setMaPhimDinhDang(val)}
                                 >
                                     <SelectTrigger className="w-full bg-transparent border-slate-700">
                                         <SelectValue placeholder="Chọn phim..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-                                        {mockPhimDinhDangList.map(phim => (
-                                            <SelectItem key={phim.MaPhimDinhDang} value={phim.MaPhimDinhDang.toString()} className="cursor-pointer focus:bg-slate-700">
+                                        {phimList.map(phim => (
+                                            <SelectItem key={phim.MaPhimDinhDang} value={phim.MaPhimDinhDang} className="cursor-pointer focus:bg-slate-700">
                                                 {phim.TenPhim} ({phim.TenDinhDang})
                                             </SelectItem>
                                         ))}
@@ -620,15 +645,15 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
                                 <Label htmlFor="MaPhongChieu">Phòng chiếu</Label>
                                 <Select 
                                     name="MaPhongChieu" 
-                                    value={maPhongChieu?.toString()} 
-                                    onValueChange={(val) => setMaPhongChieu(Number(val))}
+                                    value={maPhongChieu} 
+                                    onValueChange={(val) => setMaPhongChieu(val)}
                                 >
                                     <SelectTrigger className="w-full bg-transparent border-slate-700">
                                         <SelectValue placeholder="Chọn phòng chiếu..." />
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-                                        {mockPhongChieuList.map(phong => (
-                                            <SelectItem key={phong.MaPhongChieu} value={phong.MaPhongChieu.toString()} className="cursor-pointer focus:bg-slate-700">
+                                        {phongList.map(phong => (
+                                            <SelectItem key={phong.MaPhongChieu} value={phong.MaPhongChieu} className="cursor-pointer focus:bg-slate-700">
                                                 {phong.TenPhongChieu}
                                             </SelectItem>
                                         ))}
@@ -638,8 +663,8 @@ function ShowtimeFormDialog({ isOpen, onClose, onSubmit, showtime, selectedDate 
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="TrangThai">Trạng thái</Label>
-                                    <Select name="TrangThai" value={trangThai} onValueChange={(value: TrangThaiSuatChieu) => setTrangThai(value)}>
+                                    <Label htmlFor="TrangThai">Trạng thái (Tự động)</Label>
+                                    <Select disabled name="TrangThai" value={trangThai} onValueChange={(value: TrangThaiSuatChieu) => setTrangThai(value)}>
                                         <SelectTrigger className="w-full bg-transparent border-slate-700">
                                             <SelectValue placeholder="Chọn trạng thái" />
                                         </SelectTrigger>
