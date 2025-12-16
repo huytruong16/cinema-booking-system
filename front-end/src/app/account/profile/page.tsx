@@ -15,8 +15,8 @@ export default function ProfilePage() {
   const { user, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
-  const [displayName, setDisplayName] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'other' | undefined>(undefined);
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState('');
 
@@ -25,11 +25,11 @@ export default function ProfilePage() {
       try {
         setIsLoading(true);
         const profile = await getMyProfile();
-        
-        setDisplayName(profile.display_name || profile.username);
-        setGender(profile.gender || undefined);
-        setAvatarUrl(profile.avatar_url);
-        setEmail(profile.email);
+
+        setFullName(profile.HoTen || '');
+        setPhoneNumber(profile.SoDienThoai || '');
+        setAvatarUrl(profile.AvatarUrl);
+        setEmail(profile.Email);
 
       } catch (error) {
         console.error('Lỗi khi tải profile:', error);
@@ -44,24 +44,29 @@ export default function ProfilePage() {
 
   const handleSubmit = async () => {
     const toastId = toast.loading('Đang cập nhật thông tin...');
-    
-    const updateData = {
-      display_name: displayName,
-      gender: gender,
-      avatar_url: avatarUrl,
+
+
+    const updateData: any = {
+      HoTen: fullName.trim(),
     };
 
-    try {
-      const { message, data: updatedProfile } = await updateMyProfile(updateData);
-      toast.success(message, { id: toastId });
+    if (phoneNumber && phoneNumber.trim() !== '') {
+      updateData.SoDienThoai = phoneNumber.trim();
+    }
 
-      if (setUser && user) {
-        setUser({
-          ...user,
-          display_name: updatedProfile.display_name ?? undefined,
-          avatarUrl: updatedProfile.avatar_url,
-        });
-      }
+    if (avatarUrl) {
+      updateData.AvatarUrl = avatarUrl;
+    }
+
+    try {
+      const { message } = await updateMyProfile(updateData);
+      toast.success(message || "Cập nhật thành công", { id: toastId });
+
+      const updatedProfile = await getMyProfile();
+      setFullName(updatedProfile.HoTen || '');
+      setPhoneNumber(updatedProfile.SoDienThoai || '');
+      setAvatarUrl(updatedProfile.AvatarUrl);
+
     } catch (error: any) {
       console.error('Lỗi khi cập nhật:', error);
       const errMsg = error.response?.data?.message || 'Cập nhật thất bại.';
@@ -114,10 +119,10 @@ export default function ProfilePage() {
         <div className="md:col-span-2 dark">
           <AccountProfileForm
             email={email}
-            displayName={displayName}
-            setDisplayName={setDisplayName}
-            gender={gender}
-            setGender={setGender}
+            fullName={fullName}
+            setFullName={setFullName}
+            phoneNumber={phoneNumber}
+            setPhoneNumber={setPhoneNumber}
           />
         </div>
 
@@ -129,7 +134,7 @@ export default function ProfilePage() {
           />
         </div>
       </div>
-      
+
       <div className="mt-8">
         <Button
           onClick={handleSubmit}
@@ -138,7 +143,7 @@ export default function ProfilePage() {
           Lưu thay đổi
         </Button>
       </div>
-      <p className="mt-4 text-sm text-gray-400">
+      {/*       <p className="mt-4 text-sm text-gray-400">
           Đặt mật khẩu, nhấn vào{' '}
           <Link 
             href="/account/change-password" 
@@ -146,7 +151,7 @@ export default function ProfilePage() {
           >
             đây
           </Link>
-        </p>
+        </p> */}
     </div>
   );
 }

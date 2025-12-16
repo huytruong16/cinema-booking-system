@@ -1,24 +1,23 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface ProfileFormProps {
   email: string;
-  displayName: string;
-  setDisplayName: (value: string) => void;
-  gender: 'male' | 'female' | 'other' | undefined;
-  setGender: (value: 'male' | 'female' | 'other') => void;
+  fullName: string;
+  setFullName: (value: string) => void;
+  phoneNumber: string;
+  setPhoneNumber: (value: string) => void;
 }
 
 export function AccountProfileForm({
   email,
-  displayName,
-  setDisplayName,
-  gender,
-  setGender,
+  fullName,
+  setFullName,
+  phoneNumber,
+  setPhoneNumber,
 }: ProfileFormProps) {
-  
+
   return (
     <Card>
       <CardContent className="space-y-6 pt-6">
@@ -36,22 +35,24 @@ export function AccountProfileForm({
 
         {/* Tên */}
         <div className="space-y-2">
-          <Label htmlFor="displayName">Họ và tên</Label>
+          <Label htmlFor="fullName">Họ và tên</Label>
           <Input
-            id="displayName"
+            id="fullName"
             type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)} // 3. Dùng prop
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             className="bg-zinc-800 border-zinc-700 focus-visible:ring-yellow-500"
           />
         </div>
+
+        {/* Số điện thoại */}
         <div className="space-y-2">
-          <Label htmlFor="displayName">Số điện thoại</Label>
+          <Label htmlFor="phone">Số điện thoại</Label>
           <Input
-            id="displayName"
+            id="phone"
             type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)} // 3. Dùng prop
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
             className="bg-zinc-800 border-zinc-700 focus-visible:ring-yellow-500"
           />
         </div>
