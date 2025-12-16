@@ -33,4 +33,16 @@ export const showtimeService = {
             return [];
         }
     },
+
+    getShowtimesByMovieId: async (movieId: string, params?: { TrangThai?: string, NgayChieu?: string }): Promise<import("@/types/showtime").ShowtimeByMovieResponse | null> => {
+        try {
+            const response = await api.get<import("@/types/showtime").ShowtimeByMovieResponse>(`/showtimes/movie/${movieId}`, {
+                params
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Lỗi khi lấy lịch chiếu cho phim ${movieId}:`, error);
+            return null;
+        }
+    }
 };
