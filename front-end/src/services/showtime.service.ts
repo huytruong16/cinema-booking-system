@@ -1,5 +1,5 @@
 import api from "@/lib/apiClient";
-import { Showtime, GetShowtimesParams } from "@/types/showtime";
+import { Showtime, GetShowtimesParams, SeatType } from "@/types/showtime";
 
 export const showtimeService = {
     getShowtimes: async (params?: GetShowtimesParams): Promise<Showtime[]> => {
@@ -21,6 +21,16 @@ export const showtimeService = {
         } catch (error) {
             console.error(`Lỗi khi lấy suất chiếu ${id}:`, error);
             return null;
+        }
+    },
+
+    getSeatTypes: async (): Promise<SeatType[]> => {
+        try {
+            const response = await api.get<SeatType[]>('/seat-types');
+            return response.data;
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách loại ghế:", error);
+            return [];
         }
     },
 };

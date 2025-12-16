@@ -49,6 +49,7 @@ function BookingPageContent() {
 
   // 2. State dữ liệu
   const [showtime, setShowtime] = useState<Showtime | null>(null);
+  const [seatTypes, setSeatTypes] = useState<any[]>([]); // Sẽ update type sau
   const [loading, setLoading] = useState(true);
 
   // State booking
@@ -66,21 +67,24 @@ function BookingPageContent() {
   useEffect(() => {
     if (!showtimeId) return;
 
-    const fetchShowtime = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // Gọi API lấy chi tiết suất chiếu (Bao gồm SoDoGhe và GheSuatChieus)
-        const data = await showtimeService.getShowtimeById(showtimeId);
-        setShowtime(data);
+        const [showtimeData, seatTypesData] = await Promise.all([
+          showtimeService.getShowtimeById(showtimeId),
+          showtimeService.getSeatTypes()
+        ]);
+        setShowtime(showtimeData);
+        setSeatTypes(seatTypesData);
       } catch (error) {
-        console.error("Lỗi khi tải suất chiếu:", error);
+        console.error("Lỗi khi tải dữ liệu:", error);
         toast.error("Không thể tải thông tin suất chiếu. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchShowtime();
+    fetchData();
   }, [showtimeId]);
 
   // Logic đếm ngược
@@ -161,9 +165,9 @@ function BookingPageContent() {
   const proceedToPayment = (customerInfo: CustomerInfo) => {
     if (!showtime) return;
     setIsNavigating(true);
-    
+
     const bookingData = {
-      showtime, 
+      showtime,
       movieTitle: showtime.PhienBanPhim.Phim.TenHienThi,
       posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
       seats: selectedSeats,
@@ -171,7 +175,7 @@ function BookingPageContent() {
       totalPrice,
       customerInfo
     };
-    
+
     sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
     router.push('/payment');
   };
@@ -260,17 +264,17 @@ function BookingPageContent() {
       <div className="sticky top-0 z-30 bg-[#1C1C1C] border-b border-zinc-800 shadow-md py-3 px-4 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4 w-full md:w-auto">
-             <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              </Button>
-              <div>
-                <h2 className="text-lg font-bold text-white truncate max-w-[300px]">{movie.TenHienThi}</h2>
-                <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
-                  <span className="flex items-center"><Calendar className="w-3 h-3 mr-1"/> {format(new Date(showtime.ThoiGianBatDau), 'dd/MM/yyyy')}</span>
-                  <span className="flex items-center"><Clock className="w-3 h-3 mr-1"/> {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}</span>
-                  <span className="flex items-center"><MapPin className="w-3 h-3 mr-1"/> {showtime.PhongChieu.TenPhongChieu}</span>
-                </div>
+            <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </Button>
+            <div>
+              <h2 className="text-lg font-bold text-white truncate max-w-[300px]">{movie.TenHienThi}</h2>
+              <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
+                <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'dd/MM/yyyy')}</span>
+                <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}</span>
+                <span className="flex items-center"><MapPin className="w-3 h-3 mr-1" /> {showtime.PhongChieu.TenPhongChieu}</span>
               </div>
+            </div>
           </div>
 
           <div className={cn(
@@ -285,12 +289,13 @@ function BookingPageContent() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-8">
         <div className="lg:col-span-2 space-y-8">
           <BookingSeatMap
-            seatMap={showtime.PhongChieu.SoDoGhe} 
-            bookedSeats={bookedSeats} 
+            seatMap={showtime.PhongChieu.SoDoGhe}
+            bookedSeats={bookedSeats}
             seatMetaById={seatMetaById}
-            basePrice={basePrice} 
+            basePrice={basePrice}
             selectedSeats={selectedSeats}
             onSeatClick={handleSeatClick}
+            seatTypes={seatTypes}
           />
 
           <Card className="bg-card/50 border border-border text-white">
