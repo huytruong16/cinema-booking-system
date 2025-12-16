@@ -56,8 +56,8 @@ export interface Showtime {
   MaSuatChieu: string;
   MaPhienBanPhim: string;
   MaPhongChieu: string;
-  ThoiGianBatDau: string; 
-  ThoiGianKetThuc: string; 
+  ThoiGianBatDau: string;
+  ThoiGianKetThuc: string;
   TrangThai: 'CHUACHIEU' | 'DANGCHIEU' | 'DACHIEU' | 'DAHUY' | 'SAPCHIEU';
   CreatedAt?: string;
   UpdatedAt?: string;
@@ -67,16 +67,16 @@ export interface Showtime {
     MaDinhDang: string;
     MaNgonNgu: string;
     GiaVe: string | number;
-    
+
     Phim: {
       MaPhim: string;
       TenGoc: string;
       TenHienThi: string;
       TomTatNoiDung: string;
-      DaoDien?: string;          
-      DanhSachDienVien?: string; 
-      QuocGia?: string;          
-      TrailerUrl?: string;      
+      DaoDien?: string;
+      DanhSachDienVien?: string;
+      QuocGia?: string;
+      TrailerUrl?: string;
       PosterUrl: string;
       BackdropUrl: string;
       ThoiLuong: number;
@@ -84,14 +84,14 @@ export interface Showtime {
       TrangThaiPhim: string;
       NgayBatDauChieu: string;
       NgayKetThucChieu?: string;
-      
+
       NhanPhim: {
         MaNhanPhim: string;
-        TenNhanPhim: string; 
+        TenNhanPhim: string;
         MoTa: string;
         DoTuoiToiThieu?: number;
       };
-      
+
       PhimTheLoais: {
         MaTheLoaiPhim?: string;
         MaTheLoai: string;
@@ -104,13 +104,13 @@ export interface Showtime {
 
     DinhDang: {
       MaDinhDang: string;
-      TenDinhDang: string; 
+      TenDinhDang: string;
       GiaVe?: string;
     };
 
     NgonNgu: {
       MaNgonNgu: string;
-      TenNgonNgu: string; 
+      TenNgonNgu: string;
     };
   };
 
@@ -118,10 +118,10 @@ export interface Showtime {
     MaPhongChieu: string;
     TenPhongChieu: string;
     TrangThai?: string;
-    SoDoGhe: SeatMap; 
+    SoDoGhe: SeatMap;
   };
 
-  GheSuatChieus: GheSuatChieu[]; 
+  GheSuatChieus: GheSuatChieu[];
 }
 
 export interface GetShowtimesParams {
@@ -130,7 +130,38 @@ export interface GetShowtimesParams {
   MaPhienBanPhim?: string;
   MaDinhDang?: string;
   MaTheLoai?: string;
+  MaTheLoai?: string;
   TrangThai?: string;
   TuNgay?: string;
   DenNgay?: string;
+}
+
+export interface SuatChieuSimple {
+  MaSuatChieu: string;
+  ThoiGianBatDau: string;
+  ThoiGianKetThuc: string;
+  TrangThai: string;
+}
+
+export interface PhongChieuGroup {
+  MaPhongChieu: string;
+  TenPhongChieu: string;
+  SuatChieus: SuatChieuSimple[];
+}
+
+export interface PhienBanPhimGroup {
+  MaPhienBanPhim: string;
+  DinhDang: { TenDinhDang: string };
+  NgonNgu: { TenNgonNgu: string };
+  PhongChieu: PhongChieuGroup[];
+}
+
+export interface SuatChieuTheoNgay {
+  NgayChieu: string;
+  PhienBanPhim: PhienBanPhimGroup[];
+}
+
+export interface ShowtimeByMovieResponse {
+  Phim: any;
+  SuatChieuTheoNgay: SuatChieuTheoNgay[];
 }
