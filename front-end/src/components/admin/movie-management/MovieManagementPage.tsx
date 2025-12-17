@@ -116,11 +116,9 @@ export default function MovieManagementPage() {
 
   return (
     <div className="space-y-6 text-white h-full flex flex-col">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <h1 className="text-2xl font-bold">Quản lý Phim</h1>
         
-        {/* Actions & Search */}
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
             <div className="relative w-full sm:w-[300px]">
                 <Input
@@ -143,7 +141,6 @@ export default function MovieManagementPage() {
         {isLoading ? (
              <div className="text-center text-slate-400 py-10">Đang tải dữ liệu...</div>
         ) : (
-            // Responsive Grid: 1 col (mobile) -> 2 cols (tablet) -> 3 cols (desktop) -> 4 cols (large)
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 pb-20">
                 {filteredFilms.map((film) => (
                     <FilmCard 
@@ -276,37 +273,40 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
     const [backdropPreview, setBackdropPreview] = useState<string | null>(null);
 
     useEffect(() => {
-        if (film) {
-            setFormData({
-                TenGoc: film.TenGoc,
-                TenHienThi: film.TenHienThi,
-                TomTatNoiDung: film.TomTatNoiDung || "",
-                DaoDien: film.DaoDien || "",
-                DanhSachDienVien: film.DanhSachDienVien || "",
-                QuocGia: film.QuocGia || "",
-                TrailerUrl: film.TrailerUrl || "",
-                ThoiLuong: film.ThoiLuong,
-                NgayBatDauChieu: new Date(film.NgayBatDauChieu),
-                NgayKetThucChieu: new Date(film.NgayKetThucChieu),
-                MaNhanPhim: film.MaNhanPhim || "",
-                TheLoais: film.PhimTheLoais?.map((pt: any) => pt.MaTheLoai) || [],
-                posterFile: null,
-                backdropFile: null,
-            });
-            setPosterPreview(film.PosterUrl);
-            setBackdropPreview(film.BackdropUrl);
-        } else {
-            setFormData({
-                TenGoc: "", TenHienThi: "", TomTatNoiDung: "", DaoDien: "",
-                DanhSachDienVien: "", QuocGia: "", TrailerUrl: "", ThoiLuong: 90,
-                NgayBatDauChieu: new Date(), NgayKetThucChieu: undefined,
-                MaNhanPhim: labelsList.length > 0 ? labelsList[0].MaNhanPhim : "",
-                TheLoais: [], posterFile: null, backdropFile: null,
-            });
-            setPosterPreview(null);
-            setBackdropPreview(null);
-        }
-    }, [film, isOpen, labelsList]);
+    if (film) {
+        const rawGenres = film.PhimTheLoais?.map((pt: any) => pt.TheLoai?.MaTheLoai || pt.MaTheLoai) || [];
+        const uniqueGenres = Array.from(new Set(rawGenres)) as string[];
+
+        setFormData({
+            TenGoc: film.TenGoc,
+            TenHienThi: film.TenHienThi,
+            TomTatNoiDung: film.TomTatNoiDung || "",
+            DaoDien: film.DaoDien || "",
+            DanhSachDienVien: film.DanhSachDienVien || "",
+            QuocGia: film.QuocGia || "",
+            TrailerUrl: film.TrailerUrl || "",
+            ThoiLuong: film.ThoiLuong,
+            NgayBatDauChieu: film.NgayBatDauChieu ? new Date(film.NgayBatDauChieu) : undefined,
+            NgayKetThucChieu: film.NgayKetThucChieu ? new Date(film.NgayKetThucChieu) : undefined,
+            MaNhanPhim: film.MaNhanPhim || "",
+            TheLoais: uniqueGenres,
+            posterFile: null,
+            backdropFile: null,
+        });
+        setPosterPreview(film.PosterUrl);
+        setBackdropPreview(film.BackdropUrl);
+    } else {
+        setFormData({
+            TenGoc: "", TenHienThi: "", TomTatNoiDung: "", DaoDien: "",
+            DanhSachDienVien: "", QuocGia: "", TrailerUrl: "", ThoiLuong: 90,
+            NgayBatDauChieu: new Date(), NgayKetThucChieu: undefined,
+            MaNhanPhim: labelsList.length > 0 ? labelsList[0].MaNhanPhim : "",
+            TheLoais: [], posterFile: null, backdropFile: null,
+        });
+        setPosterPreview(null);
+        setBackdropPreview(null);
+    }
+}, [film, isOpen, labelsList]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -557,7 +557,6 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                     </form>
                 </div>
                 
-                {/* Footer - Cố định (Không cuộn) */}
                 <DialogFooter className="p-4 sm:p-6 pt-2 border-t border-slate-800 bg-[#1C1C1C] shrink-0 flex-col sm:flex-row gap-2">
                     <DialogClose asChild>
                         <Button variant="outline" type="button" className="bg-transparent border-slate-700 w-full sm:w-auto mt-2 sm:mt-0">Hủy</Button>

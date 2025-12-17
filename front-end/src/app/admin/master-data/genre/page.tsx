@@ -1,39 +1,27 @@
 "use client";
-import React, { useState } from "react";
-import MasterDataPage, { FieldDefinition } from "@/components/admin/master-data/MasterDataPage";
-
-const fields: FieldDefinition[] = [
-  { key: "TenTheLoai", label: "Tên thể loại", required: true },
-];
-
-const mockGenres = [
-  { id: 1, TenTheLoai: "Hành động" },
-  { id: 2, TenTheLoai: "Kinh dị" },
-  { id: 3, TenTheLoai: "Hài hước" },
-];
+import MasterDataPage, { ColumnConfig } from "@/components/admin/master-data/MasterDataPage";
+import { genreService } from "@/services/genre.service";
 
 export default function GenrePage() {
-  const [data, setData] = useState(mockGenres);
-
-  const handleSave = (item: any) => {
-    if (item.id) {
-        setData(prev => prev.map(i => i.id === item.id ? item : i));
-    } else {
-        setData(prev => [...prev, { ...item, id: Date.now() }]);
-    }
-  };
-
-  const handleDelete = (id: any) => {
-    setData(prev => prev.filter(i => i.id !== id));
-  };
+  const columns: ColumnConfig[] = [
+    { 
+      accessorKey: "TenTheLoai", 
+      header: "Tên Thể Loại", 
+      type: "text", 
+      required: true 
+    },
+  ];
 
   return (
-    <MasterDataPage 
-        title="Quản lý Thể loại" 
-        data={data} 
-        fields={fields} 
-        onSave={handleSave} 
-        onDelete={handleDelete} 
+    <MasterDataPage
+      title="Quản Lý Thể Loại Phim"
+      entityName="Thể loại"
+      idField="MaTheLoai"
+      columns={columns}
+      fetchData={genreService.getAll}
+      createItem={genreService.create}
+      updateItem={genreService.update}
+      deleteItem={genreService.delete}
     />
   );
 }

@@ -1,9 +1,11 @@
 import api from "@/lib/apiClient";
 import { Showtime, GetShowtimesParams, SeatType } from "@/types/showtime";
 export interface CreateShowtimeDto {
-  MaPhienBanPhim: string;
+  MaPhienBanPhim: string; 
   MaPhongChieu: string;
-  ThoiGianBatDau: string; 
+  ThoiGianBatDau: string | Date;
+  ThoiGianKetThuc: string;
+  TrangThai?: string;
 }
 
 export const showtimeService = {
@@ -65,22 +67,36 @@ export const showtimeService = {
     // Tạo suất chiếu mới
     create: async (data: CreateShowtimeDto) => {
         try {
-            const response = await api.post('/showtimes', data);
-            return response.data;
+        const payload = {
+            MaPhienBanPhim: data.MaPhienBanPhim,
+            MaPhongChieu: data.MaPhongChieu,
+            ThoiGianBatDau: new Date(data.ThoiGianBatDau).toISOString(),
+            ThoiGianKetThuc: new Date(data.ThoiGianKetThuc).toISOString(), 
+        };
+
+        const response = await api.post('/showtimes', payload);
+        return response.data;
         } catch (error) {
-            console.error("Lỗi khi tạo suất chiếu:", error);
-            throw error;
+        console.error("Lỗi khi tạo suất chiếu:", error);
+        throw error;
         }
     },
 
-    // Cập nhật suất chiếu (Đổi giờ, đổi phòng)
+    // Cập nhật suất chiếu
     update: async (id: string, data: Partial<CreateShowtimeDto>) => {
         try {
-            const response = await api.patch(`/showtimes/${id}`, data);
-            return response.data;
+        const payload: any = { ...data };
+        if (data.ThoiGianBatDau) {
+            payload.ThoiGianBatDau = new Date(data.ThoiGianBatDau).toISOString();
+        }
+        if (data.ThoiGianKetThuc) {
+            payload.ThoiGianKetThuc = new Date(data.ThoiGianKetThuc).toISOString();
+        }
+        const response = await api.patch(`/showtimes/${id}`, payload);
+        return response.data;
         } catch (error) {
-            console.error(`Lỗi khi cập nhật suất chiếu ${id}:`, error);
-            throw error;
+        console.error(`Lỗi khi cập nhật suất chiếu ${id}:`, error);
+        throw error;
         }
     },
 
