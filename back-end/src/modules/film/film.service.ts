@@ -358,7 +358,7 @@ export class FilmService {
             where: { MaPhim: id, DeletedAt: null },
             include: {
                 DanhGias: true,
-                PhienBanPhims: { select: { DinhDang: true, GiaVe: true, NgonNgu: true } },
+                PhienBanPhims: { select: { MaPhienBanPhim: true, DinhDang: true, GiaVe: true, NgonNgu: true } },
                 PhimTheLoais: { select: { TheLoai: true } },
             },
         });
