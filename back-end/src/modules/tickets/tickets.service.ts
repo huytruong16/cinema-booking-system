@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
+import { GetTicketsDto } from './dtos/get-tickets.dto';
 
 const ticketIncludes = {
     GheSuatChieu: {
@@ -42,19 +44,22 @@ const ticketIncludes = {
 export class TicketsService {
     constructor(private prisma: PrismaService) { }
 
-    getTickets() {
-        return this.prisma.vE.findMany(
-            {
-                where: {
-                    DeletedAt: null,
-                },
-                include: ticketIncludes
-            }
-        );
+    async getTickets(filters?: GetTicketsDto) {
+
+        const [data, pagination] = await this.prisma.xprisma.vE.paginate({
+            where: { DeletedAt: null },
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaVe: 'desc' }
+            ],
+            include: ticketIncludes,
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaVe'));
+
+        return { data, pagination };
     }
 
-    getTicketById(id: string) {
-        return this.prisma.vE.findUnique({
+    async getTicketById(id: string) {
+        return await this.prisma.vE.findUnique({
             where: {
                 MaVe: id,
                 DeletedAt: null

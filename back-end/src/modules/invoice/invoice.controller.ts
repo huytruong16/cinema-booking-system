@@ -1,8 +1,9 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards, Query } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
+import { GetInvoiceDto } from './dtos/get-invoice.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
 @ApiTags('Hóa đơn')
@@ -14,8 +15,8 @@ export class InvoiceController {
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })
-  async getAllInvoices() {
-    return this.invoiceService.getAllInvoices();
+  async getAllInvoices(@Query() filters: GetInvoiceDto) {
+    return this.invoiceService.getAllInvoices(filters);
   }
 
   @Get(':id')

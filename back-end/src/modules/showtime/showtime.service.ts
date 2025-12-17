@@ -4,6 +4,7 @@ import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
 import { GetShowtimeByMovieDto } from './dtos/get-showtime-by-movie.dto';
 import { CreateShowtimeDto } from './dtos/create-showtime.dto';
 import { UpdateShowtimeDto } from './dtos/update-showtime.dto';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class ShowtimeService {
@@ -205,9 +206,12 @@ export class ShowtimeService {
 
         this.applyShowtimeFilters(filters, whereConditions);
 
-        const showtimes = await this.prisma.sUATCHIEU.findMany({
+        const [data, pagination] = await this.prisma.xprisma.sUATCHIEU.paginate({
             where: whereConditions,
-            orderBy: { ThoiGianBatDau: 'asc' },
+            orderBy: [
+                { ThoiGianBatDau: 'asc' },
+                { MaSuatChieu: 'asc' }
+            ],
             include: {
                 PhienBanPhim: {
                     include: {
@@ -226,9 +230,9 @@ export class ShowtimeService {
                     }
                 },
             }
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaSuatChieu'));
 
-        return showtimes;
+        return { data, pagination };
     }
 
     async getShowtimeById(id: string) {

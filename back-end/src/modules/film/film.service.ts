@@ -341,8 +341,11 @@ export class FilmService {
             };
         }
 
-        return await this.prisma.pHIENBANPHIM.findMany({
-            orderBy: { CreatedAt: 'desc' },
+        const [data, pagination] = await this.prisma.xprisma.pHIENBANPHIM.paginate({
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaPhienBanPhim: 'desc' }
+            ],
             where: whereConditions,
             select: {
                 MaPhienBanPhim: true,
@@ -356,7 +359,9 @@ export class FilmService {
                 NgonNgu: true,
                 GiaVe: true
             },
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaPhienBanPhim'));
+
+        return { data, pagination };
     }
 
     async getFilmById(id: string) {

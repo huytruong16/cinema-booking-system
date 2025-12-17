@@ -12,7 +12,8 @@ import {
     UploadedFile,
     ParseFilePipe,
     MaxFileSizeValidator,
-    FileTypeValidator
+    FileTypeValidator,
+    Query
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { ComboService } from './combo.service';
@@ -27,6 +28,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateComboDto } from './dtos/create-combo.dto';
 import { UpdateComboDto } from './dtos/update-combo.dto';
+import { GetComboDto } from './dtos/get-combo.dto';
 
 @ApiTags('Combo')
 @Controller('combos')
@@ -36,8 +38,8 @@ export class ComboController {
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách các combo' })
     @ApiResponse({ status: 200, description: 'Danh sách combo được trả về thành công.' })
-    async getAllCombos() {
-        return this.comboService.getAllCombos();
+    async getAllCombos(@Query() filters: GetComboDto) {
+        return this.comboService.getAllCombos(filters);
     }
 
     @Get(':id')

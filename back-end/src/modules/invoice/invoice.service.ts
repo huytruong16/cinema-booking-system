@@ -2,10 +2,12 @@ import { Injectable, NotFoundException, BadRequestException, Inject, Scope } fro
 import { REQUEST } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 import { DiscountTypeEnum, PromoStatusEnum, RoleEnum, SeatStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from 'src/libs/common/enums';
 import { PayosService } from 'src/libs/common/services/payos.service';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 import { ConfigService } from '@nestjs/config';
+import { GetInvoiceDto } from './dtos/get-invoice.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
@@ -16,21 +18,24 @@ export class InvoiceService {
     @Inject(REQUEST) private readonly request: any,
   ) { }
 
-  async getAllInvoices() {
-    return this.prisma.hOADON.findMany(
-      {
-        where: { DeletedAt: null },
-        orderBy: { CreatedAt: 'desc' },
-        include: {
-          HoaDonCombos: {
-            include: {
-              Combo: true,
-            }
-          },
-          Ves: true
+  async getAllInvoices(filters?: GetInvoiceDto) {
+    const [data, pagination] = await this.prisma.xprisma.hOADON.paginate({
+      where: { DeletedAt: null },
+      orderBy: [
+        { CreatedAt: 'desc' },
+        { MaHoaDon: 'desc' }
+      ],
+      include: {
+        HoaDonCombos: {
+          include: {
+            Combo: true,
+          }
         },
-      }
-    );
+        Ves: true
+      },
+    }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaHoaDon'));
+
+    return { data, pagination };
   }
 
   async getInvoiceById(id: string) {

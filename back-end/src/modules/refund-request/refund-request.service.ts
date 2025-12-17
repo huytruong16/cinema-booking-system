@@ -7,6 +7,8 @@ import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status
 import { REQUEST } from '@nestjs/core';
 import { MailService } from '../mail/mail.service';
 import formatCurrency from 'src/libs/common/helpers/format-vn-currency';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
+import { GetRefundRequestDto } from './dto/get-refund-request.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RefundRequestService {
@@ -15,12 +17,17 @@ export class RefundRequestService {
         @Inject(REQUEST) private readonly request: any,
         private readonly mailService: MailService,
     ) { }
-    async getAllRefundRequests() {
-        return await this.prisma.yEUCAUHOANVE.findMany({
-            orderBy: { CreatedAt: 'desc' },
+    async getAllRefundRequests(filters: GetRefundRequestDto) {
+        const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE.paginate({
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaYeuCau: 'desc' }
+            ],
             where: { DeletedAt: null },
             include: { Ve: true },
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaYeuCau'));
+
+        return { data, pagination };
     }
 
     async createNewRefundRequest(refundRequestData: CreateRefundRequestDto): Promise<any> {

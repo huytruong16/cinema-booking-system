@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsEnum, IsDateString, IsUUID } from 'class-validator';
 import { ShowtimeStatusEnum } from '../../../libs/common/enums/showtime-status.enum';
+import { CursorPaginationDto } from 'src/libs/common/dto/cursor-pagination.dto';
 
-export class GetAllShowtimeDto {
+export class GetAllShowtimeDto extends CursorPaginationDto {
     @ApiProperty({
         description: 'Mã phim',
         required: false,

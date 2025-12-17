@@ -1,4 +1,4 @@
-import { Controller, Get, Param, BadRequestException, Post, Body, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException, Post, Body, Patch, UseGuards, Query } from '@nestjs/common';
 import { RefundRequestService } from './refund-request.service';
 import {
     ApiTags,
@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
+import { GetRefundRequestDto } from './dto/get-refund-request.dto';
 import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
@@ -20,8 +21,8 @@ export class RefundRequestController {
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách yêu cầu hoàn vé' })
     @ApiResponse({ status: 200, description: 'Danh sách yêu cầu hoàn vé' })
-    async getAllRefundRequests() {
-        return this.refundRequestService.getAllRefundRequests();
+    async getAllRefundRequests(@Query() filters: GetRefundRequestDto) {
+        return this.refundRequestService.getAllRefundRequests(filters);
     }
 
     @Post()

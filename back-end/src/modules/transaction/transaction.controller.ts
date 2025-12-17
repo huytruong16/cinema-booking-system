@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, SetMetadata, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, SetMetadata, UseGuards, Query } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { UpdateTransactionMethodDto } from './dto/update-transaction-method';
+import { GetTransactionDto } from './dto/get-transaction.dto';
 import { isUUID } from 'class-validator';
 import { CreateRefundTransactionDto } from './dto/create-refund-transaction.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
@@ -16,8 +17,8 @@ export class TransactionController {
 
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách các giao dịch' })
-    async getAllTransaction() {
-        return await this.transactionService.getAllTransactions();
+    async getAllTransaction(@Query() filters: GetTransactionDto) {
+        return await this.transactionService.getAllTransactions(filters);
     }
 
     @ApiExcludeEndpoint()
