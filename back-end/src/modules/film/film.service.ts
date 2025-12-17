@@ -52,7 +52,7 @@ export class FilmService {
             where: whereConditions,
             include: {
                 DanhGias: true,
-                PhienBanPhims: { select: { DinhDang: true, GiaVe: true, NgonNgu: true } },
+                PhienBanPhims: { select: { MaPhienBanPhim: true, DinhDang: true, GiaVe: true, NgonNgu: true } },
                 PhimTheLoais: { select: { TheLoai: true } },
                 NhanPhim: true,
             },
