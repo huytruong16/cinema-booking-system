@@ -1,36 +1,44 @@
 import apiClient from '@/lib/apiClient';
 
 export interface UserProfile {
-  id: string;
-  email: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  gender: 'male' | 'female' | 'other' | null;
-  role: {
-    name: string;
-  };
+  MaNguoiDung: string;
+  HoTen: string;
+  Email: string;
+  SoDienThoai: string | null;
+  AvatarUrl: string | null;
+  VaiTro: string;
+  MaNhomNguoiDung: string | null;
+  NhomNguoiDung: any | null;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
 }
 
 export interface UpdateProfileData {
-  display_name?: string;
-  gender?: 'male' | 'female' | 'other';
-  avatar_url?: string | null;
+  HoTen?: string;
+  SoDienThoai?: string;
+  AvatarUrl?: string | null;
+  MatKhau?: string;
 }
 
-
 export const getMyProfile = async (): Promise<UserProfile> => {
-  const response = await apiClient.get<UserProfile>('/profile/me');
+  const response = await apiClient.get<UserProfile>('/users/me');
   return response.data;
 };
 
 export const updateMyProfile = async (
   data: UpdateProfileData,
 ): Promise<{ message: string; data: UserProfile }> => {
-  const response = await apiClient.put<{ message: string; data: UserProfile }>('/profile/me', data);
-  return response.data;
+  try {
+    const response = await apiClient.patch<{ message: string; data: UserProfile }>('/users/me', data);
+    return response.data;
+  } catch (error: any) {
+    console.error("Update profile error response:", error.response?.data);
+    throw error;
+  }
 };
+
 export const changePassword = async (data: { oldPassword: string, newPassword: string }) => {
-  const response = await apiClient.post('/profile/change-password', data);
+  const response = await apiClient.post('/auth/change-password', data);
   return response.data;
 };

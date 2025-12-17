@@ -4,6 +4,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 import  NavBar  from "@/components/layout/NavBar";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
+import { Toaster } from "@/components/ui/sonner";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -32,6 +34,7 @@ export default function RootLayout({
         <AuthProvider>
           <NavBar />
           {children}
+          <Toaster />
           <ConditionalFooter/>
         </AuthProvider>
 

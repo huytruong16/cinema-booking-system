@@ -1,8 +1,10 @@
-import { Controller, Get, Param, BadRequestException, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Param, BadRequestException, UseGuards, Patch, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { isUUID } from 'class-validator';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateProfileDto } from './dtos/update-profile.dto';
 
 @ApiTags('Người dùng')
 @Controller('users')
@@ -30,4 +32,45 @@ export class UserController {
         if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
         return this.userService.getUserById(id);
     }
+
+    @Patch('me')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Cập nhật thông tin cá nhân (có thể cập nhật một phần)' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Thông tin người dùng cập nhật và avatar mới (tùy chọn)',
+        schema: {
+            type: 'object',
+            properties: {
+                HoTen: {
+                    type: 'string',
+                    example: 'Nguyễn Văn A',
+                    description: 'Họ tên người dùng',
+                },
+                SoDienThoai: {
+                    type: 'string',
+                    example: '0909123456',
+                    description: 'Số điện thoại',
+                },
+                avatarFile: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Ảnh đại diện mới (jpg, jpeg, png, webp)',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('avatarFile'))
+    @ApiResponse({ status: 200, description: 'Cập nhật thông tin cá nhân thành công.' })
+    @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token không hợp lệ.' })
+    @ApiResponse({ status: 404, description: 'Người dùng không tồn tại.' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ.' })
+    async updateProfile(
+        @Body() dto: UpdateProfileDto,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        return this.userService.updateProfile(dto, file);
+    }
+
 }
