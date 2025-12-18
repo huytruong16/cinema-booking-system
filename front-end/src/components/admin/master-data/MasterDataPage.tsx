@@ -38,10 +38,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 export interface ColumnConfig {
   accessorKey: string;
-  header: string;   
+  header: string;
   type: "text" | "number" | "textarea";
-  required?: boolean;  
-  formatValue?: (value: any) => string | number; 
+  required?: boolean;
+  formatValue?: (value: any) => string | number;
 }
 
 interface MasterDataPageProps {
@@ -49,7 +49,7 @@ interface MasterDataPageProps {
   entityName: string;
   idField: string;
   columns: ColumnConfig[];
-  
+
   fetchData: () => Promise<any[]>;
   createItem: (data: any) => Promise<any>;
   updateItem: (id: string, data: any) => Promise<any>;
@@ -74,7 +74,7 @@ export default function MasterDataPage({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any | null>(null);
-  
+
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const loadData = async () => {
@@ -100,7 +100,7 @@ export default function MasterDataPage({
       setFilteredData(data);
     } else {
       const lower = searchTerm.toLowerCase();
-      const searchKey = columns[0].accessorKey; 
+      const searchKey = columns[0].accessorKey;
       const filtered = data.filter((item) =>
         String(item[searchKey]).toLowerCase().includes(lower)
       );
@@ -111,54 +111,59 @@ export default function MasterDataPage({
   const handleOpenCreate = () => {
     setCurrentItem(null);
     const initData: any = {};
-    columns.forEach(col => initData[col.accessorKey] = col.type === 'number' ? 0 : "");
+    columns.forEach(
+      (col) => (initData[col.accessorKey] = col.type === "number" ? 0 : "")
+    );
     setFormData(initData);
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (item: any) => {
     setCurrentItem(item);
-    setFormData({ ...item }); 
+    setFormData({ ...item });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async () => {
     for (const col of columns) {
-        if (col.required && (formData[col.accessorKey] === undefined || formData[col.accessorKey] === "")) {
-            toast.warning(`Vui lòng nhập ${col.header}`);
-            return;
-        }
+      if (
+        col.required &&
+        (formData[col.accessorKey] === undefined ||
+          formData[col.accessorKey] === "")
+      ) {
+        toast.warning(`Vui lòng nhập ${col.header}`);
+        return;
+      }
     }
 
     try {
       const payload: any = {};
-      
+
       columns.forEach((col) => {
-          const value = formData[col.accessorKey];
-          if (col.type === 'number') {
-              payload[col.accessorKey] = Number(value);
-          } else {
-              payload[col.accessorKey] = value;
-          }
+        const value = formData[col.accessorKey];
+        if (col.type === "number") {
+          payload[col.accessorKey] = Number(value);
+        } else {
+          payload[col.accessorKey] = value;
+        }
       });
 
       setIsDialogOpen(false);
 
       const promise = currentItem
-        ? updateItem(currentItem[idField], payload) 
+        ? updateItem(currentItem[idField], payload)
         : createItem(payload);
 
       toast.promise(promise, {
-        loading: 'Đang xử lý...',
+        loading: "Đang xử lý...",
         success: () => {
-            loadData();
-            return currentItem ? 'Cập nhật thành công!' : 'Tạo mới thành công!';
+          loadData();
+          return currentItem ? "Cập nhật thành công!" : "Tạo mới thành công!";
         },
         error: (err: any) => {
-            return err?.response?.data?.message || "Có lỗi xảy ra";
+          return err?.response?.data?.message || "Có lỗi xảy ra";
         },
       });
-
     } catch (error) {
       console.error(error);
     }
@@ -172,8 +177,8 @@ export default function MasterDataPage({
       setIsDeleteAlertOpen(false);
       loadData();
     } catch (error) {
-        console.error(error);
-        toast.error("Xóa thất bại (Dữ liệu đang được sử dụng)");
+      console.error(error);
+      toast.error("Xóa thất bại (Dữ liệu đang được sử dụng)");
     }
   };
 
@@ -203,7 +208,7 @@ export default function MasterDataPage({
             <TableRow>
               <TableHead className="w-[80px]">STT</TableHead>
               {columns.map((col) => (
-                  <TableHead key={col.accessorKey}>{col.header}</TableHead>
+                <TableHead key={col.accessorKey}>{col.header}</TableHead>
               ))}
               <TableHead className="text-right">Hành Động</TableHead>
             </TableRow>
@@ -211,7 +216,10 @@ export default function MasterDataPage({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 2} className="text-center py-8">
+                <TableCell
+                  colSpan={columns.length + 2}
+                  className="text-center py-8"
+                >
                   <div className="flex justify-center items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" /> Đang tải...
                   </div>
@@ -219,21 +227,32 @@ export default function MasterDataPage({
               </TableRow>
             ) : filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 2} className="text-center py-8 text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length + 2}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   Không có dữ liệu
                 </TableCell>
               </TableRow>
             ) : (
               filteredData.map((item, index) => (
                 <TableRow key={item[idField]}>
-                  <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="font-medium text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
                   {columns.map((col) => (
-                      <TableCell key={col.accessorKey}>
-                          {col.formatValue ? col.formatValue(item[col.accessorKey]) : item[col.accessorKey]}
-                      </TableCell>
+                    <TableCell key={col.accessorKey}>
+                      {col.formatValue
+                        ? col.formatValue(item[col.accessorKey])
+                        : item[col.accessorKey]}
+                    </TableCell>
                   ))}
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(item)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEdit(item)}
+                    >
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
                     <Button
@@ -257,34 +276,55 @@ export default function MasterDataPage({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-white">
           <DialogHeader>
-            <DialogTitle>{currentItem ? `Cập nhật ${entityName}` : `Thêm ${entityName} Mới`}</DialogTitle>
-            <DialogDescription>Nhập thông tin bên dưới để lưu vào hệ thống.</DialogDescription>
+            <DialogTitle>
+              {currentItem
+                ? `Cập nhật ${entityName}`
+                : `Thêm ${entityName} Mới`}
+            </DialogTitle>
+            <DialogDescription>
+              Nhập thông tin bên dưới để lưu vào hệ thống.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {columns.map((col) => (
-                <div key={col.accessorKey} className="grid gap-2">
-                    <Label htmlFor={col.accessorKey}>{col.header}</Label>
-                    {col.type === 'textarea' ? (
-                        <Textarea 
-                            id={col.accessorKey}
-                            value={formData[col.accessorKey] || ""}
-                            onChange={(e) => setFormData({...formData, [col.accessorKey]: e.target.value})}
-                            placeholder={`Nhập ${col.header.toLowerCase()}...`}
-                        />
-                    ) : (
-                        <Input
-                            id={col.accessorKey}
-                            type={col.type === 'number' ? 'number' : 'text'}
-                            value={formData[col.accessorKey] || (col.type === 'number' ? 0 : "")}
-                            onChange={(e) => setFormData({...formData, [col.accessorKey]: e.target.value})}
-                            placeholder={`Nhập ${col.header.toLowerCase()}...`}
-                        />
-                    )}
-                </div>
+              <div key={col.accessorKey} className="grid gap-2">
+                <Label htmlFor={col.accessorKey}>{col.header}</Label>
+                {col.type === "textarea" ? (
+                  <Textarea
+                    id={col.accessorKey}
+                    value={formData[col.accessorKey] || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [col.accessorKey]: e.target.value,
+                      })
+                    }
+                    placeholder={`Nhập ${col.header.toLowerCase()}...`}
+                  />
+                ) : (
+                  <Input
+                    id={col.accessorKey}
+                    type={col.type === "number" ? "number" : "text"}
+                    value={
+                      formData[col.accessorKey] ||
+                      (col.type === "number" ? 0 : "")
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [col.accessorKey]: e.target.value,
+                      })
+                    }
+                    placeholder={`Nhập ${col.header.toLowerCase()}...`}
+                  />
+                )}
+              </div>
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Hủy
+            </Button>
             <Button onClick={handleSubmit}>Lưu</Button>
           </DialogFooter>
         </DialogContent>
@@ -300,7 +340,12 @@ export default function MasterDataPage({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Xóa
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
