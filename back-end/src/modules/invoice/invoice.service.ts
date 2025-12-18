@@ -147,11 +147,15 @@ export class InvoiceService {
   async createInvoice(request: CreateInvoiceDto) {
     const { Email, MaGheSuatChieus, Combos, MaVouchers } = request;
     const prisma = this.prisma;
-    const userId = this.request?.user.id
+    const userId = this.request?.user?.id
 
-    const user = await prisma.nGUOIDUNGPHANMEM.findUnique({
-      where: { MaNguoiDung: userId }
-    });
+    let user;
+
+    if (userId) {
+      user = await prisma.nGUOIDUNGPHANMEM.findUnique({
+        where: { MaNguoiDung: userId }
+      });
+    }
 
     if ((!user || user.VaiTro !== RoleEnum.KHACHHANG) && !Email) {
       throw new BadRequestException('Email không được để trống');
@@ -252,21 +256,25 @@ export class InvoiceService {
         await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
     }
 
-    await this.prisma.gIAODICH.create({
-      data: {
-        MaHoaDon: created.MaHoaDon,
-        PhuongThuc: request.LoaiGiaoDich,
-        TongTien: totalAfterDiscount.toString(),
-        NgayGiaoDich: new Date(),
-        LoaiGiaoDich: TransactionTypeEnum.MUAVE,
-        Code: transactionCode.toString(),
-        LinkId: paymentData ? paymentData.paymentLinkId : '',
-        GiaoDichUrl: paymentData ? paymentData.checkoutUrl : '',
-        MaNhanVien: (user && user.VaiTro === RoleEnum.NHANVIEN) ? user.MaNguoiDung : null,
-      }
-    });
+    if (paymentData) {
+      await this.prisma.gIAODICH.create({
+        data: {
+          MaHoaDon: created.MaHoaDon,
+          PhuongThuc: request.LoaiGiaoDich,
+          TongTien: totalAfterDiscount.toString(),
+          NgayGiaoDich: new Date(),
+          LoaiGiaoDich: TransactionTypeEnum.MUAVE,
+          Code: transactionCode.toString(),
+          LinkId: paymentData ? paymentData.paymentLinkId : '',
+          GiaoDichUrl: paymentData ? paymentData.checkoutUrl : '',
+          MaNhanVien: (user && user.VaiTro === RoleEnum.NHANVIEN) ? user.MaNguoiDung : null,
+        }
+      });
+    } else {
+      throw new BadRequestException('Không tạo được giao dịch thanh toán, vui lòng thử lại sau');
+    }
 
-    return this.getInvoiceById(created.MaHoaDon);
+    return { "GiaoDichUrl": paymentData?.checkoutUrl };
 
     async function checkAvailableUserVoucher() {
       if (MaVouchers && MaVouchers.length > 0) {
