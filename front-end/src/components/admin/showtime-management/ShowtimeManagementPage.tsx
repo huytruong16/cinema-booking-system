@@ -144,13 +144,22 @@ export default function ShowtimeManagementPage() {
         filmService.getAll()
       ]);
 
-      setPhongChieuList((roomsRes as any[]).map((r: any) => ({
+      const unwrapData = (data: any) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.data)) return data.data;
+          return [];
+      };
+
+      const roomsArray = unwrapData(roomsRes);
+      const filmsArray = unwrapData(filmsRes);
+
+      setPhongChieuList(roomsArray.map((r: any) => ({
         MaPhongChieu: r.MaPhongChieu,
         TenPhongChieu: r.TenPhongChieu 
       })));
 
       const flatList: PhimDinhDang[] = [];
-      (filmsRes as any[]).forEach((film: any) => {
+      (filmsArray as any[]).forEach((film: any) => {
         if (film.PhienBanPhims) {
           film.PhienBanPhims.forEach((pv: any) => {
              if (pv.MaPhienBanPhim) {
@@ -178,9 +187,9 @@ export default function ShowtimeManagementPage() {
       try {
         const dateStr = format(selectedDate, "yyyy-MM-dd");
         const res = await showtimeService.getAll({ NgayChieu: dateStr });
-        
-        // 🟢 THAY ĐỔI: Chỉ lưu dữ liệu thô, không map ngay tại đây
-        setRawShowtimes(res as any[]);
+        const dataToSet = Array.isArray(res) ? res : (res as any).data || [];
+
+        setRawShowtimes(dataToSet);
       } catch (error) {
           console.error("Lỗi fetch showtime:", error);
           toast.error("Lỗi tải lịch chiếu");
@@ -189,13 +198,12 @@ export default function ShowtimeManagementPage() {
       }
   };
 
-  // 🟢 THAY ĐỔI: Dùng useMemo để map dữ liệu ngay khi phongChieuList có dữ liệu
-  // Không cần gọi lại API showtime, UI sẽ tự cập nhật tên phòng ngay lập tức
   const allShowtimes = useMemo(() => {
+    if (!Array.isArray(rawShowtimes)) return [];
+
     return rawShowtimes.map((st: any) => {
-        // Tìm tên phòng trong list đã tải
         const matchedRoom = phongChieuList.find(r => r.MaPhongChieu === st.MaPhongChieu);
-        const tenPhong = matchedRoom ? matchedRoom.TenPhongChieu : (st.PhongChieu?.TenPhongChieu || "Đang tải...");
+        const tenPhong = matchedRoom ? matchedRoom.TenPhongChieu : (st.PhongChieu?.TenPhongChieu || "Phòng chưa xác định");
 
         return {
             MaSuatChieu: st.MaSuatChieu,
@@ -213,7 +221,6 @@ export default function ShowtimeManagementPage() {
     });
   }, [rawShowtimes, phongChieuList]);
 
-  // Derived state cho selectedShowtime
   const selectedShowtime = useMemo(() => 
     allShowtimes.find(s => s.MaSuatChieu === selectedShowtimeId) || null
   , [allShowtimes, selectedShowtimeId]);
@@ -222,7 +229,6 @@ export default function ShowtimeManagementPage() {
     fetchMasterData();
   }, []);
 
-  // 🟢 THAY ĐỔI: Bỏ dependency phongChieuList để tránh fetch 2 lần
   useEffect(() => {
     fetchShowtimes();
     setSelectedShowtimeId(null); 
@@ -241,6 +247,25 @@ export default function ShowtimeManagementPage() {
 
   const handleFormSubmit = async (formData: SuatChieuView) => {
     try {
+        const newStart = formData.ThoiGianBatDau.getTime();
+        const newEnd = formData.ThoiGianKetThuc.getTime();
+
+        const hasConflict = allShowtimes.some((existing) => {
+            if (existing.MaPhongChieu !== formData.MaPhongChieu) return false;
+
+            if (editingShowtime && existing.MaSuatChieu === editingShowtime.MaSuatChieu) return false;
+
+            const existStart = existing.ThoiGianBatDau.getTime();
+            const existEnd = existing.ThoiGianKetThuc.getTime();
+
+            return newStart < existEnd && newEnd > existStart;
+        });
+
+        if (hasConflict) {
+            toast.error("Xung đột lịch chiếu! Phòng này đã có suất chiếu trong khung giờ này.");
+            return; 
+        }
+
         const payload = {
             MaPhienBanPhim: formData.MaPhimDinhDang,
             MaPhongChieu: formData.MaPhongChieu,
@@ -271,7 +296,7 @@ export default function ShowtimeManagementPage() {
           await showtimeService.delete(maSuatChieu);
           toast.success("Xóa thành công");
           if (selectedShowtime?.MaSuatChieu === maSuatChieu) {
-            setSelectedShowtime(null);
+            setSelectedShowtimeId(null);
           }
           fetchShowtimes();
       } catch (error) {

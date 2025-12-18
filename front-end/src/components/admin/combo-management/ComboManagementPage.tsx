@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, ShoppingCart, Upload, ImageOff } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, ShoppingCart, Upload, ImageOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { comboService, Combo } from '@/services/combo.service';
@@ -32,7 +32,6 @@ const trangThaiOptions: { value: TrangThaiCombo; label: string }[] = [
   { value: "HETHANG", label: "Hết hàng" },
 ];
 
-// Helper lấy màu badge
 const getBadgeVariant = (trangThai: TrangThaiCombo) => {
     switch (trangThai) {
         case "CONHANG": return "bg-green-600 text-white";
@@ -57,7 +56,9 @@ export default function ComboManagementPage() {
     try {
       setIsLoading(true);
       const data = await comboService.getAll();
-      setCombos(data);
+      const comboArray = Array.isArray(data) ? data : (data as any).data || [];
+      
+      setCombos(comboArray);
     } catch (error) {
       console.error("Lỗi tải combo:", error);
       toast.error("Không thể tải danh sách combo");
@@ -65,12 +66,13 @@ export default function ComboManagementPage() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     fetchCombos();
   }, []);
 
   const filteredCombos = useMemo(() => {
+    if (!Array.isArray(combos)) return [];
+
     return combos.filter(combo => {
       const matchesSearch = combo.TenCombo.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || combo.TrangThai === statusFilter;
@@ -180,7 +182,6 @@ export default function ComboManagementPage() {
   );
 }
 
-// --- COMPONENT CON: CARD COMBO ---
 interface ComboCardProps {
     combo: Combo; 
     onEdit: () => void;
@@ -273,7 +274,6 @@ interface ComboFormState {
     TrangThai: TrangThaiCombo;
 }
 
-// --- COMPONENT CON: DIALOG FORM ---
 interface ComboFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
@@ -290,7 +290,7 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
     useEffect(() => {
         if (combo) {
             setFormData({
@@ -320,7 +320,6 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
         }));
     };
 
-    // Xử lý chọn file ảnh
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -333,10 +332,10 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
          setFormData(prev => ({ ...prev, TrangThai: value }));
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
 
-        // 1. VALIDATION
         const errors = [];
 
         const priceRegex = /^[1-9]\d*$/;
@@ -368,7 +367,14 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
             data.append('comboFile', selectedFile); 
         }
 
-        onSubmit(data);
+        try {
+            setIsSubmitting(true);
+            await onSubmit(data); 
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
     return (
@@ -443,7 +449,6 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                                 </div>
                             </div>
                             
-                            {/* Input File Upload */}
                             <div className="space-y-2">
                                 <Label htmlFor="HinhAnh">Hình ảnh {!combo && <span className="text-red-500">*</span>}</Label>
                                 <div className="flex gap-4 items-start">
@@ -457,7 +462,6 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                                             <input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
                                         </label>
                                     </div>
-                                    {/* Preview */}
                                     <div className="w-32 h-32 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 relative">
                                         {previewUrl ? (
                                             <Image src={previewUrl} alt="Preview" fill className="object-cover" />
@@ -471,11 +475,21 @@ function ComboFormDialog({ isOpen, onClose, onSubmit, combo }: ComboFormDialogPr
                         </div>
                     </ScrollArea>
                     <DialogFooter className="!mt-6 pt-6 border-t border-slate-700">
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline" className="bg-transparent border-slate-700 hover:bg-slate-800">Hủy</Button>
-                        </DialogClose>
-                        <Button type="submit">{combo ? "Cập nhật" : "Lưu"}</Button>
-                    </DialogFooter>
+                    <DialogClose asChild>
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="bg-transparent border-slate-700 hover:bg-slate-800"
+                            disabled={isSubmitting}
+                        >
+                            Hủy
+                        </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {combo ? "Cập nhật" : "Lưu"}
+                    </Button>
+                </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
