@@ -2,10 +2,13 @@ import { Injectable, NotFoundException, BadRequestException, Inject, Scope } fro
 import { REQUEST } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
-import { DiscountTypeEnum, PromoStatusEnum, RoleEnum, SeatStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from 'src/libs/common/enums';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
+import { DiscountTypeEnum, PromoStatusEnum, RoleEnum, SeatStatusEnum, TicketStatusEnum, TransactionEnum, TransactionStatusEnum, TransactionTypeEnum } from 'src/libs/common/enums';
 import { PayosService } from 'src/libs/common/services/payos.service';
 import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 import { ConfigService } from '@nestjs/config';
+import { GetInvoiceDto } from './dtos/get-invoice.dto';
+import GetInvoiceResponseDto from './dtos/get-invoice-response.dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
@@ -16,21 +19,52 @@ export class InvoiceService {
     @Inject(REQUEST) private readonly request: any,
   ) { }
 
-  async getAllInvoices() {
-    return this.prisma.hOADON.findMany(
-      {
-        where: { DeletedAt: null },
-        orderBy: { CreatedAt: 'desc' },
-        include: {
-          HoaDonCombos: {
-            include: {
-              Combo: true,
-            }
-          },
-          Ves: true
+  async getAllInvoices(filters?: GetInvoiceDto) {
+    const [data, pagination] = await this.prisma.xprisma.hOADON.paginate({
+      where: { DeletedAt: null },
+      orderBy: [
+        { CreatedAt: 'desc' },
+        { MaHoaDon: 'desc' }
+      ],
+      include: {
+        HoaDonCombos: {
+          include: {
+            Combo: true,
+          }
         },
-      }
-    );
+        Ves: {
+          include: {
+            GheSuatChieu: {
+              include: {
+                SuatChieu: {
+                  include: {
+                    PhienBanPhim: {
+                      include: {
+                        Phim: true
+                      }
+                    },
+                    PhongChieu: true
+                  }
+                },
+                GhePhongChieu: {
+                  include: {
+                    GheLoaiGhe: {
+                      include: {
+                        Ghe: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+      },
+    }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaHoaDon'));
+
+    const mappedData: GetInvoiceResponseDto[] = data.map((invoice) => this.mapToInvoiceResponse(invoice));
+
+    return { data: mappedData, pagination };
   }
 
   async getInvoiceById(id: string) {
@@ -40,53 +74,32 @@ export class InvoiceService {
         include: {
           HoaDonCombos: {
             include: {
-              Combo: true
+              Combo: true,
             }
           },
           Ves: {
             include: {
               GheSuatChieu: {
                 include: {
-                  GhePhongChieu: {
-                    include: {
-                      GheLoaiGhe: {
-                        include: {
-                          LoaiGhe: true,
-                          Ghe: true
-                        }
-                      }
-                    }
-                  },
                   SuatChieu: {
                     include: {
                       PhienBanPhim: {
                         include: {
-                          Phim: {
-                            include: {
-                              PhimTheLoais: {
-                                include: {
-                                  TheLoai: true
-                                }
-                              }
-                            }
-                          },
-                          DinhDang: true,
-                          NgonNgu: true
+                          Phim: true
                         }
                       },
-                      PhongChieu: true,
+                      PhongChieu: true
+                    }
+                  },
+                  GhePhongChieu: {
+                    include: {
+                      GheLoaiGhe: {
+                        include: {
+                          Ghe: true
+                        }
+                      }
                     }
                   }
-                }
-              }
-            }
-          },
-          GiaoDichs: true,
-          HoaDonKhuyenMais: {
-            include: {
-              KhuyenMaiKH: {
-                include: {
-                  KhuyenMai: true,
                 }
               }
             }
@@ -99,7 +112,36 @@ export class InvoiceService {
       throw new NotFoundException('Hóa đơn không tồn tại');
     }
 
-    return invoice;
+    return this.mapToInvoiceResponse(invoice);
+  }
+
+  private mapToInvoiceResponse(invoice: any): GetInvoiceResponseDto {
+    const firstTicket = invoice.Ves[0];
+    const showtime = firstTicket?.GheSuatChieu?.SuatChieu;
+    const film = showtime?.PhienBanPhim?.Phim;
+    const room = showtime?.PhongChieu;
+
+    return {
+      MaHoaDon: invoice.MaHoaDon,
+      Phim: {
+        TenPhim: film?.TenHienThi,
+        PosterUrl: film?.PosterUrl
+      },
+      ThoiGianChieu: showtime?.ThoiGianBatDau,
+      PhongChieu: room?.TenPhongChieu,
+      Ves: invoice.Ves.map((v: any) => {
+        const ghe = v.GheSuatChieu?.GhePhongChieu?.GheLoaiGhe?.Ghe;
+        return {
+          SoGhe: ghe ? `${ghe.Hang}${ghe.Cot}` : '',
+          TrangThai: v.TrangThaiVe as TicketStatusEnum
+        };
+      }),
+      Combos: invoice.HoaDonCombos.map((hdc: any) => ({
+        TenCombo: hdc.Combo?.TenCombo,
+        SoLuong: hdc.SoLuong
+      })),
+      TongTien: Number(invoice.TongTien)
+    };
   }
 
   async createInvoice(request: CreateInvoiceDto) {

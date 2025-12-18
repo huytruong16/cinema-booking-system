@@ -1,12 +1,12 @@
-import { Controller, Get, Param, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, BadRequestException, Post, Body } from '@nestjs/common';
 import { ScreeningRoomService } from './screening-room.service';
 import {
     ApiTags,
     ApiOperation,
-    ApiResponse,
     ApiParam,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
+import { CreateScreeningRoomDto } from './dtos/create-screening-room.dto';
 
 @ApiTags('Phòng chiếu')
 @Controller('screening-rooms')
@@ -17,6 +17,12 @@ export class ScreeningRoomController {
     @ApiOperation({ summary: 'Lấy danh sách các phòng chiếu' })
     async getAllScreeningRooms() {
         return this.screeningRoomService.getAllScreeningRooms();
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Tạo phòng chiếu mới' })
+    async createScreeningRoom(@Body() createScreeningRoomDto: CreateScreeningRoomDto) {
+        return this.screeningRoomService.createScreeningRoom(createScreeningRoomDto);
     }
 
     @Get(':id')

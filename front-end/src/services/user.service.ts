@@ -1,4 +1,5 @@
 import apiClient from '@/lib/apiClient';
+import { TicketResponse } from '@/types/ticket';
 
 export interface UserProfile {
   MaNguoiDung: string;
@@ -41,4 +42,10 @@ export const updateMyProfile = async (
 export const changePassword = async (data: { oldPassword: string, newPassword: string }) => {
   const response = await apiClient.post('/auth/change-password', data);
   return response.data;
+};
+
+export const getMyTickets = async (): Promise<TicketResponse[]> => {
+  const response = await apiClient.get<any>('/invoices');
+  const data = response.data;
+  return Array.isArray(data) ? data : data.data || [];
 };

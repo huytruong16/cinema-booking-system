@@ -102,8 +102,9 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
 export const filmService = {
   getAllFilms: async (): Promise<Movie[]> => {
     try {
-      const response = await api.get<BackendFilm[]>('/films');
-      return response.data.map(mapToFrontendMovie);
+      const response = await api.get<any>('/films');
+      const films = Array.isArray(response.data) ? response.data : response.data.data || [];
+      return films.map(mapToFrontendMovie);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách phim:", error);
       return [];

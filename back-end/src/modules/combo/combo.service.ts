@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateComboDto } from './dtos/create-combo.dto';
 import { UpdateComboDto } from './dtos/update-combo.dto';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class ComboService {
@@ -11,14 +12,22 @@ export class ComboService {
         private readonly storageService: StorageService
     ) { }
 
-    async getAllCombos() {
-        return await this.prisma.cOMBO.findMany({
-            orderBy: { CreatedAt: 'desc' },
-            where: { DeletedAt: null },
+    async getAllCombos(filters?: any) {
+        const where: any = { DeletedAt: null };
+        if (filters?.TrangThai) where.TrangThai = filters.TrangThai;
+
+        const [data, pagination] = await this.prisma.xprisma.cOMBO.paginate({
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaCombo: 'desc' }
+            ],
+            where,
             include: {
                 HoaDonCombos: false,
             },
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaCombo'));
+
+        return { data, pagination };
     }
 
     async getComboById(id: string) {

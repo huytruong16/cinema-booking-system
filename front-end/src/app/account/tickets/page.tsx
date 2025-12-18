@@ -1,14 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
-import { mockUserTickets } from '@/lib/mockData';
+import React, { useState, useEffect } from 'react';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TicketX } from 'lucide-react';
+import { TicketX, Loader2 } from 'lucide-react';
+import { getMyTickets } from '@/services/user.service';
+import { TicketResponse } from '@/types/ticket';
+import { toast } from 'sonner';
 
 export default function MyTicketsPage() {
-  const upcomingTickets = mockUserTickets.filter(t => t.status === 'upcoming');
-  const historyTickets = mockUserTickets.filter(t => t.status === 'completed' || t.status === 'cancelled');
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const data = await getMyTickets();
+        const mappedTickets = data.map(mapTicketResponseToCardProps);
+        setTickets(mappedTickets);
+      } catch (error) {
+        console.error('Failed to fetch tickets:', error);
+        toast.error('Không thể tải danh sách vé');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTickets();
+  }, []);
+
+  const upcomingTickets = tickets.filter(t => t.status === 'upcoming');
+  const historyTickets = tickets;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl">
@@ -61,4 +90,32 @@ export default function MyTicketsPage() {
       </Tabs>
     </div>
   );
+}
+
+function mapTicketResponseToCardProps(apiTicket: TicketResponse) {
+  const showDateObj = new Date(apiTicket.ThoiGianChieu);
+  const now = new Date();
+  
+  let status = 'upcoming';
+  if (apiTicket.TrangThaiThanhToan === 'THATBAI') {
+    status = 'cancelled';
+  } else if (showDateObj < now) {
+    status = 'completed';
+  }
+
+  return {
+    id: apiTicket.MaHoaDon,
+    movieTitle: apiTicket.Phim.TenPhim,
+    posterUrl: apiTicket.Phim.PosterUrl,
+    backdropUrl: apiTicket.Phim.PosterUrl, // Fallback
+    cinemaName: 'Movix UIT', // Hardcoded
+    roomName: apiTicket.PhongChieu,
+    showDate: showDateObj.toLocaleDateString('vi-VN'),
+    showTime: showDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    seats: apiTicket.Ves.map(v => v.SoGhe),
+    combos: apiTicket.Combos.map(c => ({ name: c.TenCombo, quantity: c.SoLuong })),
+    price: apiTicket.TongTien,
+    status: status,
+    qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${apiTicket.MaHoaDon}`
+  };
 }
