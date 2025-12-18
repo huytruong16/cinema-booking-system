@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards, Query, SetMetadata } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
@@ -28,6 +28,7 @@ export class InvoiceController {
   }
 
   @Post()
+  @SetMetadata('isPublic', true)
   @ApiOperation({ summary: 'Tạo hóa đơn mới' })
   async createInvoice(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoiceService.createInvoice(createInvoiceDto);
