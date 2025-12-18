@@ -37,12 +37,12 @@ export function AccountNavigation() {
       <Avatar className="h-10 w-10">
         <AvatarImage src={user?.avatarUrl || 'https://theselfishmeme.co.uk/wp-content/uploads/2025/10/avatar-mac-dinh-ca-nam-va-nu-26.webp'} alt={user?.username} />
         <AvatarFallback>
-          {user?.display_name?.[0] || user?.username?.[0] || 'U'}
+          {user?.username?.[0] || user?.username?.[0] || 'U'}
         </AvatarFallback>
       </Avatar>
       <div className="text-sm overflow-hidden">
         <p className="font-semibold text-white truncate">
-          {user?.display_name || user?.username}
+          { user?.username}
         </p>
         <p className="text-gray-400 truncate">{user?.email}</p>
       </div>

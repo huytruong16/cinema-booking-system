@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useRouter } from "next/navigation";
 import apiClient from '@/lib/apiClient';
 import { authService } from "@/lib/api/authService";
+import { getMyProfile } from "@/services/user.service";
 
 type VaiTro = "KHACHHANG" | "NHANVIEN" | "ADMIN";
 
@@ -36,16 +37,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
+    const initAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem("user");
 
-      if (storedUser) {
-        _setUser(JSON.parse(storedUser));
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          _setUser(parsedUser);
+
+          // Refresh profile to get latest avatar
+          try {
+            const profile = await getMyProfile();
+            const updatedUser = {
+              ...parsedUser,
+              username: profile.HoTen,
+              avatarUrl: profile.AvatarUrl,
+              soDienThoai: profile.SoDienThoai
+            };
+            _setUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
+          } catch (err) {
+            console.error("Failed to refresh user profile", err);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load auth state from localStorage", error);
       }
-    } catch (error) {
-      console.error("Failed to load auth state from localStorage", error);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const setUser = (newUser: AuthUser | null) => {
