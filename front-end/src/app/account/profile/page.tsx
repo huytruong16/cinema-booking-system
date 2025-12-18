@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
+
 export default function ProfilePage() {
   const { user, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +20,7 @@ export default function ProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -45,27 +47,35 @@ export default function ProfilePage() {
   const handleSubmit = async () => {
     const toastId = toast.loading('Đang cập nhật thông tin...');
 
-
-    const updateData: any = {
-      HoTen: fullName.trim(),
-    };
-
-    if (phoneNumber && phoneNumber.trim() !== '') {
-      updateData.SoDienThoai = phoneNumber.trim();
-    }
-
-    if (avatarUrl) {
-      updateData.AvatarUrl = avatarUrl;
-    }
-
     try {
-      const { message } = await updateMyProfile(updateData);
+      const formData = new FormData();
+      formData.append('HoTen', fullName.trim());
+      
+      if (phoneNumber && phoneNumber.trim() !== '') {
+        formData.append('SoDienThoai', phoneNumber.trim());
+      }
+      
+      if (avatarFile) {
+        formData.append('avatarFile', avatarFile);
+      }
+
+      const { message } = await updateMyProfile(formData);
       toast.success(message || "Cập nhật thành công", { id: toastId });
 
       const updatedProfile = await getMyProfile();
       setFullName(updatedProfile.HoTen || '');
       setPhoneNumber(updatedProfile.SoDienThoai || '');
       setAvatarUrl(updatedProfile.AvatarUrl);
+      setAvatarFile(null); // Reset file after successful upload
+
+      if (user) {
+        setUser({
+          ...user,
+          username: updatedProfile.HoTen,
+          soDienThoai: updatedProfile.SoDienThoai,
+          avatarUrl: updatedProfile.AvatarUrl
+        });
+      }
 
     } catch (error: any) {
       console.error('Lỗi khi cập nhật:', error);
@@ -73,6 +83,11 @@ export default function ProfilePage() {
       toast.error(errMsg, { id: toastId });
     }
   };
+
+  const handleAvatarChange = (file: File, previewUrl: string) => {
+    setAvatarFile(file);
+    setAvatarUrl(previewUrl);
+  }
 
   if (isLoading) {
     return (
@@ -130,7 +145,7 @@ export default function ProfilePage() {
         <div className="md:col-span-1 dark">
           <AvatarUpload
             currentAvatarUrl={avatarUrl || ''}
-            onAvatarUrlChange={setAvatarUrl}
+            onAvatarChange={handleAvatarChange}
           />
         </div>
       </div>

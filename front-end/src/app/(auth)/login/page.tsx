@@ -15,6 +15,7 @@ import { authService } from "@/lib/api/authService"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { jwtDecode } from "jwt-decode"
+import { getMyProfile } from "@/services/user.service"
 
 type VaiTro = "KHACHHANG" | "NHANVIEN" | "ADMIN";
 type TrangThaiNguoiDung = "CHUAKICHHOAT" | "CONHOATDONG" | "KHONGHOATDONG";
@@ -99,6 +100,19 @@ export default function LoginPage() {
             };
 
             login(authUserForContext);
+
+            try {
+                const profile = await getMyProfile();
+                login({
+                    ...authUserForContext,
+                    username: profile.HoTen,
+                    avatarUrl: profile.AvatarUrl,
+                    soDienThoai: profile.SoDienThoai
+                });
+            } catch (error) {
+                console.error("Failed to fetch user profile:", error);
+            }
+
             const role = authUserForContext.role; 
 
             if (role === "ADMIN" || role === "NHANVIEN") {

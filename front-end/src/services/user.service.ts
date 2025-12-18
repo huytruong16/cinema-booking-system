@@ -29,10 +29,14 @@ export const getMyProfile = async (): Promise<UserProfile> => {
 };
 
 export const updateMyProfile = async (
-  data: UpdateProfileData,
+  data: FormData,
 ): Promise<{ message: string; data: UserProfile }> => {
   try {
-    const response = await apiClient.patch<{ message: string; data: UserProfile }>('/users/me', data);
+    const response = await apiClient.patch<{ message: string; data: UserProfile }>('/users/me', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   } catch (error: any) {
     console.error("Update profile error response:", error.response?.data);

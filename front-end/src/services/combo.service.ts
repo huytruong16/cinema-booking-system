@@ -12,8 +12,9 @@ export interface Combo {
 export const comboService = {
   // 1. Lấy danh sách combo
   getAll: async () => {
-    const res = await apiClient.get<Combo[]>('/combos');
-    return res.data;
+    const res = await apiClient.get<any>('/combos');
+    const data = res.data;
+    return Array.isArray(data) ? data : data.data || [];
   },
 
   // 2. Tạo combo mới
