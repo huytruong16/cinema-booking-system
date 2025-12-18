@@ -11,6 +11,7 @@ import { Ticket, ArrowLeft, CheckCircle2, XCircle, Loader2, QrCode, Clock, Film,
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { voucherService, Voucher } from '@/services/voucher.service';
+import { invoiceService } from '@/services/invoice.service';
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,9 @@ function PaymentContent() {
   const [appliedPromo, setAppliedPromo] = useState<Voucher | null>(null);
   const [promoError, setPromoError] = useState("");
 
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [countdown, setCountdown] = useState(30);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [waitingCountdown, setWaitingCountdown] = useState(600); // 10 minutes
 
   useEffect(() => {
     const loadData = () => {
@@ -54,17 +56,67 @@ function PaymentContent() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (showQRModal && countdown > 0) {
+    if (showWaitingModal && waitingCountdown > 0) {
       interval = setInterval(() => {
-        setCountdown((prev) => prev - 1);
+        setWaitingCountdown((prev) => prev - 1);
       }, 1000);
-    } else if (showQRModal && countdown === 0) {
-      toast.success("Thanh toán thành công!");
-      sessionStorage.removeItem('pendingBooking'); 
-      router.push('/payment/success');
+    } else if (showWaitingModal && waitingCountdown === 0) {
+      setShowWaitingModal(false);
+      toast.error("Hết thời gian thanh toán.");
     }
     return () => clearInterval(interval);
-  }, [showQRModal, countdown, router]);
+  }, [showWaitingModal, waitingCountdown]);
+
+  const handlePayment = async () => {
+    if (!bookingData) return;
+    setIsProcessing(true);
+
+    try {
+      // Validate data integrity
+      const invalidSeats = bookingData.seats.filter((s: any) => !s.uuid);
+      if (invalidSeats.length > 0) {
+        toast.error("Dữ liệu ghế không hợp lệ. Vui lòng đặt lại vé.");
+        return;
+      }
+
+      // Validate Email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!bookingData.customerInfo.email || !emailRegex.test(bookingData.customerInfo.email)) {
+        toast.error("Email không hợp lệ. Vui lòng kiểm tra lại thông tin.");
+        return;
+      }
+
+      const payload = {
+        Email: bookingData.customerInfo.email,
+        LoaiGiaoDich: "TRUCTUYEN" as const,
+        MaGheSuatChieus: bookingData.seats.map((s: any) => s.uuid),
+        Combos: bookingData.combos ? bookingData.combos.map((c: any) => ({
+          MaCombo: c.id,
+          SoLuong: c.quantity
+        })) : [],
+        MaVouchers: appliedPromo ? [appliedPromo.MaKhuyenMai] : []
+      };
+
+      console.log("Sending payment payload:", payload);
+
+      const res = await invoiceService.create(payload);
+      
+      if (res.GiaoDichUrl) {
+        window.open(res.GiaoDichUrl, '_blank');
+        setShowWaitingModal(true);
+        setWaitingCountdown(600);
+      } else {
+        toast.error("Không nhận được đường dẫn thanh toán.");
+      }
+
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      const message = error?.response?.data?.message || "Có lỗi xảy ra khi tạo giao dịch.";
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleApplyPromo = async () => {
     setPromoError("");
@@ -312,9 +364,17 @@ function PaymentContent() {
                     <CardFooter>
                         <Button 
                             className="w-full h-12 text-lg bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-900/20"
-                            onClick={() => { setCountdown(30); setShowQRModal(true); }}
+                            onClick={handlePayment}
+                            disabled={isProcessing}
                         >
-                            Thanh toán ngay
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Đang xử lý...
+                              </>
+                            ) : (
+                              "Thanh toán ngay"
+                            )}
                         </Button>
                     </CardFooter>
                 </Card>
@@ -322,39 +382,35 @@ function PaymentContent() {
           </div>
 
         </div>
-        <Dialog open={showQRModal} onOpenChange={setShowQRModal}>
+        <Dialog open={showWaitingModal} onOpenChange={setShowWaitingModal}>
             <DialogContent className="bg-[#1C1C1C] border-zinc-800 text-white sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
-                    <DialogTitle className="text-center text-xl">Quét mã thanh toán</DialogTitle>
+                    <DialogTitle className="text-center text-xl">Đang chờ thanh toán</DialogTitle>
                     <DialogDescription className="text-center text-zinc-400">
-                        Tự động chuyển trang sau khi hoàn tất
+                        Vui lòng hoàn tất thanh toán tại cổng thanh toán
                     </DialogDescription>
                 </DialogHeader>
                 
                 <div className="flex flex-col items-center justify-center space-y-6 py-4">
-                    {/* QR Code */}
-                    <div className="bg-white p-4 rounded-xl shadow-white/5 shadow-2xl relative group">
-                        <Image 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Movix_Pay_${finalPrice}`} 
-                            alt="Payment QR" 
-                            width={220} 
-                            height={220} 
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 rounded-xl">
-                            <QrCode className="text-black w-10 h-10" />
-                        </div>
+                    <div className="bg-yellow-500/10 p-6 rounded-full animate-pulse">
+                        <Clock className="w-12 h-12 text-yellow-500" />
                     </div>
 
-                    {/* Timer */}
-                    <div className="flex flex-col items-center space-y-2">
+                    <div className="text-center space-y-2">
+                        <p className="text-zinc-300">Hệ thống đang chờ xác nhận giao dịch...</p>
                         <div className="text-3xl font-bold text-primary">{finalPrice.toLocaleString('vi-VN')} ₫</div>
-                        <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 px-4 py-2 rounded-full border border-yellow-500/20">
-                            <Clock className="h-4 w-4 animate-pulse" />
-                            <span className=" font-bold">
-                                Còn lại: {countdown}s
-                            </span>
-                        </div>
                     </div>
+
+                    <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 px-4 py-2 rounded-full border border-yellow-500/20">
+                        <Clock className="h-4 w-4" />
+                        <span className="font-bold">
+                            Thời gian còn lại: {Math.floor(waitingCountdown / 60)}:{(waitingCountdown % 60).toString().padStart(2, '0')}
+                        </span>
+                    </div>
+                    
+                    <Button variant="destructive" className="w-full dark" onClick={() => window.location.reload()}>
+                        Đã thanh toán xong? Kiểm tra lại
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>

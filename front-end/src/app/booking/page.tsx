@@ -227,7 +227,7 @@ function BookingPageContent() {
 
       const existing = meta[seatId];
       if (!existing) {
-        meta[seatId] = { type, price, status: gs.TrangThai };
+        meta[seatId] = { type, price, status: gs.TrangThai, uuid: gs.MaGheSuatChieu };
         continue;
       }
 
@@ -235,6 +235,7 @@ function BookingPageContent() {
         type: mergeType(existing.type, type),
         price: Math.max(existing.price, price),
         status: existing.status === 'CONTRONG' && gs.TrangThai === 'CONTRONG' ? 'CONTRONG' : (existing.status !== 'CONTRONG' ? existing.status : gs.TrangThai),
+        uuid: gs.MaGheSuatChieu
       };
     }
     return meta;
