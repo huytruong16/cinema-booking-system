@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,8 @@ export default function MovieVersionManagementPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentVersion, setCurrentVersion] = useState<MovieVersion | null>(null);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     MaPhim: "",
@@ -86,9 +88,15 @@ export default function MovieVersionManagementPage() {
         movieVersionService.getLanguages(),
       ]);
 
-      const films_array = (filmsData as any[]);
-      const formats_array = (formatsData as any[]);
-      const languages_array = (languagesData as any[]);
+      const unwrapData = (data: any) => {
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.data)) return data.data;
+          return [];
+      };
+
+      const films_array = unwrapData(filmsData);
+      const formats_array = unwrapData(formatsData);
+      const languages_array = unwrapData(languagesData);
 
       setFilms(films_array.map((f: any) => ({ id: f.MaPhim, name: f.TenHienThi })));
       setFormats(formats_array.map((f: any) => ({ id: f.MaDinhDang || f.id, name: f.TenDinhDang })));
@@ -158,11 +166,15 @@ export default function MovieVersionManagementPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     try {
       if (!formData.MaPhim || !formData.MaDinhDang || !formData.MaNgonNgu || formData.GiaVe <= 0) {
         toast.warning("Vui lòng điền đầy đủ thông tin hợp lệ");
         return;
       }
+
+      setIsSubmitting(true);
 
       if (currentVersion) {
         await movieVersionService.update(currentVersion.id, formData);
@@ -176,6 +188,8 @@ export default function MovieVersionManagementPage() {
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra (kiểm tra lại kết nối hoặc dữ liệu)");
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -265,7 +279,6 @@ export default function MovieVersionManagementPage() {
         </Table>
       </div>
 
-      {/* Dialog Create/Edit */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-white">
           <DialogHeader>
@@ -353,10 +366,13 @@ export default function MovieVersionManagementPage() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
               Hủy
             </Button>
-            <Button onClick={handleSubmit}>{currentVersion ? "Lưu thay đổi" : "Tạo mới"}</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {currentVersion ? "Lưu thay đổi" : "Tạo mới"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

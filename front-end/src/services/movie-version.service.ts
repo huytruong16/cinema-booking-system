@@ -39,7 +39,6 @@ export const movieVersionService = {
     return await api.delete(`/films/version/${id}`);
   },
   
-  // 4. Helper lấy Master Data
   getFormats: async () => {
     const res = await api.get("/formats");
     return res.data;

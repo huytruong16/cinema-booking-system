@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apiClient";
 import { Movie } from "@/types/movie";
 
@@ -127,22 +128,34 @@ export const filmService = {
 
   create: async (data: CreateFilmDto) => {
       const formData = new FormData();
-      formData.append('TenGoc', data.TenGoc);
-      formData.append('TenHienThi', data.TenHienThi);
-      formData.append('TomTatNoiDung', data.TomTatNoiDung);
-      formData.append('DaoDien', data.DaoDien);
-      formData.append('DanhSachDienVien', data.DanhSachDienVien);
-      formData.append('QuocGia', data.QuocGia);
-      formData.append('TrailerUrl', data.TrailerUrl);
-      formData.append('ThoiLuong', data.ThoiLuong.toString());
-      formData.append('NgayBatDauChieu', data.NgayBatDauChieu);
-      formData.append('NgayKetThucChieu', data.NgayKetThucChieu);
-      formData.append('MaNhanPhim', data.MaNhanPhim);
-      
-      formData.append('TheLoais', JSON.stringify(data.TheLoais));
 
-      if (data.posterFile) formData.append('posterFile', data.posterFile);
-      if (data.backdropFile) formData.append('backdropFile', data.backdropFile);
+      const append = (key: string, value: any) => {
+          if (value !== undefined && value !== null && value !== '') {
+              formData.append(key, value);
+          }
+      };
+
+      append('TenGoc', data.TenGoc);
+      append('TenHienThi', data.TenHienThi);
+      append('TomTatNoiDung', data.TomTatNoiDung);
+      append('DaoDien', data.DaoDien);
+      append('DanhSachDienVien', data.DanhSachDienVien);
+      append('QuocGia', data.QuocGia);
+      append('TrailerUrl', data.TrailerUrl);
+      append('ThoiLuong', data.ThoiLuong?.toString());
+      append('MaNhanPhim', data.MaNhanPhim);
+
+      if (data.NgayBatDauChieu) append('NgayBatDauChieu', new Date(data.NgayBatDauChieu).toISOString());
+      if (data.NgayKetThucChieu) append('NgayKetThucChieu', new Date(data.NgayKetThucChieu).toISOString());
+      
+      if (data.TheLoais && Array.isArray(data.TheLoais)) {
+          formData.append('TheLoais', JSON.stringify(data.TheLoais));
+      } else {
+          formData.append('TheLoais', JSON.stringify([]));
+      }
+
+      if (data.posterFile instanceof File) formData.append('posterFile', data.posterFile);
+      if (data.backdropFile instanceof File) formData.append('backdropFile', data.backdropFile);
 
       const res = await api.post('/films', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -151,31 +164,53 @@ export const filmService = {
   },
 
   update: async (id: string, data: Partial<CreateFilmDto>) => {
-      const formData = new FormData();
-      if (data.TenGoc) formData.append('TenGoc', data.TenGoc);
-      if (data.TenHienThi) formData.append('TenHienThi', data.TenHienThi);
-      if (data.TomTatNoiDung) formData.append('TomTatNoiDung', data.TomTatNoiDung);
-      if (data.DaoDien) formData.append('DaoDien', data.DaoDien);
-      if (data.DanhSachDienVien) formData.append('DanhSachDienVien', data.DanhSachDienVien);
-      if (data.QuocGia) formData.append('QuocGia', data.QuocGia);
-      if (data.TrailerUrl) formData.append('TrailerUrl', data.TrailerUrl);
-      if (data.ThoiLuong) formData.append('ThoiLuong', data.ThoiLuong.toString());
-      if (data.NgayBatDauChieu) formData.append('NgayBatDauChieu', data.NgayBatDauChieu);
-      if (data.NgayKetThucChieu) formData.append('NgayKetThucChieu', data.NgayKetThucChieu);
-      if (data.MaNhanPhim) formData.append('MaNhanPhim', data.MaNhanPhim);
-      
-      if (data.TheLoais) {
-          formData.append('TheLoais', JSON.stringify(data.TheLoais));
-      }
+    const formData = new FormData();
 
-      if (data.posterFile) formData.append('posterFile', data.posterFile);
-      if (data.backdropFile) formData.append('backdropFile', data.backdropFile);
+    const append = (key: string, value: any) => {
+        if (value !== undefined && value !== null) {
+            formData.append(key, value);
+        }
+    };
 
-      const res = await api.patch(`/films/${id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return res.data;
-  },
+    if (data.TenGoc) append('TenGoc', data.TenGoc);
+    if (data.TenHienThi) append('TenHienThi', data.TenHienThi);
+    
+    if (data.TomTatNoiDung !== undefined) formData.append('TomTatNoiDung', data.TomTatNoiDung || '');
+    if (data.DaoDien !== undefined) formData.append('DaoDien', data.DaoDien || '');
+    if (data.DanhSachDienVien !== undefined) formData.append('DanhSachDienVien', data.DanhSachDienVien || '');
+    if (data.QuocGia !== undefined) formData.append('QuocGia', data.QuocGia || '');
+    if (data.TrailerUrl !== undefined) formData.append('TrailerUrl', data.TrailerUrl || '');
+    
+    if (data.ThoiLuong !== undefined && data.ThoiLuong !== null) append('ThoiLuong', data.ThoiLuong.toString());
+    if (data.MaNhanPhim) append('MaNhanPhim', data.MaNhanPhim);
+
+    if (data.NgayBatDauChieu) {
+        const dateVal = typeof data.NgayBatDauChieu === 'string' ? new Date(data.NgayBatDauChieu) : data.NgayBatDauChieu;
+        formData.append('NgayBatDauChieu', dateVal.toISOString());
+    }
+    if (data.NgayKetThucChieu) {
+        const dateVal = typeof data.NgayKetThucChieu === 'string' ? new Date(data.NgayKetThucChieu) : data.NgayKetThucChieu;
+        formData.append('NgayKetThucChieu', dateVal.toISOString());
+    }
+    
+    if (data.TheLoais && Array.isArray(data.TheLoais)) {
+        data.TheLoais.forEach((tl: string) => {
+            formData.append('TheLoais', tl); 
+        });
+    }
+
+    if (data.posterFile instanceof File) {
+        formData.append('posterFile', data.posterFile);
+    }
+    if (data.backdropFile instanceof File) {
+        formData.append('backdropFile', data.backdropFile);
+    }
+
+    const res = await api.patch(`/films/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+},
 
   delete: async (id: string) => {
       const res = await api.delete(`/films/${id}`);

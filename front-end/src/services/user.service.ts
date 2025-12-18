@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import apiClient from '@/lib/apiClient';
 import { TicketResponse } from '@/types/ticket';
 

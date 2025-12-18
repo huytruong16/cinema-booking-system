@@ -39,7 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, CalendarIcon, ChevronsUpDown, Upload } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, CalendarIcon, ChevronsUpDown, Upload, Loader2 } from 'lucide-react';
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { format } from "date-fns";
@@ -67,9 +67,16 @@ export default function MovieManagementPage() {
             filmService.getAllGenres(),
             filmService.getAllLabels()
         ]);
-        setFilms(filmsData);
-        setGenres(genresData);
-        setLabels(labelsData);
+
+        const unwrapData = (data: any) => {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.data)) return data.data;
+            return [];
+        };
+        
+        setFilms(unwrapData(filmsData));
+        setGenres(unwrapData(genresData));
+        setLabels(unwrapData(labelsData));
     } catch (error) {
         console.error("Lỗi tải dữ liệu:", error);
         toast.error("Không thể tải dữ liệu phim/thể loại/nhãn.");
@@ -83,9 +90,10 @@ export default function MovieManagementPage() {
   }, []);
 
   const filteredFilms = useMemo(() => {
+    if (!Array.isArray(films)) return [];
     return films.filter(f => 
-        f.TenHienThi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        f.TenGoc.toLowerCase().includes(searchTerm.toLowerCase())
+        (f.TenHienThi || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (f.TenGoc || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [films, searchTerm]);
 
@@ -116,11 +124,9 @@ export default function MovieManagementPage() {
 
   return (
     <div className="space-y-6 text-white h-full flex flex-col">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <h1 className="text-2xl font-bold">Quản lý Phim</h1>
         
-        {/* Actions & Search */}
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
             <div className="relative w-full sm:w-[300px]">
                 <Input
@@ -143,7 +149,6 @@ export default function MovieManagementPage() {
         {isLoading ? (
              <div className="text-center text-slate-400 py-10">Đang tải dữ liệu...</div>
         ) : (
-            // Responsive Grid: 1 col (mobile) -> 2 cols (tablet) -> 3 cols (desktop) -> 4 cols (large)
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 pb-20">
                 {filteredFilms.map((film) => (
                     <FilmCard 
@@ -153,6 +158,11 @@ export default function MovieManagementPage() {
                         onDelete={() => handleDelete(film.MaPhim)}
                     />
                 ))}
+                {filteredFilms.length === 0 && (
+                    <div className="col-span-full text-center text-slate-500 py-10">
+                        Không tìm thấy phim nào.
+                    </div>
+                )}
             </div>
         )}
       </ScrollArea>
@@ -203,9 +213,9 @@ function FilmCard({ film, onEdit, onDelete }: { film: BackendFilm, onEdit: () =>
 
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                     <CalendarIcon className="size-3 shrink-0" />
-                    <span className="truncate">{format(new Date(film.NgayBatDauChieu), 'dd/MM/yyyy')}</span>
+                    <span className="truncate">{film.NgayBatDauChieu ? format(new Date(film.NgayBatDauChieu), 'dd/MM/yyyy') : 'N/A'}</span>
                     <span> - </span>
-                    <span className="truncate">{format(new Date(film.NgayKetThucChieu), 'dd/MM/yyyy')}</span>
+                    <span className="truncate">{film.NgayKetThucChieu ? format(new Date(film.NgayKetThucChieu), 'dd/MM/yyyy') : 'N/A'}</span>
                 </div>
 
                 <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
@@ -255,6 +265,8 @@ interface FilmFormState {
 }
 
 function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsList }: any) {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const [formData, setFormData] = useState<FilmFormState>({
         TenGoc: "",
         TenHienThi: "",
@@ -276,37 +288,40 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
     const [backdropPreview, setBackdropPreview] = useState<string | null>(null);
 
     useEffect(() => {
-        if (film) {
-            setFormData({
-                TenGoc: film.TenGoc,
-                TenHienThi: film.TenHienThi,
-                TomTatNoiDung: film.TomTatNoiDung || "",
-                DaoDien: film.DaoDien || "",
-                DanhSachDienVien: film.DanhSachDienVien || "",
-                QuocGia: film.QuocGia || "",
-                TrailerUrl: film.TrailerUrl || "",
-                ThoiLuong: film.ThoiLuong,
-                NgayBatDauChieu: new Date(film.NgayBatDauChieu),
-                NgayKetThucChieu: new Date(film.NgayKetThucChieu),
-                MaNhanPhim: film.MaNhanPhim || "",
-                TheLoais: film.PhimTheLoais?.map((pt: any) => pt.MaTheLoai) || [],
-                posterFile: null,
-                backdropFile: null,
-            });
-            setPosterPreview(film.PosterUrl);
-            setBackdropPreview(film.BackdropUrl);
-        } else {
-            setFormData({
-                TenGoc: "", TenHienThi: "", TomTatNoiDung: "", DaoDien: "",
-                DanhSachDienVien: "", QuocGia: "", TrailerUrl: "", ThoiLuong: 90,
-                NgayBatDauChieu: new Date(), NgayKetThucChieu: undefined,
-                MaNhanPhim: labelsList.length > 0 ? labelsList[0].MaNhanPhim : "",
-                TheLoais: [], posterFile: null, backdropFile: null,
-            });
-            setPosterPreview(null);
-            setBackdropPreview(null);
-        }
-    }, [film, isOpen, labelsList]);
+    if (film) {
+        const rawGenres = film.PhimTheLoais?.map((pt: any) => pt.TheLoai?.MaTheLoai || pt.MaTheLoai) || [];
+        const uniqueGenres = Array.from(new Set(rawGenres)) as string[];
+
+        setFormData({
+            TenGoc: film.TenGoc,
+            TenHienThi: film.TenHienThi,
+            TomTatNoiDung: film.TomTatNoiDung || "",
+            DaoDien: film.DaoDien || "",
+            DanhSachDienVien: film.DanhSachDienVien || "",
+            QuocGia: film.QuocGia || "",
+            TrailerUrl: film.TrailerUrl || "",
+            ThoiLuong: film.ThoiLuong,
+            NgayBatDauChieu: film.NgayBatDauChieu ? new Date(film.NgayBatDauChieu) : undefined,
+            NgayKetThucChieu: film.NgayKetThucChieu ? new Date(film.NgayKetThucChieu) : undefined,
+            MaNhanPhim: film.MaNhanPhim || "",
+            TheLoais: uniqueGenres,
+            posterFile: null,
+            backdropFile: null,
+        });
+        setPosterPreview(film.PosterUrl);
+        setBackdropPreview(film.BackdropUrl);
+    } else {
+        setFormData({
+            TenGoc: "", TenHienThi: "", TomTatNoiDung: "", DaoDien: "",
+            DanhSachDienVien: "", QuocGia: "", TrailerUrl: "", ThoiLuong: 90,
+            NgayBatDauChieu: new Date(), NgayKetThucChieu: undefined,
+            MaNhanPhim: labelsList.length > 0 ? labelsList[0].MaNhanPhim : "",
+            TheLoais: [], posterFile: null, backdropFile: null,
+        });
+        setPosterPreview(null);
+        setBackdropPreview(null);
+    }
+}, [film, isOpen, labelsList]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -336,9 +351,16 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (isSubmitting) return;
+
         try {
             if (!formData.TenHienThi || !formData.TenGoc || !formData.NgayBatDauChieu || !formData.NgayKetThucChieu || !formData.MaNhanPhim) {
                 toast.error("Vui lòng điền các trường bắt buộc (*)!");
+                return;
+            }
+            if (formData.NgayKetThucChieu < formData.NgayBatDauChieu) {
+                toast.error("Ngày kết thúc phải lớn hơn hoặc bằng ngày khởi chiếu!");
                 return;
             }
 
@@ -348,6 +370,8 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                 NgayKetThucChieu: formData.NgayKetThucChieu.toISOString(),
                 ThoiLuong: Number(formData.ThoiLuong),
             };
+
+            setIsSubmitting(true);
 
             if (film) {
                 await filmService.update(film.MaPhim, payload);
@@ -363,6 +387,8 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
         } catch (error: any) {
             console.error(error);
             toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -557,12 +583,12 @@ function FilmFormDialog({ isOpen, onClose, onSuccess, film, genresList, labelsLi
                     </form>
                 </div>
                 
-                {/* Footer - Cố định (Không cuộn) */}
                 <DialogFooter className="p-4 sm:p-6 pt-2 border-t border-slate-800 bg-[#1C1C1C] shrink-0 flex-col sm:flex-row gap-2">
                     <DialogClose asChild>
-                        <Button variant="outline" type="button" className="bg-transparent border-slate-700 w-full sm:w-auto mt-2 sm:mt-0">Hủy</Button>
+                        <Button variant="outline" type="button" className="bg-transparent border-slate-700 w-full sm:w-auto mt-2 sm:mt-0" disabled={isSubmitting}>Hủy</Button>
                     </DialogClose>
-                    <Button type="submit" form="film-form" className="w-full sm:w-auto">
+                    <Button type="submit" form="film-form" className="w-full sm:w-auto" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {film ? "Lưu thay đổi" : "Tạo phim mới"}
                     </Button>
                 </DialogFooter>
