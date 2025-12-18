@@ -136,7 +136,7 @@ export function MovieCard({
                                     )}
                                     {tags.map((tag, i) => (
                                         <span
-                                            key={tag}
+                                            key={`${tag}-${i}`}
                                             className={`px-2 py-0.5 rounded-md font-medium ${i % 3 === 0
                                                     ? "bg-[var(--chart-3)]/20 text-[var(--chart-3)]"
                                                     : i % 3 === 1

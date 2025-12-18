@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -204,6 +205,7 @@ export function TicketCard({ ticket }: TicketProps) {
                           </Button>
                       </DialogTrigger>
                       <DialogContent className="bg-transparent border-none shadow-none p-0 max-w-md w-full">
+                          <DialogTitle className="sr-only">Chi tiết vé</DialogTitle>
                           <TicketDetail ticket={{...ticket, status: currentStatus}} />
                       </DialogContent>
                   </Dialog>
