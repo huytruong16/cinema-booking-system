@@ -9,10 +9,11 @@ export interface CreateShowtimeDto {
 export const showtimeService = {
     getShowtimes: async (params?: GetShowtimesParams): Promise<Showtime[]> => {
         try {
-            const response = await api.get<Showtime[]>('/showtimes', {
+            const response = await api.get<any>('/showtimes', {
                 params: params,
             });
-            return response.data;
+            const data = response.data;
+            return Array.isArray(data) ? data : data.data || [];
         } catch (error) {
             console.error("Lỗi khi lấy danh sách suất chiếu:", error);
             throw error;
