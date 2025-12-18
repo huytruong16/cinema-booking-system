@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Ticket, ArrowLeft, CheckCircle2, XCircle, Loader2, QrCode, Clock, Film, Utensils } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { mockPromotions } from '@/lib/mockData';
+import { voucherService, Voucher } from '@/services/voucher.service';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ function PaymentContent() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<typeof mockPromotions[0] | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<Voucher | null>(null);
   const [promoError, setPromoError] = useState("");
 
   const [showQRModal, setShowQRModal] = useState(false);
@@ -66,33 +66,65 @@ function PaymentContent() {
     return () => clearInterval(interval);
   }, [showQRModal, countdown, router]);
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     setPromoError("");
-    const promo = mockPromotions.find(p => p.code.toUpperCase() === promoCode.toUpperCase());
-    
-    if (!promo) {
-      setPromoError("Mã không hợp lệ.");
+    if (!promoCode.trim()) return;
+
+    try {
+      const promo = await voucherService.getByCode(promoCode);
+      
+      if (!promo) {
+        setPromoError("Mã không hợp lệ.");
+        setAppliedPromo(null);
+        return;
+      }
+
+      // Validate voucher
+      const now = new Date();
+      if (promo.TrangThai !== 'CONHOATDONG') {
+        setPromoError("Mã khuyến mãi không còn hoạt động.");
+        setAppliedPromo(null);
+        return;
+      }
+      if (new Date(promo.NgayKetThuc) < now) {
+        setPromoError("Mã khuyến mãi đã hết hạn.");
+        setAppliedPromo(null);
+        return;
+      }
+      if (new Date(promo.NgayBatDau) > now) {
+        setPromoError("Mã khuyến mãi chưa bắt đầu.");
+        setAppliedPromo(null);
+        return;
+      }
+      if (promo.SoLuongSuDung >= promo.SoLuongMa) {
+        setPromoError("Mã khuyến mãi đã hết lượt sử dụng.");
+        setAppliedPromo(null);
+        return;
+      }
+      if (bookingData && bookingData.totalPrice < promo.GiaTriDonToiThieu) {
+        setPromoError(`Đơn tối thiểu ${promo.GiaTriDonToiThieu.toLocaleString('vi-VN')}đ.`);
+        setAppliedPromo(null);
+        return;
+      }
+
+      setAppliedPromo(promo);
+      toast.success("Áp dụng mã thành công!");
+    } catch (error) {
+      console.error("Lỗi áp dụng mã:", error);
+      setPromoError("Mã không hợp lệ hoặc có lỗi xảy ra.");
       setAppliedPromo(null);
-      return;
     }
-    if (promo.minOrder && bookingData && bookingData.totalPrice < promo.minOrder) {
-      setPromoError(`Đơn tối thiểu ${promo.minOrder.toLocaleString('vi-VN')}đ.`);
-      setAppliedPromo(null);
-      return;
-    }
-    setAppliedPromo(promo);
-    toast.success("Áp dụng mã thành công!");
   };
 
   const finalPrice = useMemo(() => {
     if (!bookingData) return 0;
     let discount = 0;
     if (appliedPromo) {
-      if (appliedPromo.type === 'PERCENT') {
-        discount = (bookingData.totalPrice * appliedPromo.value) / 100;
-        if (appliedPromo.maxDiscount) discount = Math.min(discount, appliedPromo.maxDiscount);
+      if (appliedPromo.LoaiGiamGia === 'PHANTRAM') {
+        discount = (bookingData.totalPrice * appliedPromo.GiaTri) / 100;
+        if (appliedPromo.GiaTriGiamToiDa) discount = Math.min(discount, appliedPromo.GiaTriGiamToiDa);
       } else {
-        discount = appliedPromo.value;
+        discount = appliedPromo.GiaTri;
       }
     }
     return Math.max(0, bookingData.totalPrice - discount);
@@ -226,7 +258,7 @@ function PaymentContent() {
                   <div className="mt-3 bg-green-900/20 border border-green-500/30 rounded-md p-3 flex justify-between items-center">
                     <div className="text-green-400 text-sm flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4"/> 
-                      <span>Đã giảm: <strong>{discountAmount.toLocaleString('vi-VN')}đ</strong> ({appliedPromo.code})</span>
+                      <span>Đã giảm: <strong>{discountAmount.toLocaleString('vi-VN')}đ</strong> ({appliedPromo.Code})</span>
                     </div>
                     <Button variant="ghost" size="sm" className="h-6 text-zinc-400 hover:text-white" onClick={() => { setAppliedPromo(null); setPromoCode(""); }}>Xóa</Button>
                   </div>

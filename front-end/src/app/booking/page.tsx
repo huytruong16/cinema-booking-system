@@ -178,8 +178,15 @@ function BookingPageContent() {
 
     const bookingData = {
       showtime,
-      movieTitle: showtime.PhienBanPhim.Phim.TenHienThi,
-      posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
+      movie: {
+        title: showtime.PhienBanPhim.Phim.TenHienThi,
+        posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
+        ageRating: showtime.PhienBanPhim.Phim.NhanPhim?.TenNhanPhim || "T18"
+      },
+      format: `${showtime.PhienBanPhim.DinhDang.TenDinhDang} - ${showtime.PhienBanPhim.NgonNgu.TenNgonNgu}`,
+      time: new Date(showtime.ThoiGianBatDau).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date(showtime.ThoiGianBatDau).toLocaleDateString('vi-VN'),
+      roomName: showtime.PhongChieu.TenPhong,
       seats: selectedSeats,
       combos: selectedCombosList,
       totalPrice,
