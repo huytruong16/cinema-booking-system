@@ -9,6 +9,8 @@ import { CreateRefundTransactionDto } from "./dto/create-refund-transaction.dto"
 import { REQUEST } from "@nestjs/core";
 import { UpdateRefundTransactionStatusDto } from "./dto/update-refund-transaction-status.dto";
 import { RefundRequestService } from "../refund-request/refund-request.service";
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
+import { GetTransactionDto } from "./dto/get-transaction.dto";
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -80,10 +82,17 @@ export class TransactionService {
         );
     }
 
-    async getAllTransactions() {
-        return await this.prisma.gIAODICH.findMany({
+    async getAllTransactions(filters?: GetTransactionDto) {
+
+        const [data, pagination] = await this.prisma.xprisma.gIAODICH.paginate({
             where: { DeletedAt: null },
-        });
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaGiaoDich: 'desc' }
+            ],
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaGiaoDich'));
+
+        return { data, pagination };
     }
 
     async getTransactionById(id: string) {

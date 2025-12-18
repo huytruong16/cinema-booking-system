@@ -6,6 +6,7 @@ import { StorageService } from '../storage/storage.service';
 import { UpdateFilmDto } from './dtos/update-film.dto';
 import { CreateFilmVersionDto } from './dtos/create-film-version.dto';
 import { UpdateFilmVersionDto } from './dtos/update-film-version.dto';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class FilmService {
@@ -47,8 +48,11 @@ export class FilmService {
             };
         }
 
-        return await this.prisma.pHIM.findMany({
-            orderBy: { CreatedAt: 'desc' },
+        const [data, pagination] = await this.prisma.xprisma.pHIM.paginate({
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaPhim: 'desc' }
+            ],
             where: whereConditions,
             include: {
                 DanhGias: true,
@@ -56,7 +60,9 @@ export class FilmService {
                 PhimTheLoais: { select: { TheLoai: true } },
                 NhanPhim: true,
             },
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaPhim'));
+
+        return { data, pagination };
     }
     async createFilm(payload: CreateFilmDto, posterFile?: Express.Multer.File, backdropFile?: Express.Multer.File) {
         const prisma = this.prisma;
@@ -335,8 +341,11 @@ export class FilmService {
             };
         }
 
-        return await this.prisma.pHIENBANPHIM.findMany({
-            orderBy: { CreatedAt: 'desc' },
+        const [data, pagination] = await this.prisma.xprisma.pHIENBANPHIM.paginate({
+            orderBy: [
+                { CreatedAt: 'desc' },
+                { MaPhienBanPhim: 'desc' }
+            ],
             where: whereConditions,
             select: {
                 MaPhienBanPhim: true,
@@ -350,7 +359,9 @@ export class FilmService {
                 NgonNgu: true,
                 GiaVe: true
             },
-        });
+        }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaPhienBanPhim'));
+
+        return { data, pagination };
     }
 
     async getFilmById(id: string) {

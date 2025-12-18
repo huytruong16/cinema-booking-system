@@ -1,5 +1,6 @@
-import { Controller, Get, NotFoundException, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, BadRequestException, Query } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
+import { GetTicketsDto } from './dtos/get-tickets.dto';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 
@@ -10,8 +11,8 @@ export class TicketsController {
 
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách các vé' })
-    findAll() {
-        return this.ticketsService.getTickets();
+    findAll(@Query() filters: GetTicketsDto) {
+        return this.ticketsService.getTickets(filters);
     }
 
     @Get(':id')

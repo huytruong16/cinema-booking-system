@@ -1,8 +1,9 @@
 import { IsOptional, IsString, IsArray, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { CursorPaginationDto } from 'src/libs/common/dto/cursor-pagination.dto';
 
-export class FilterFilmDto {
+export class FilterFilmDto extends CursorPaginationDto {
     @ApiProperty({ required: false, description: 'Mã định dạng phim' })
     @IsOptional()
     @IsUUID()

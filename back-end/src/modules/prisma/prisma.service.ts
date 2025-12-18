@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { pagination } from 'prisma-extension-pagination';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -11,5 +12,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     async onModuleDestroy() {
         await this.$disconnect();
         console.log('Prisma disconnected');
+    }
+
+    get xprisma() {
+        return this.$extends(pagination());
     }
 }
