@@ -503,8 +503,8 @@ export class InvoiceService {
 
       const comboPrices = (Combos && Combos.length > 0) ? (() => {
         const comboPrices = combos.map(c => {
-          const price = Number(c.GiaTien) * (Combos.find(x => x.MaCombo === c.MaCombo)?.SoLuong || 1);
-          total += price;
+          const price = Number(c.GiaTien);
+          total += price * (Combos.find(x => x.MaCombo === c.MaCombo)?.SoLuong || 1);
           return { id: c.MaCombo, price };
         });
         return comboPrices;
