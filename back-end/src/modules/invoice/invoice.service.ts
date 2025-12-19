@@ -60,6 +60,7 @@ export class InvoiceService {
         HoaDonCombos: {
           select: {
             SoLuong: true,
+            DonGia: true,
             Combo: {
               select: {
                 TenCombo: true,
@@ -69,6 +70,8 @@ export class InvoiceService {
         },
         Ves: {
           select: {
+            GiaVe: true,
+            TrangThaiVe: true,
             GheSuatChieu: {
               select: {
                 SuatChieu: {
@@ -107,6 +110,21 @@ export class InvoiceService {
               }
             }
           }
+        },
+        HoaDonKhuyenMais: {
+          select: {
+            GiaTriGiam: true,
+            KhuyenMaiKH: {
+              select: {
+                KhuyenMai: {
+                  select: {
+                    TenKhuyenMai: true,
+                    DoiTuongApDung: true,
+                  }
+                }
+              }
+            }
+          }
         }
       },
     }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaHoaDon'));
@@ -122,9 +140,19 @@ export class InvoiceService {
         where: { MaHoaDon: id, DeletedAt: null },
         include: {
           GiaoDichs: true,
+          HoaDonKhuyenMais: {
+            include: {
+              KhuyenMaiKH: {
+                include: {
+                  KhuyenMai: true
+                }
+              }
+            }
+          },
           HoaDonCombos: {
             select: {
               SoLuong: true,
+              DonGia: true,
               Combo: {
                 select: {
                   TenCombo: true,
@@ -188,7 +216,7 @@ export class InvoiceService {
       Email: invoice.Email,
       Phim: {
         TenPhim: film?.TenHienThi,
-        PosterUrl: film?.PosterUrl
+        PosterUrl: film?.PosterUrl,
       },
       ThoiGianChieu: showtime?.ThoiGianBatDau,
       PhongChieu: room?.TenPhongChieu,
@@ -196,12 +224,19 @@ export class InvoiceService {
         const ghe = v.GheSuatChieu?.GhePhongChieu?.GheLoaiGhe?.Ghe;
         return {
           SoGhe: ghe ? `${ghe.Hang}${ghe.Cot}` : '',
-          TrangThai: v.TrangThaiVe as TicketStatusEnum
+          TrangThai: v.TrangThaiVe as TicketStatusEnum,
+          DonGia: Number(v.GiaVe)
         };
       }),
       Combos: (invoice.HoaDonCombos ?? []).map((hdc: any) => ({
         TenCombo: hdc.Combo?.TenCombo,
-        SoLuong: hdc.SoLuong
+        SoLuong: hdc.SoLuong,
+        DonGia: Number(hdc.DonGia)
+      })),
+      KhuyenMais: (invoice.HoaDonKhuyenMais ?? []).map((hdkm: any) => ({
+        TenKhuyenMai: hdkm.KhuyenMaiKH?.KhuyenMai?.TenKhuyenMai,
+        LoaiKhuyenMai: hdkm.KhuyenMaiKH?.KhuyenMai?.DoiTuongApDung as VoucherTargetEnum,
+        SoTienGiam: Number(hdkm.GiaTriGiam)
       })),
       NgayLap: invoice.NgayLap,
       TrangThaiGiaoDich: transaction?.TrangThai as TransactionStatusEnum,
