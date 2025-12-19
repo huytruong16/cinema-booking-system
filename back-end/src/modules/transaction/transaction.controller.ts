@@ -66,4 +66,16 @@ export class TransactionController {
         }
         return this.transactionService.updateTransactionMethod(transactionId, request);
     }
+
+    @Get('/:id')
+    @ApiOperation({ summary: 'Lấy thông tin giao dịch theo mã giao dịch' })
+    @ApiParam({ name: 'id', description: 'Mã giao dịch', required: true })
+    async getTransactionById(
+        @Param('id') transactionId: string,
+    ) {
+        if (!isUUID(transactionId, '4')) {
+            throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        }
+        return this.transactionService.getTransactionById(transactionId);
+    }
 }
