@@ -21,36 +21,85 @@ export class InvoiceService {
 
   async getAllInvoices(filters?: GetInvoiceDto) {
     const [data, pagination] = await this.prisma.xprisma.hOADON.paginate({
-      where: { DeletedAt: null },
+      where: {
+        ...filters?.search ? {
+          OR: [
+            { Email: { contains: filters.search } },
+            { Code: { contains: filters.search } },
+          ]
+        } : undefined,
+        ...filters?.status ? {
+          GiaoDichs: {
+            some: { TrangThai: filters.status }
+          }
+        } : undefined,
+        ...filters?.date ? {
+          NgayLap: {
+            gte: new Date(new Date(filters.date).setHours(0, 0, 0, 0)),
+            lt: new Date(new Date(filters.date).setHours(23, 59, 59, 0))
+          }
+        } : undefined,
+        DeletedAt: null
+      },
       orderBy: [
         { CreatedAt: 'desc' },
         { MaHoaDon: 'desc' }
       ],
-      include: {
+      select: {
+        MaHoaDon: true,
+        Code: true,
+        Email: true,
+        NgayLap: true,
+        TongTien: true,
+        GiaoDichs: {
+          select: {
+            TrangThai: true,
+            LoaiGiaoDich: true,
+          }
+        },
         HoaDonCombos: {
-          include: {
-            Combo: true,
+          select: {
+            SoLuong: true,
+            Combo: {
+              select: {
+                TenCombo: true,
+              }
+            }
           }
         },
         Ves: {
-          include: {
+          select: {
             GheSuatChieu: {
-              include: {
+              select: {
                 SuatChieu: {
-                  include: {
+                  select: {
                     PhienBanPhim: {
-                      include: {
-                        Phim: true
+                      select: {
+                        Phim: {
+                          select: {
+                            TenHienThi: true,
+                            PosterUrl: true,
+                          }
+                        }
                       }
                     },
-                    PhongChieu: true
+                    PhongChieu: {
+                      select: {
+                        TenPhongChieu: true,
+                      }
+                    }
                   }
                 },
                 GhePhongChieu: {
-                  include: {
+                  select: {
                     GheLoaiGhe: {
-                      include: {
-                        Ghe: true
+                      select: {
+                        Ghe: {
+                          select: {
+                            Hang: true,
+                            Cot: true,
+                          }
+                        }
                       }
                     }
                   }
@@ -58,7 +107,7 @@ export class InvoiceService {
               }
             }
           }
-        },
+        }
       },
     }).withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaHoaDon'));
 
@@ -72,9 +121,15 @@ export class InvoiceService {
       {
         where: { MaHoaDon: id, DeletedAt: null },
         include: {
+          GiaoDichs: true,
           HoaDonCombos: {
-            include: {
-              Combo: true,
+            select: {
+              SoLuong: true,
+              Combo: {
+                select: {
+                  TenCombo: true,
+                }
+              },
             }
           },
           Ves: {
@@ -94,8 +149,13 @@ export class InvoiceService {
                   GhePhongChieu: {
                     include: {
                       GheLoaiGhe: {
-                        include: {
-                          Ghe: true
+                        select: {
+                          Ghe: {
+                            select: {
+                              Hang: true,
+                              Cot: true,
+                            }
+                          }
                         }
                       }
                     }
@@ -120,9 +180,12 @@ export class InvoiceService {
     const showtime = firstTicket?.GheSuatChieu?.SuatChieu;
     const film = showtime?.PhienBanPhim?.Phim;
     const room = showtime?.PhongChieu;
+    const transaction = invoice.GiaoDichs?.find((e: any) => e.LoaiGiaoDich === TransactionTypeEnum.MUAVE);
 
     return {
       MaHoaDon: invoice.MaHoaDon,
+      Code: invoice.Code,
+      Email: invoice.Email,
       Phim: {
         TenPhim: film?.TenHienThi,
         PosterUrl: film?.PosterUrl
@@ -136,10 +199,12 @@ export class InvoiceService {
           TrangThai: v.TrangThaiVe as TicketStatusEnum
         };
       }),
-      Combos: invoice.HoaDonCombos.map((hdc: any) => ({
+      Combos: (invoice.HoaDonCombos ?? []).map((hdc: any) => ({
         TenCombo: hdc.Combo?.TenCombo,
         SoLuong: hdc.SoLuong
       })),
+      NgayLap: invoice.NgayLap,
+      TrangThaiGiaoDich: transaction?.TrangThai as TransactionStatusEnum,
       TongTien: Number(invoice.TongTien)
     };
   }
