@@ -90,7 +90,8 @@ export class InvoiceService {
                       select: {
                         TenPhongChieu: true,
                       }
-                    }
+                    },
+                    ThoiGianBatDau: true,
                   }
                 },
                 GhePhongChieu: {
@@ -356,8 +357,10 @@ export class InvoiceService {
         await this.payosService.getPaymentLinkUrl(transactionCode, totalAfterDiscount, `${created.Code}`);
     }
 
+    let transaction;
+
     if (paymentData) {
-      await this.prisma.gIAODICH.create({
+      transaction = await this.prisma.gIAODICH.create({
         data: {
           MaHoaDon: created.MaHoaDon,
           PhuongThuc: request.LoaiGiaoDich,
@@ -374,7 +377,10 @@ export class InvoiceService {
       throw new BadRequestException('Không tạo được giao dịch thanh toán, vui lòng thử lại sau');
     }
 
-    return { "GiaoDichUrl": paymentData?.checkoutUrl };
+    return {
+      "MaGiaoDich": transaction.MaGiaoDich,
+      "GiaoDichUrl": paymentData?.checkoutUrl
+    };
 
     async function checkAvailableUserVoucher() {
       if (MaVouchers && MaVouchers.length > 0) {
@@ -503,8 +509,8 @@ export class InvoiceService {
 
       const comboPrices = (Combos && Combos.length > 0) ? (() => {
         const comboPrices = combos.map(c => {
-          const price = Number(c.GiaTien) * (Combos.find(x => x.MaCombo === c.MaCombo)?.SoLuong || 1);
-          total += price;
+          const price = Number(c.GiaTien);
+          total += price * (Combos.find(x => x.MaCombo === c.MaCombo)?.SoLuong || 1);
           return { id: c.MaCombo, price };
         });
         return comboPrices;

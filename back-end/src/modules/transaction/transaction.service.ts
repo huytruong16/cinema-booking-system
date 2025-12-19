@@ -305,7 +305,11 @@ export class TransactionService {
                 MaGiaoDich: null
             },
             include: {
-                Ve: true
+                HoaDon: {
+                    include: {
+                        Ves: true
+                    }
+                }
             }
         });
 
@@ -313,7 +317,7 @@ export class TransactionService {
             throw new BadRequestException('Một số yêu cầu hoàn vé không tồn tại hoặc đã được xử lý.');
         }
 
-        const invoiceIds = refundRequests.map(req => req.Ve.MaHoaDon);
+        const invoiceIds = refundRequests.map(req => req.MaHoaDon);
         const uniqueInvoiceIds = [...new Set(invoiceIds)];
 
         if (uniqueInvoiceIds.length > 1) {

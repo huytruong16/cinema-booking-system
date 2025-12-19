@@ -11,11 +11,13 @@ import { SeatType } from '@/types/showtime';
 
 export interface SelectedSeat {
   id: string; // VD: A01, G01
+  uuid?: string; 
   type: string;
   price: number;
 }
 
 export interface SeatRenderMeta {
+  uuid?: string; 
   type: string;
   price: number;
   status?: string;
@@ -46,9 +48,10 @@ export default function BookingSeatMap({
   const handleInternalSeatClick = (
     seatId: string,
     seatType: string,
-    seatPrice: number
+    seatPrice: number,
+    uuid?: string
   ) => {
-    onSeatClick({ id: seatId, type: seatType, price: seatPrice });
+    onSeatClick({ id: seatId, type: seatType, price: seatPrice, uuid });
   };
 
   const getSeatColor = (type: string) => {
@@ -139,7 +142,7 @@ export default function BookingSeatMap({
                           isSelected && "bg-primary border-primary text-primary-foreground hover:bg-primary/80 ring-2 ring-offset-2 ring-offset-background ring-primary",
                           isBooked && "bg-slate-800/50 border-transparent text-slate-600 cursor-not-allowed hover:bg-slate-800/50"
                         )}
-                        onClick={() => handleInternalSeatClick(seatId, type, price)}
+                        onClick={() => handleInternalSeatClick(seatId, type, price, meta?.uuid)}
                         disabled={isBooked}
                         title={`${seatId} - ${price.toLocaleString()}đ`}
                       >

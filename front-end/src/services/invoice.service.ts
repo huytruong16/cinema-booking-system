@@ -1,5 +1,23 @@
-import apiClient from "@/lib/apiClient";
-export interface InvoiceItem {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import apiClient from '@/lib/apiClient';
+
+export interface CreateInvoiceDto {
+  Email: string;
+  LoaiGiaoDich: "TRUCTUYEN" | "TAIQUAY";
+  MaGheSuatChieus: string[];
+  Combos: {
+    MaCombo: string;
+    SoLuong: number;
+  }[];
+  MaVouchers: string[];
+}
+
+export interface InvoiceResponse {
+  MaGiaoDich: string;
+  GiaoDichUrl: string;
+}
+
+  export interface InvoiceItem {
   MaVe?: string;
   Code?: string; 
   TenPhim?: string;
@@ -38,6 +56,11 @@ export interface GetInvoicesParams {
 }
 
 export const invoiceService = {
+  create: async (data: CreateInvoiceDto) => {
+    const res = await apiClient.post<InvoiceResponse>('/invoices', data);
+    return res.data;
+  },
+
   getAll: async (params?: GetInvoicesParams) => {
     const res = await apiClient.get('/invoices', { params: { limit: 20, ...params } });
     return res.data;

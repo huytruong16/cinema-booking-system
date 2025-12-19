@@ -178,8 +178,15 @@ function BookingPageContent() {
 
     const bookingData = {
       showtime,
-      movieTitle: showtime.PhienBanPhim.Phim.TenHienThi,
-      posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
+      movie: {
+        title: showtime.PhienBanPhim.Phim.TenHienThi,
+        posterUrl: showtime.PhienBanPhim.Phim.PosterUrl,
+        ageRating: showtime.PhienBanPhim.Phim.NhanPhim?.TenNhanPhim || "T18"
+      },
+      format: `${showtime.PhienBanPhim.DinhDang.TenDinhDang} - ${showtime.PhienBanPhim.NgonNgu.TenNgonNgu}`,
+      time: new Date(showtime.ThoiGianBatDau).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date(showtime.ThoiGianBatDau).toLocaleDateString('vi-VN'),
+      roomName: showtime.PhongChieu.TenPhong,
       seats: selectedSeats,
       combos: selectedCombosList,
       totalPrice,
@@ -220,7 +227,7 @@ function BookingPageContent() {
 
       const existing = meta[seatId];
       if (!existing) {
-        meta[seatId] = { type, price, status: gs.TrangThai };
+        meta[seatId] = { type, price, status: gs.TrangThai, uuid: gs.MaGheSuatChieu };
         continue;
       }
 
@@ -228,6 +235,7 @@ function BookingPageContent() {
         type: mergeType(existing.type, type),
         price: Math.max(existing.price, price),
         status: existing.status === 'CONTRONG' && gs.TrangThai === 'CONTRONG' ? 'CONTRONG' : (existing.status !== 'CONTRONG' ? existing.status : gs.TrangThai),
+        uuid: gs.MaGheSuatChieu
       };
     }
     return meta;
