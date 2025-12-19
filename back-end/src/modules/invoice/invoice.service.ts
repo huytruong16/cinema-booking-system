@@ -90,7 +90,8 @@ export class InvoiceService {
                       select: {
                         TenPhongChieu: true,
                       }
-                    }
+                    },
+                    ThoiGianBatDau: true,
                   }
                 },
                 GhePhongChieu: {
