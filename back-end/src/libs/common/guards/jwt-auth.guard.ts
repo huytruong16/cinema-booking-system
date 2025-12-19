@@ -12,30 +12,31 @@ export class JwtAuthGuard implements CanActivate {
             context.getClass(),
         ]);
 
-        if (isPublic) return true;
-
         const req = context.switchToHttp().getRequest();
-        const authHeader = (req.headers?.authorization || '') as string;
+        const authHeader = req.headers?.authorization as string | undefined;
 
-        if (!authHeader) {
-            throw new UnauthorizedException('Missing Authorization header');
+        if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.slice(7).trim();
+
+            if (token) {
+                try {
+                    const secret = process.env.JWT_SECRET || 'default_jwt_secret';
+                    const payload = jwt.verify(token, secret);
+                    req.user = payload;
+                } catch (err) {
+                    if (!isPublic) {
+                        throw new UnauthorizedException(
+                            'Token không hợp lệ hoặc đã hết hạn.',
+                        );
+                    }
+                }
+            }
         }
 
-        const token = authHeader.startsWith('Bearer ')
-            ? authHeader.slice(7).trim()
-            : authHeader.trim();
-
-        if (!token) {
-            throw new UnauthorizedException('Missing token');
+        if (!isPublic && !req.user) {
+            throw new UnauthorizedException('Vui lòng đăng nhập để tiếp tục');
         }
 
-        try {
-            const secret = process.env.JWT_SECRET || 'default_jwt_secret';
-            const payload = jwt.verify(token, secret);
-            req.user = payload;
-            return true;
-        } catch (err) {
-            throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn.');
-        }
+        return true;
     }
 }
