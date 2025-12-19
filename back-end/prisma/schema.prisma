@@ -203,7 +203,6 @@ model VE {
   TrangThaiVe    trang_thai_ve   @default(CHUASUDUNG)
   GheSuatChieu   GHE_SUATCHIEU    @relation(fields: [MaGheSuatChieu], references: [MaGheSuatChieu])
   HoaDon         HOADON          @relation(fields: [MaHoaDon], references: [MaHoaDon])
-  YeuCauHoanVes  YEUCAUHOANVE[]
   CreatedAt      DateTime        @default(now()) @db.Timestamptz(6)
   UpdatedAt      DateTime        @default(now()) @db.Timestamptz(6)
   DeletedAt      DateTime?       @db.Timestamptz(6)
@@ -211,7 +210,7 @@ model VE {
 
 model YEUCAUHOANVE {
   MaYeuCau       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  MaVe           String                 @db.Uuid
+  MaHoaDon       String                 @db.Uuid
   MaGiaoDich     String?                @db.Uuid
   TrangThai      trang_thai_yeu_cau     @default(DANGCHO)
   LyDoHoan       String                 
@@ -220,7 +219,7 @@ model YEUCAUHOANVE {
   SoTaiKhoan     String
   TenChuTaiKhoan String
   SoTien         Decimal
-  Ve             VE                     @relation(fields: [MaVe], references: [MaVe])
+  HoaDon         HOADON                 @relation(fields: [MaHoaDon], references: [MaHoaDon])
   GiaoDich       GIAODICH?              @relation(fields: [MaGiaoDich], references: [MaGiaoDich])
   CreatedAt      DateTime               @default(now()) @db.Timestamptz(6)
   UpdatedAt      DateTime               @default(now()) @db.Timestamptz(6)
@@ -272,6 +271,7 @@ model HOADON {
   HoaDonCombos HOADONCOMBO[]
   GiaoDichs    GIAODICH[]
   Ves          VE[]
+  YeuCauHoanVes YEUCAUHOANVE[]
   HoaDonKhuyenMais HOADON_KHUYENMAI[]
   CreatedAt    DateTime       @default(now()) @db.Timestamptz(6)
   UpdatedAt    DateTime       @default(now()) @db.Timestamptz(6)
