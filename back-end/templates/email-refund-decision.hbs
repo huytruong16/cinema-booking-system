@@ -33,6 +33,28 @@
             padding: 30px;
         }
 
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+
+        .invoice-table th {
+            background-color: #f0fdf4;
+            color: #108f27;
+            padding: 10px;
+            border: 1px solid #bbf7d0;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .invoice-table td {
+            padding: 8px 10px;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
         .info-group {
             margin-bottom: 20px;
             background-color: #f9f9f9;
@@ -106,10 +128,6 @@
             <div class="info-group">
                 <h3 style="margin-top: 0; border-bottom: 2px solid #ddd; padding-bottom: 5px;">Thông tin vé</h3>
                 <div class="info-row">
-                    <span class="label">Mã vé:</span>&nbsp;
-                    <span class="value">{{ticket_code}}</span>
-                </div>
-                <div class="info-row">
                     <span class="label">Phim:</span>&nbsp;
                     <span class="value">{{movie_name}}</span>
                 </div>
@@ -118,13 +136,11 @@
                     <span class="value">{{cinema_room}}</span>
                 </div>
                 <div class="info-row">
-                    <span class="label">Ghế:</span>&nbsp;
-                    <span class="value" style="color: #e63946;">{{seat_code}}</span>
-                </div>
-                <div class="info-row">
                     <span class="label">Suất chiếu:</span>&nbsp;
                     <span class="value">{{show_time}}</span>
                 </div>
+
+                {{{refund_items}}}
             </div>
 
             {{{transaction_details}}}

@@ -1,13 +1,10 @@
-import { BadRequestException } from "@nestjs/common";
 import { ApiProperty } from "@nestjs/swagger";
-import { Transform } from "class-transformer";
 import { IsArray, IsString, IsUUID, Matches } from "class-validator";
 
 export class CreateRefundRequestDto {
-    @ApiProperty({ description: "Danh sách mã vé", example: ["552023698", "059844299"] })
-    @IsArray({ message: 'Danh sách mã vé phải là một mảng' })
-    @IsString({ each: true, message: 'Mã vé phải là chuỗi ký tự' })
-    Code: string[];
+    @ApiProperty({ description: "Danh sách mã hóa đơn", example: "550e8400-e29b-41d4-a716-446655440000" })
+    @IsUUID("4", { message: 'Mỗi mã hóa đơn phải là UUID v4 hợp lệ' })
+    Code: string;
 
     @ApiProperty({ description: "Lý do hoàn vé", example: "Khách hàng có việc bận" })
     @IsString({ message: 'Lý do hoàn vé phải là chuỗi ký tự' })

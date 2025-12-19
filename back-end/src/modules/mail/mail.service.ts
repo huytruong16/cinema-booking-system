@@ -182,12 +182,21 @@ export class MailService {
     async sendRefundDecisionEmail(
         to: string,
         data: {
-            TicketCode: string;
             BookingCode: string;
             MovieName: string;
             CinemaRoom: string;
-            SeatCode: string;
             ShowTime: string;
+            Tickets: {
+                Code: string;
+                SeatCode: string;
+                Price: string;
+            }[];
+            Combos: {
+                Name: string;
+                Quantity: number;
+                Price: string;
+                Total: string;
+            }[];
             RefundAmount: string;
             BankAccount: string;
             BankName: string;
@@ -205,10 +214,69 @@ export class MailService {
 
         const isRefunded = status === RefundRequestStatusEnum.DAHOAN;
         const subject = isRefunded
-            ? `[Movix] Xác nhận hoàn tiền thành công - Mã vé ${data.TicketCode}`
-            : `[Movix] Thông báo hủy yêu cầu hoàn vé - Mã vé ${data.TicketCode}`;
+            ? `[Movix] Xác nhận hoàn tiền thành công - Đơn hàng ${data.BookingCode}`
+            : `[Movix] Thông báo hủy yêu cầu hoàn vé - Đơn hàng ${data.BookingCode}`;
 
         const title = isRefunded ? 'YÊU CẦU HOÀN VÉ ĐÃ ĐƯỢC CHẤP NHẬN' : 'YÊU CẦU HOÀN VÉ BỊ TỪ CHỐI';
+
+        let refundItemsHtml = '';
+
+        if (isRefunded) {
+            let rowsHtml = '';
+            let stt = 1;
+
+            if (data.Tickets && data.Tickets.length) {
+                data.Tickets.forEach(ticket => {
+                    rowsHtml += `
+                        <tr>
+                            <td class="text-center">${stt++}</td>
+                            <td class="text-left">Vé ${ticket.Code} - Ghế ${ticket.SeatCode}</td>
+                            <td class="text-center">1</td>
+                            <td class="text-right">${ticket.Price}</td>
+                            <td class="text-right">${ticket.Price}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            if (data.Combos && data.Combos.length) {
+                data.Combos.forEach(combo => {
+                    rowsHtml += `
+                        <tr>
+                            <td class="text-center">${stt++}</td>
+                            <td class="text-left">${combo.Name}</td>
+                            <td class="text-center">${combo.Quantity}</td>
+                            <td class="text-right">${combo.Price}</td>
+                            <td class="text-right">${combo.Total}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            rowsHtml += `
+                    <tr>
+                        <td colspan="4" class="text-right" style="font-weight: 600;">Tổng tiền hoàn</td>
+                        <td class="text-right">${data.RefundAmount}</td>
+                    </tr>
+                `;
+
+            refundItemsHtml = `
+                <table class="invoice-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">STT</th>
+                            <th>Mặt hàng</th>
+                            <th style="width:60px;">SL</th>
+                            <th style="width:110px;">Đơn giá</th>
+                            <th style="width:110px;">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            `;
+        }
 
         let transactionDetailsHtml = '';
         if (isRefunded) {
@@ -247,11 +315,10 @@ export class MailService {
         let htmlContent = htmlTemplate
             .replace('{{title}}', title)
             .replace('{{booking_code}}', data.BookingCode)
-            .replace('{{ticket_code}}', data.TicketCode)
             .replace('{{movie_name}}', data.MovieName)
             .replace('{{show_time}}', data.ShowTime)
             .replace('{{cinema_room}}', data.CinemaRoom)
-            .replace('{{seat_code}}', data.SeatCode)
+            .replace('{{{refund_items}}}', refundItemsHtml)
             .replace('{{{transaction_details}}}', transactionDetailsHtml);
 
         await this.transporter.sendMail({
