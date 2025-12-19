@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -35,10 +35,10 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   Search,
   Eye,
@@ -49,14 +49,23 @@ import {
   RefreshCcw,
   Calendar as CalendarIcon,
   X,
+  Loader2,
+  AlertTriangle,
+  Tag,
+  Image as ImageIcon,
+  MapPin,
+  Clock,
+  Ticket,
+  Popcorn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
+import { invoiceService, BackendInvoice } from "@/services/invoice.service";
 
-// --- TYPES ---
+// --- TYPES (Frontend Only) ---
 type TrangThaiThanhToan = "DANGCHO" | "THANHCONG" | "THATBAI";
 type PhuongThucThanhToan =
   | "TRUCTIEP"
@@ -79,7 +88,9 @@ interface GiaoDich {
 
 interface VeMua {
   MaVe: string;
+  Code: string;
   TenPhim: string;
+  PosterUrl: string;
   PhongChieu: string;
   Ghe: string;
   GiaVe: number;
@@ -89,8 +100,15 @@ interface VeMua {
 interface ComboMua {
   MaCombo: string;
   TenCombo: string;
+  HinhAnh: string;
   SoLuong: number;
   DonGia: number;
+}
+
+interface KhuyenMai {
+  Code: string;
+  SoTienGiam: number;
+  MoTa?: string;
 }
 
 interface HoaDon {
@@ -103,150 +121,11 @@ interface HoaDon {
   GiaoDichs: GiaoDich[];
   Ves: VeMua[];
   Combos: ComboMua[];
+  KhuyenMais: KhuyenMai[];
 }
 
-// --- MOCK DATA ---
-const mockInvoices: HoaDon[] = [
-  {
-    MaHoaDon: "uuid-hd-1",
-    Code: "HD241115-001",
-    Email: "khachhangA@gmail.com",
-    NgayLap: new Date("2024-11-15T10:30:00"),
-    TongTien: 250000,
-    GiaoDichs: [
-      {
-        MaGiaoDich: "uuid-gd-1",
-        Code: "TXN_MOMO_123456",
-        PhuongThuc: "MOMO",
-        TongTien: 250000,
-        TrangThai: "THANHCONG",
-        NgayGiaoDich: new Date("2024-11-15T10:35:00"),
-        LoaiGiaoDich: "MUAVE",
-        NoiDung: "Thanh toan ve xem phim",
-      },
-    ],
-    Ves: [
-      {
-        MaVe: "v1",
-        TenPhim: "Inside Out 2",
-        PhongChieu: "P01",
-        Ghe: "F5",
-        GiaVe: 90000,
-        DaHoan: false,
-      },
-      {
-        MaVe: "v2",
-        TenPhim: "Inside Out 2",
-        PhongChieu: "P01",
-        Ghe: "F6",
-        GiaVe: 90000,
-        DaHoan: false,
-      },
-    ],
-    Combos: [
-      {
-        MaCombo: "c1",
-        TenCombo: "Combo Bắp Nước Lớn",
-        SoLuong: 1,
-        DonGia: 70000,
-      },
-    ],
-  },
-  {
-    MaHoaDon: "uuid-hd-3",
-    Code: "HD241114-055",
-    Email: "lethic@outlook.com",
-    NgayLap: new Date("2024-11-14T19:00:00"),
-    TongTien: 300000,
-    GiaoDichs: [
-      {
-        MaGiaoDich: "uuid-gd-3",
-        Code: "CASH_001",
-        PhuongThuc: "TRUCTIEP",
-        TongTien: 300000,
-        TrangThai: "THANHCONG",
-        NgayGiaoDich: new Date("2024-11-14T19:05:00"),
-        LoaiGiaoDich: "MUAVE",
-        NoiDung: "Thanh toán tiền mặt tại quầy",
-      },
-    ],
-    Ves: [
-      {
-        MaVe: "v4",
-        TenPhim: "Kẻ Trộm Mặt Trăng 4",
-        PhongChieu: "P02",
-        Ghe: "E1",
-        GiaVe: 100000,
-        DaHoan: true,
-      },
-      {
-        MaVe: "v5",
-        TenPhim: "Kẻ Trộm Mặt Trăng 4",
-        PhongChieu: "P02",
-        Ghe: "E2",
-        GiaVe: 100000,
-        DaHoan: false,
-      },
-    ],
-    Combos: [
-      { MaCombo: "c2", TenCombo: "Bắp Phô Mai", SoLuong: 2, DonGia: 50000 },
-    ],
-  },
-  {
-    MaHoaDon: "uuid-hd-4",
-    Code: "HD241116-002",
-    Email: "nguyenvand@gmail.com",
-    NgayLap: new Date("2024-11-16T08:15:00"),
-    TongTien: 150000,
-    GiaoDichs: [
-      {
-        MaGiaoDich: "uuid-gd-4",
-        Code: "PAYOS_999888",
-        PhuongThuc: "PAYOS",
-        TongTien: 150000,
-        TrangThai: "DANGCHO",
-        NgayGiaoDich: new Date("2024-11-16T08:16:00"),
-        LoaiGiaoDich: "MUAVE",
-        NoiDung: "Chuyển khoản QR",
-      },
-    ],
-    Ves: [
-      {
-        MaVe: "v6",
-        TenPhim: "Dune: Part Two",
-        PhongChieu: "P03",
-        Ghe: "H5",
-        GiaVe: 150000,
-        DaHoan: false,
-      },
-    ],
-    Combos: [],
-  },
-  {
-    MaHoaDon: "uuid-hd-5",
-    Code: "HD241113-012",
-    Email: "failed_user@test.com",
-    NgayLap: new Date("2024-11-13T14:20:00"),
-    TongTien: 400000,
-    GiaoDichs: [
-      {
-        MaGiaoDich: "uuid-gd-5",
-        Code: "MOMO_ERR_001",
-        PhuongThuc: "MOMO",
-        TongTien: 400000,
-        TrangThai: "THATBAI",
-        NgayGiaoDich: new Date("2024-11-13T14:25:00"),
-        LoaiGiaoDich: "MUAVE",
-        NoiDung: "Lỗi kết nối ngân hàng",
-      },
-    ],
-    Ves: [],
-    Combos: [],
-  },
-];
-
 // --- HELPERS ---
-const getStatusColor = (status: TrangThaiThanhToan) => {
+const getStatusColor = (status: string) => {
   switch (status) {
     case "THANHCONG":
       return "bg-green-500/20 text-green-400 border-green-500/50";
@@ -259,7 +138,7 @@ const getStatusColor = (status: TrangThaiThanhToan) => {
   }
 };
 
-const getStatusLabel = (status: TrangThaiThanhToan) => {
+const getStatusLabel = (status: string) => {
   switch (status) {
     case "THANHCONG":
       return "Thành công";
@@ -283,8 +162,20 @@ const getPaymentMethodLabel = (method: string) => {
   return map[method] || method;
 };
 
+const parseSafeDate = (value: any): Date => {
+  if (!value) return new Date();
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? new Date() : date;
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    value
+  );
+
 export default function InvoiceManagementPage() {
-  const [invoices, setInvoices] = useState<HoaDon[]>(mockInvoices);
+  const [invoices, setInvoices] = useState<HoaDon[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // States cho Filter
   const [searchTerm, setSearchTerm] = useState("");
@@ -295,22 +186,110 @@ export default function InvoiceManagementPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
-  // --- LOGIC LỌC DỮ LIỆU ---
+  // --- FETCH DATA ---
+  const fetchInvoices = async () => {
+    setLoading(true);
+    try {
+      const res: any = await invoiceService.getAll();
+      const rawData: any[] = res.data || [];
+
+      const mappedData: HoaDon[] = rawData.map((inv) => {
+        // Map Giao dịch
+        const listGiaoDich: GiaoDich[] = (inv.GiaoDichs || []).map(
+          (gd: any) => ({
+            MaGiaoDich: gd.MaGiaoDich,
+            Code: gd.Code || "GD-UNK",
+            PhuongThuc: gd.PhuongThuc || "TRUCTUYEN",
+            TongTien: Number(gd.TongTien),
+            TrangThai: gd.TrangThai,
+            NgayGiaoDich: parseSafeDate(gd.NgayGiaoDich || inv.NgayLap),
+            LoaiGiaoDich: gd.LoaiGiaoDich || "MUAVE",
+            NoiDung: gd.NoiDung,
+          })
+        );
+
+        if (listGiaoDich.length === 0) {
+          listGiaoDich.push({
+            MaGiaoDich: "temp-" + inv.MaHoaDon,
+            Code: "TXN-" + inv.Code,
+            PhuongThuc: "TRUCTUYEN",
+            TongTien: Number(inv.TongTien),
+            TrangThai: "THANHCONG",
+            NgayGiaoDich: parseSafeDate(inv.NgayLap),
+            LoaiGiaoDich: "MUAVE",
+          });
+        }
+
+        const listVe: VeMua[] = (inv.Ves || []).map((v: any, idx: number) => ({
+          MaVe: `${inv.MaHoaDon}_${idx}`,
+          Code: `${inv.Code}_${idx}`,
+          TenPhim: inv.Phim?.TenPhim || "Không xác định",
+          PosterUrl: inv.Phim?.PosterUrl || "",
+          PhongChieu: inv.PhongChieu || "Không xác định",
+          Ghe: v.SoGhe || "N/A",
+          GiaVe: Number(v.DonGia || 0),
+          DaHoan: v.TrangThai === "DAHOAN" || v.TrangThai === "CHOHOANTIEN",
+        }));
+
+        const listCombo: ComboMua[] = (inv.Combos || []).map(
+          (c: any, idx: number) => ({
+            MaCombo: c.MaCombo || `${inv.MaHoaDon}_C_${idx}`,
+            TenCombo: c.TenCombo || "Combo",
+            HinhAnh: c.HinhAnh || "",
+            SoLuong: c.SoLuong || 1,
+            DonGia: Number(c.DonGia || 0),
+          })
+        );
+
+        const listKhuyenMai: KhuyenMai[] = (inv.KhuyenMais || []).map(
+          (k: any) => ({
+            Code: k.TenKhuyenMai || "KM",
+            SoTienGiam: Number(k.SoTienGiam || 0),
+            MoTa: k.LoaiKhuyenMai,
+          })
+        );
+
+        return {
+          MaHoaDon: inv.MaHoaDon,
+          Code: inv.Code,
+          Email: inv.Email || "Khách vãng lai",
+          NgayLap: parseSafeDate(inv.NgayLap),
+          TongTien: Number(inv.TongTien),
+          MaKhachHang: "",
+          GiaoDichs: listGiaoDich,
+          Ves: listVe,
+          Combos: listCombo,
+          KhuyenMais: listKhuyenMai,
+        };
+      });
+
+      setInvoices(mappedData);
+    } catch (error) {
+      console.error("Fetch error:", error);
+      toast.error("Lỗi tải dữ liệu hóa đơn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  // --- FILTER LOGIC ---
   const filteredInvoices = useMemo(() => {
     return invoices.filter((inv) => {
-      // 1. Lọc theo Search (Mã HĐ hoặc Email)
+      const term = searchTerm.toLowerCase();
       const matchSearch =
-        inv.Code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.Email.toLowerCase().includes(searchTerm.toLowerCase());
+        inv.Code.toLowerCase().includes(term) ||
+        (inv.Email && inv.Email.toLowerCase().includes(term));
 
-      // 2. Lọc theo Trạng thái (dựa vào giao dịch cuối cùng)
       const lastTx =
         inv.GiaoDichs.length > 0
           ? inv.GiaoDichs[inv.GiaoDichs.length - 1].TrangThai
           : "DANGCHO";
       const matchStatus = statusFilter === "all" || lastTx === statusFilter;
 
-      // 3. Lọc theo Khoảng thời gian (Date Range)
       let matchDate = true;
       if (dateRange?.from) {
         const invDate = new Date(inv.NgayLap);
@@ -318,7 +297,6 @@ export default function InvoiceManagementPage() {
         const toDate = dateRange.to
           ? endOfDay(dateRange.to)
           : endOfDay(dateRange.from);
-
         matchDate = isWithinInterval(invDate, { start: fromDate, end: toDate });
       }
 
@@ -326,24 +304,38 @@ export default function InvoiceManagementPage() {
     });
   }, [invoices, searchTerm, statusFilter, dateRange]);
 
+  // --- HANDLERS ---
   const handleViewDetail = (invoice: HoaDon) => {
     setSelectedInvoice(invoice);
     setIsDetailOpen(true);
   };
 
   const handlePrintInvoice = () => {
-    toast.info("Đang in hóa đơn...");
+    toast.info("Chức năng đang phát triển...");
   };
 
-  const handleCreateRefundRequest = (
-    selectedTicketIds: string[],
-    reason: string
-  ) => {
-    toast.success(
-      `Đã tạo yêu cầu hoàn ${selectedTicketIds.length} vé thành công!`
-    );
-    setIsRefundDialogOpen(false);
-    setIsDetailOpen(false);
+  const handleCreateRefundRequest = async (reason: string) => {
+    if (!selectedInvoice) return;
+
+    try {
+      const mockTicketCodes = selectedInvoice.Ves.map(
+        (v, i) => `${selectedInvoice.Code}_${i + 1}`
+      );
+
+      await invoiceService.createRefundRequest({
+        Code: mockTicketCodes,
+        LyDo: reason,
+      });
+
+      toast.success("Đã gửi yêu cầu hoàn tiền thành công!");
+      setIsRefundDialogOpen(false);
+      setIsDetailOpen(false);
+      fetchInvoices();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Lỗi khi gửi yêu cầu hoàn tiền"
+      );
+    }
   };
 
   const resetFilters = () => {
@@ -448,9 +440,10 @@ export default function InvoiceManagementPage() {
         </div>
       </div>
 
+      {/* TABLE */}
       <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-[#1C1C1C] z-10 shadow-sm">
                 <TableRow className="border-slate-700 hover:bg-transparent">
@@ -467,7 +460,7 @@ export default function InvoiceManagementPage() {
                     Tổng tiền
                   </TableHead>
                   <TableHead className="text-slate-100 font-semibold text-center">
-                    Trạng thái GD
+                    Trạng thái
                   </TableHead>
                   <TableHead className="text-slate-100 font-semibold text-right">
                     Hành động
@@ -475,7 +468,19 @@ export default function InvoiceManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-slate-500"
+                    >
+                      <div className="flex justify-center items-center gap-2">
+                        <Loader2 className="animate-spin size-5" /> Đang tải dữ
+                        liệu...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredInvoices.length > 0 ? (
                   filteredInvoices.map((invoice) => {
                     const lastTx =
                       invoice.GiaoDichs.length > 0
@@ -542,17 +547,18 @@ export default function InvoiceManagementPage() {
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </div>
         </div>
       </Card>
 
+      {/* DIALOGS */}
       {selectedInvoice && (
         <InvoiceDetailDialog
           isOpen={isDetailOpen}
           onClose={() => setIsDetailOpen(false)}
           invoice={selectedInvoice}
-          onPrint={handlePrintInvoice}
           onRefund={() => setIsRefundDialogOpen(true)}
+          onPrint={handlePrintInvoice}
         />
       )}
 
@@ -568,6 +574,8 @@ export default function InvoiceManagementPage() {
   );
 }
 
+// --- SUB COMPONENTS ---
+
 function InvoiceDetailDialog({
   isOpen,
   onClose,
@@ -581,19 +589,31 @@ function InvoiceDetailDialog({
   onPrint: () => void;
   onRefund: () => void;
 }) {
-  const canRefund = invoice.GiaoDichs.some(
-    (gd) => gd.TrangThai === "THANHCONG"
+  const canRefund =
+    invoice.GiaoDichs.some((gd) => gd.TrangThai === "THANHCONG") &&
+    invoice.Ves.some((v) => !v.DaHoan);
+
+  // Tính toán
+  const totalVe = invoice.Ves.reduce((sum, v) => sum + v.GiaVe, 0);
+  const totalCombo = invoice.Combos.reduce(
+    (sum, c) => sum + c.DonGia * c.SoLuong,
+    0
+  );
+  const tamTinh = totalVe + totalCombo;
+  const totalGiamGia = invoice.KhuyenMais.reduce(
+    (sum, k) => sum + k.SoTienGiam,
+    0
   );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-3xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-slate-800 bg-[#1C1C1C] rounded-t-lg shrink-0">
           <div className="flex justify-between items-center pr-8">
             <div>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 Chi tiết Hóa đơn{" "}
-                <span className="text-primary">{invoice.Code}</span>
+                <span className="text-primary font-mono">{invoice.Code}</span>
               </DialogTitle>
               <DialogDescription className="text-slate-400 mt-1">
                 {format(
@@ -616,42 +636,48 @@ function InvoiceDetailDialog({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto bg-[#1C1C1C]">
           <div className="p-6 space-y-8">
+            {/* THÔNG TIN CHUNG */}
             <div className="grid grid-cols-2 gap-6 p-4 bg-slate-900/50 rounded-lg border border-slate-800">
               <div>
                 <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
                   Khách hàng
                 </p>
-                <p className="text-base font-medium">{invoice.Email}</p>
+                <p
+                  className="text-base font-medium truncate"
+                  title={invoice.Email}
+                >
+                  {invoice.Email}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
                   Tổng thanh toán
                 </p>
                 <p className="text-2xl font-bold text-green-400">
-                  {invoice.TongTien.toLocaleString("vi-VN")} ₫
+                  {formatCurrency(invoice.TongTien)}
                 </p>
               </div>
             </div>
 
+            {/* CHI TIẾT VÉ */}
             <div>
               <h3 className="text-sm font-semibold text-slate-300 uppercase mb-3 flex items-center gap-2">
-                <Receipt className="size-4" /> Chi tiết đơn hàng
+                <Ticket className="size-4" /> Chi tiết Vé ({invoice.Ves.length})
               </h3>
               <div className="border border-slate-800 rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader className="bg-slate-900">
                     <TableRow className="border-slate-800 hover:bg-slate-900">
-                      <TableHead className="text-slate-300">Mô tả</TableHead>
+                      <TableHead className="text-slate-300 w-[50%]">
+                        Mô tả
+                      </TableHead>
                       <TableHead className="text-slate-300 text-center">
-                        SL / Ghế
+                        Ghế
                       </TableHead>
                       <TableHead className="text-slate-300 text-right">
-                        Đơn giá
-                      </TableHead>
-                      <TableHead className="text-slate-300 text-right">
-                        Thành tiền
+                        Giá vé
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -662,69 +688,178 @@ function InvoiceDetailDialog({
                         className="border-slate-800 hover:bg-slate-800/30"
                       >
                         <TableCell>
-                          <p className="font-medium text-white">{ve.TenPhim}</p>
-                          <p className="text-xs text-slate-500">
-                            Phòng {ve.PhongChieu}
-                          </p>
-                          {ve.DaHoan && (
-                            <Badge
-                              variant="destructive"
-                              className="mt-1 text-[10px] px-1 py-0 h-4"
-                            >
-                              Đã hoàn
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-12 bg-slate-800 rounded overflow-hidden shrink-0 border border-slate-700">
+                              {ve.PosterUrl ? (
+                                <img
+                                  src={ve.PosterUrl}
+                                  alt="Poster"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-600">
+                                  <ImageIcon className="size-4" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p
+                                className="font-medium text-white text-sm truncate max-w-[300px]"
+                                title={ve.TenPhim}
+                              >
+                                {ve.TenPhim}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate">
+                                <MapPin className="size-3 inline mr-1" />
+                                {ve.PhongChieu}
+                              </p>
+                              {ve.DaHoan && (
+                                <Badge
+                                  variant="destructive"
+                                  className="mt-1 text-[10px] px-1.5 py-0 h-4"
+                                >
+                                  Đã hoàn
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="secondary" className="bg-slate-800">
+                          <Badge
+                            variant="secondary"
+                            className="bg-slate-800 min-w-[3rem] justify-center"
+                          >
                             {ve.Ghe}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right text-slate-400">
-                          {ve.GiaVe.toLocaleString()} ₫
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {ve.GiaVe.toLocaleString()} ₫
+                        <TableCell className="text-right font-medium text-slate-200">
+                          {formatCurrency(ve.GiaVe)}
                         </TableCell>
                       </TableRow>
                     ))}
-                    {invoice.Combos.map((cb, idx) => (
-                      <TableRow
-                        key={`cb-${idx}`}
-                        className="border-slate-800 hover:bg-slate-800/30"
-                      >
-                        <TableCell>
-                          <p className="font-medium text-white">
-                            {cb.TenCombo}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-center text-slate-300">
-                          x{cb.SoLuong}
-                        </TableCell>
-                        <TableCell className="text-right text-slate-400">
-                          {cb.DonGia.toLocaleString()} ₫
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {(cb.DonGia * cb.SoLuong).toLocaleString()} ₫
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="bg-slate-900/50 hover:bg-slate-900/50 border-t border-slate-700">
-                      <TableCell
-                        colSpan={3}
-                        className="text-right font-bold text-slate-200"
-                      >
-                        Tổng cộng
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-primary text-lg">
-                        {invoice.TongTien.toLocaleString()} ₫
-                      </TableCell>
-                    </TableRow>
                   </TableBody>
                 </Table>
               </div>
             </div>
 
+            {/* CHI TIẾT COMBO */}
+            {invoice.Combos.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-300 uppercase mb-3 flex items-center gap-2">
+                  <Popcorn className="size-4" /> Combo bắp nước
+                </h3>
+                <div className="border border-slate-800 rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-900">
+                      <TableRow className="border-slate-800 hover:bg-slate-900">
+                        <TableHead className="text-slate-300 w-[50%]">
+                          Combo
+                        </TableHead>
+                        <TableHead className="text-slate-300 text-center">
+                          Số lượng
+                        </TableHead>
+                        <TableHead className="text-slate-300 text-right">
+                          Đơn giá
+                        </TableHead>
+                        <TableHead className="text-slate-300 text-right">
+                          Thành tiền
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoice.Combos.map((cb, idx) => (
+                        <TableRow
+                          key={`cb-${idx}`}
+                          className="border-slate-800 hover:bg-slate-800/30"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 bg-slate-800 rounded overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center">
+                                {cb.HinhAnh ? (
+                                  <img
+                                    src={cb.HinhAnh}
+                                    alt="Combo"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Receipt className="size-4 text-slate-600" />
+                                )}
+                              </div>
+                              <p
+                                className="font-medium text-white text-sm truncate max-w-[250px]"
+                                title={cb.TenCombo}
+                              >
+                                {cb.TenCombo}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center text-slate-300">
+                            x{cb.SoLuong}
+                          </TableCell>
+                          <TableCell className="text-right text-slate-400">
+                            {formatCurrency(cb.DonGia)}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-slate-200">
+                            {formatCurrency(cb.DonGia * cb.SoLuong)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* KHUYẾN MÃI & TỔNG KẾT */}
+            <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800 flex flex-col gap-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Tạm tính (Vé + Combo):</span>
+                <span className="text-slate-200">
+                  {formatCurrency(tamTinh)}
+                </span>
+              </div>
+
+              {/* Section Khuyến mãi */}
+              {invoice.KhuyenMais.length > 0 && (
+                <div className="space-y-2 py-2 border-y border-slate-800 border-dashed">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase">
+                    <Tag className="size-3" /> Khuyến mãi áp dụng
+                  </div>
+                  {invoice.KhuyenMais.map((km, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-green-500/10 text-green-500 border-green-500/30 font-mono text-[10px] px-1.5 py-0"
+                        >
+                          {km.Code}
+                        </Badge>
+                        <span className="text-slate-400 text-xs truncate max-w-[300px]">
+                          {km.MoTa || "Giảm giá hóa đơn"}
+                        </span>
+                      </div>
+                      <span className="text-green-400 font-medium">
+                        -{formatCurrency(km.SoTienGiam)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-between items-end pt-1">
+                <span className="text-base font-bold text-white">
+                  Tổng cộng:
+                </span>
+                <span className="text-xl font-bold text-primary">
+                  {formatCurrency(invoice.TongTien)}
+                </span>
+              </div>
+            </div>
+
+            {/* LỊCH SỬ GIAO DỊCH */}
             <div>
               <h3 className="text-sm font-semibold text-slate-300 uppercase mb-3 flex items-center gap-2">
                 <CreditCard className="size-4" /> Lịch sử giao dịch
@@ -750,7 +885,7 @@ function InvoiceDetailDialog({
                         <p className="font-medium text-sm text-slate-200">
                           {getPaymentMethodLabel(gd.PhuongThuc)}
                           <span className="text-slate-500 mx-2">•</span>
-                          <span className="text-xs font-normal text-slate-400">
+                          <span className="text-xs font-normal text-slate-400 font-mono">
                             {gd.Code}
                           </span>
                         </p>
@@ -769,7 +904,7 @@ function InvoiceDetailDialog({
                         )}
                       >
                         {gd.LoaiGiaoDich === "HOANTIEN" ? "-" : "+"}
-                        {gd.TongTien.toLocaleString()} ₫
+                        {formatCurrency(gd.TongTien)}
                       </p>
                       <span
                         className={cn(
@@ -787,7 +922,7 @@ function InvoiceDetailDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="px-6 py-4 border-t border-slate-800 bg-[#1C1C1C] shrink-0 sm:justify-between">
           <div className="flex gap-2">
@@ -804,7 +939,7 @@ function InvoiceDetailDialog({
                 className="bg-red-900/20 text-red-400 border border-red-900 hover:bg-red-900/40"
                 onClick={onRefund}
               >
-                <RefreshCcw className="size-4 mr-2" /> Yêu cầu hoàn vé
+                <RefreshCcw className="size-4 mr-2" /> Hoàn toàn bộ hóa đơn
               </Button>
             )}
           </div>
@@ -831,67 +966,36 @@ function CreateRefundDialog({
   isOpen: boolean;
   onClose: () => void;
   invoice: HoaDon;
-  onSubmit: (ticketIds: string[], reason: string) => void;
+  onSubmit: (reason: string) => void;
 }) {
-  const availableTickets = invoice.Ves.filter((v) => !v.DaHoan);
-  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
   const [reason, setReason] = useState("");
 
-  const handleToggleTicket = (maVe: string) => {
-    setSelectedTickets((prev) =>
-      prev.includes(maVe) ? prev.filter((id) => id !== maVe) : [...prev, maVe]
-    );
-  };
-
-  const totalRefundAmount = availableTickets
-    .filter((v) => selectedTickets.includes(v.MaVe))
-    .reduce((sum, v) => sum + v.GiaVe, 0);
+  const availableRefundAmount = invoice.Ves.filter((v) => !v.DaHoan).reduce(
+    (sum, v) => sum + v.GiaVe,
+    0
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Tạo yêu cầu hoàn vé</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="size-5 text-yellow-500" />
+            Xác nhận hoàn hóa đơn
+          </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Chọn vé cần hoàn và nhập lý do. Yêu cầu sẽ được gửi để duyệt.
+            Bạn đang yêu cầu hoàn tiền cho{" "}
+            <span className="text-white font-bold">toàn bộ vé</span> trong hóa
+            đơn <span className="font-mono text-white">{invoice.Code}</span>.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>Chọn vé hoàn ({selectedTickets.length})</Label>
-            {availableTickets.length > 0 ? (
-              <div className="grid gap-2 border border-slate-800 rounded-md p-2 max-h-[200px] overflow-y-auto">
-                {availableTickets.map((ve) => (
-                  <div
-                    key={ve.MaVe}
-                    className="flex items-center justify-between p-2 rounded hover:bg-slate-800/50 cursor-pointer"
-                    onClick={() => handleToggleTicket(ve.MaVe)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        id={`refund-${ve.MaVe}`}
-                        checked={selectedTickets.includes(ve.MaVe)}
-                        onCheckedChange={() => handleToggleTicket(ve.MaVe)}
-                        className="border-slate-500 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-slate-200">
-                          {ve.TenPhim}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          Ghế {ve.Ghe} • {ve.GiaVe.toLocaleString()} ₫
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-yellow-500 italic">
-                Không có vé nào khả dụng để hoàn.
-              </p>
-            )}
+          <div className="bg-red-900/10 border border-red-900/30 p-3 rounded-md">
+            <p className="text-sm text-red-400">
+              Lưu ý: Hệ thống hiện tại chỉ hỗ trợ hoàn tiền vé phim. Các sản
+              phẩm Combo đi kèm sẽ không được hoàn tiền.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -911,7 +1015,7 @@ function CreateRefundDialog({
               Tổng tiền hoàn dự kiến:
             </span>
             <span className="text-xl font-bold text-white">
-              {totalRefundAmount.toLocaleString()} ₫
+              {formatCurrency(availableRefundAmount)}
             </span>
           </div>
         </div>
@@ -925,11 +1029,11 @@ function CreateRefundDialog({
             Hủy
           </Button>
           <Button
-            onClick={() => onSubmit(selectedTickets, reason)}
+            onClick={() => onSubmit(reason)}
             className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={selectedTickets.length === 0 || !reason.trim()}
+            disabled={!reason.trim()}
           >
-            Gửi yêu cầu
+            Gửi yêu cầu hoàn
           </Button>
         </DialogFooter>
       </DialogContent>
