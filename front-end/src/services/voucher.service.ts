@@ -66,5 +66,18 @@ export const voucherService = {
   delete: async (id: string) => {
     const res = await apiClient.delete(`/vouchers/${id}`);
     return res.data;
+  },
+
+  // 6. Lấy theo code
+  getByCode: async (code: string) => {
+    try {
+      // API /vouchers/{id} yêu cầu UUID, nên không thể dùng trực tiếp với string
+      const res = await apiClient.get<Voucher[]>('/vouchers');
+      const voucher = res.data.find(v => v.Code.toUpperCase() === code.toUpperCase());
+      return voucher;
+    } catch (error) {
+      console.error("Error fetching voucher by code:", error);
+      throw error;
+    }
   }
 };
