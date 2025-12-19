@@ -96,14 +96,9 @@ export class TransactionService {
     }
 
     async getTransactionById(id: string) {
-        const transaction = await this.prisma.gIAODICH.findUnique({
+        return await this.prisma.gIAODICH.findUnique({
             where: { MaGiaoDich: id, DeletedAt: null },
         });
-
-        return {
-            MaGiaoDich: transaction?.MaGiaoDich,
-            TrangThai: transaction?.TrangThai,
-        };
     }
 
     async updateTransactionStatus(webhookBody: any) {
