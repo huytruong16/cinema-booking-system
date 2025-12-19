@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { voucherService, Voucher } from '@/services/voucher.service';
 import { invoiceService } from '@/services/invoice.service';
+import { transactionService } from '@/services/transaction.service';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ function PaymentContent() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
   const [waitingCountdown, setWaitingCountdown] = useState(600); // 10 minutes
 
   useEffect(() => {
@@ -67,6 +69,29 @@ function PaymentContent() {
     return () => clearInterval(interval);
   }, [showWaitingModal, waitingCountdown]);
 
+  useEffect(() => {
+    if (!showWaitingModal || !transactionId) return;
+
+    const checkStatus = async () => {
+      try {
+        const transaction = await transactionService.getById(transactionId);
+        if (transaction.TrangThai === 'THANHCONG') {
+          toast.success("Thanh toán thành công!");
+          sessionStorage.removeItem('pendingBooking');
+          router.push('/payment/success');
+        } else if (transaction.TrangThai === 'THATBAI' || transaction.TrangThai === 'HUY') {
+          toast.error("Thanh toán thất bại hoặc bị hủy.");
+          setShowWaitingModal(false);
+        }
+      } catch (error) {
+        console.error("Error checking transaction status:", error);
+      }
+    };
+
+    const interval = setInterval(checkStatus, 3000); 
+    return () => clearInterval(interval);
+  }, [showWaitingModal, transactionId, router]);
+
   const handlePayment = async () => {
     if (!bookingData) return;
     setIsProcessing(true);
@@ -102,7 +127,7 @@ function PaymentContent() {
       const res = await invoiceService.create(payload);
       
       if (res.GiaoDichUrl) {
-        window.open(res.GiaoDichUrl, '_blank');
+        window.location.href = res.GiaoDichUrl;
         setShowWaitingModal(true);
         setWaitingCountdown(600);
       } else {

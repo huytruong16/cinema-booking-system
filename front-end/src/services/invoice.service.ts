@@ -12,6 +12,7 @@ export interface CreateInvoiceDto {
 }
 
 export interface InvoiceResponse {
+  MaGiaoDich: string;
   GiaoDichUrl: string;
 }
 
