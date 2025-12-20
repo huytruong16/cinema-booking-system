@@ -284,7 +284,7 @@ export class TransactionService {
     }
 
     async createRefundTransaction(payload: CreateRefundTransactionDto) {
-        const { MaYeuCaus, PhuongThuc } = payload;
+        const { MaYeuCau, PhuongThuc } = payload;
 
         if (this.request?.user?.vaitro !== RoleEnum.NHANVIEN) {
             throw new BadRequestException('Chỉ nhân viên mới có quyền tạo giao dịch hoàn tiền');
@@ -300,41 +300,26 @@ export class TransactionService {
             throw new NotFoundException('Nhân viên không tồn tại');
         }
 
-        const refundRequests = await this.prisma.yEUCAUHOANVE.findMany({
+        const refundRequests = await this.prisma.yEUCAUHOANVE.findUnique({
             where: {
-                MaYeuCau: { in: MaYeuCaus },
+                MaYeuCau: MaYeuCau,
                 DeletedAt: null,
                 MaGiaoDich: null
             },
             include: {
-                HoaDon: {
-                    include: {
-                        Ves: true
-                    }
-                }
+                HoaDon: true
             }
         });
 
-        if (refundRequests.length !== MaYeuCaus.length) {
-            throw new BadRequestException('Một số yêu cầu hoàn vé không tồn tại hoặc đã được xử lý.');
+        if (!refundRequests) {
+            throw new BadRequestException('Yêu cầu hoàn vé không tồn tại hoặc đã được xử lý');
         }
-
-        const invoiceIds = refundRequests.map(req => req.MaHoaDon);
-        const uniqueInvoiceIds = [...new Set(invoiceIds)];
-
-        if (uniqueInvoiceIds.length > 1) {
-            throw new BadRequestException('Các yêu cầu hoàn vé phải thuộc cùng một hóa đơn để gộp giao dịch.');
-        }
-
-        const invoiceId = uniqueInvoiceIds[0];
-
-        const totalAmount = refundRequests.reduce((sum, req) => sum + Number(req.SoTien), 0);
 
         const ts = await this.prisma.$transaction(async (tx) => {
             const transaction = await tx.gIAODICH.create({
                 data: {
-                    MaHoaDon: invoiceId,
-                    TongTien: totalAmount,
+                    MaHoaDon: refundRequests.HoaDon.MaHoaDon,
+                    TongTien: refundRequests.SoTien,
                     LoaiGiaoDich: TransactionTypeEnum.HOANTIEN,
                     PhuongThuc: PhuongThuc,
                     NgayGiaoDich: new Date(),
@@ -348,7 +333,7 @@ export class TransactionService {
             });
 
             await tx.yEUCAUHOANVE.updateMany({
-                where: { MaYeuCau: { in: MaYeuCaus } },
+                where: { MaYeuCau: MaYeuCau },
                 data: {
                     MaGiaoDich: transaction.MaGiaoDich,
                     UpdatedAt: new Date()
