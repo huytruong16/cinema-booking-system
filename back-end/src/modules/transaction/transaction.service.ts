@@ -124,6 +124,7 @@ export class TransactionService {
                 LoaiGiaoDich: true,
                 TrangThai: true,
                 MaGiaoDich: true,
+                NgayGiaoDich: true,
                 HoaDon: {
                     select: {
                         CreatedAt: true,
