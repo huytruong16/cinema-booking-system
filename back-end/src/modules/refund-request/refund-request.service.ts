@@ -39,7 +39,15 @@ export class RefundRequestService {
                     DeletedAt: null
                 },
                 include: {
-                    Ves: true
+                    Ves: {
+                        include: {
+                            GheSuatChieu: {
+                                include: {
+                                    SuatChieu: true
+                                }
+                            }
+                        }
+                    }
                 }
             }
         )
@@ -57,7 +65,8 @@ export class RefundRequestService {
         if (param && param?.KieuDuLieu === 'int') {
             refundWindowHours = parseInt(param.GiaTri);
         }
-        const refundWindow = new Date(inv?.CreatedAt || new Date());
+
+        const refundWindow = new Date(inv?.Ves[0]?.GheSuatChieu.SuatChieu.ThoiGianBatDau || new Date());
         refundWindow.setHours(refundWindow.getHours() + refundWindowHours);
         if (new Date() > refundWindow) {
             throw new BadRequestException('Vé đã vượt quá thời gian hoàn vé cho phép');
