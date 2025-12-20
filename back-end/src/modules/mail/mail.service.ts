@@ -6,6 +6,7 @@ import { join } from 'path';
 import formatCurrency from 'src/libs/common/helpers/format-vn-currency';
 import InvoiceMailDto from './dto/invoice-mail.dto';
 import { RefundRequestStatusEnum } from 'src/libs/common/enums';
+import { console } from 'inspector';
 
 
 @Injectable()
@@ -87,7 +88,7 @@ export class MailService {
         );
 
         const bookingCode = invoiceData.Transaction.GiaoDich.HoaDon.Code;
-        const bookingDate = new Date(invoiceData.Transaction.GiaoDich.HoaDon.CreatedAt).toLocaleDateString('vi-VN');
+        const bookingDate = new Date(invoiceData.Transaction.GiaoDich.NgayGiaoDich).toLocaleDateString('vi-VN');
         const totalAmount = new Intl.NumberFormat('vi-VN').format(Number(invoiceData.Transaction.GiaoDich.HoaDon.TongTien));
 
         const movieName = invoiceData.Showtime.PhienBanPhim.Phim.TenHienThi;

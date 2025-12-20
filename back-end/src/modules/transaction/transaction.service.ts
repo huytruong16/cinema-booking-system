@@ -26,8 +26,8 @@ export class TransactionService {
         const emailData: InvoiceMailDto = {
             Transaction: {
                 GiaoDich: {
+                    NgayGiaoDich: invoice.HoaDon.GiaoDich.NgayGiaoDich,
                     HoaDon: {
-                        CreatedAt: invoice.CreatedAt.toLocaleDateString('vi-VN'),
                         TongTien: invoice.TongTien,
                         Email: invoice.Email,
                         Code: invoice.Code,
