@@ -282,86 +282,159 @@ export class ShowtimeService {
     }
 
     async createShowtime(payload: CreateShowtimeDto) {
-        const phienBan = await this.prisma.pHIENBANPHIM.findFirst({
-            where: {
-                MaPhienBanPhim: payload.MaPhienBanPhim,
-                DeletedAt: null,
-            },
+        return this.prisma.$transaction(async (tx) => {
+
+            const phienBan = await tx.pHIENBANPHIM.findFirst({
+                where: {
+                    MaPhienBanPhim: payload.MaPhienBanPhim,
+                    DeletedAt: null,
+                },
+            });
+
+            if (!phienBan) {
+                throw new NotFoundException('Phiên bản phim không tồn tại');
+            }
+
+            const phong = await tx.pHONGCHIEU.findFirst({
+                where: {
+                    MaPhongChieu: payload.MaPhongChieu,
+                    DeletedAt: null,
+                },
+            });
+
+            if (!phong) {
+                throw new NotFoundException('Phòng chiếu không tồn tại');
+            }
+
+            const showtime = await tx.sUATCHIEU.create({
+                data: {
+                    MaPhienBanPhim: payload.MaPhienBanPhim,
+                    MaPhongChieu: payload.MaPhongChieu,
+                    ThoiGianBatDau: new Date(payload.ThoiGianBatDau),
+                    ThoiGianKetThuc: new Date(payload.ThoiGianKetThuc),
+                },
+            });
+
+            const ghePhongChieus = await tx.gHE_PHONGCHIEU.findMany({
+                where: {
+                    MaPhongChieu: payload.MaPhongChieu,
+                    DeletedAt: null,
+                },
+                select: {
+                    MaGhePhongChieu: true,
+                },
+            });
+
+            if (ghePhongChieus.length === 0) {
+                throw new Error('Phòng chiếu chưa được cấu hình ghế');
+            }
+
+            await tx.gHE_SUATCHIEU.createMany({
+                data: ghePhongChieus.map(ghe => ({
+                    MaSuatChieu: showtime.MaSuatChieu,
+                    MaGhePhongChieu: ghe.MaGhePhongChieu
+                })),
+            });
+
+            return {
+                message: 'Tạo suất chiếu thành công',
+                MaSuatChieu: showtime.MaSuatChieu,
+                SoLuongGhe: ghePhongChieus.length,
+            };
         });
-
-        if (!phienBan) {
-            throw new NotFoundException('Phiên bản phim không tồn tại');
-        }
-
-        const phong = await this.prisma.pHONGCHIEU.findFirst({
-            where: {
-                MaPhongChieu: payload.MaPhongChieu,
-                DeletedAt: null,
-            },
-        });
-
-        if (!phong) {
-            throw new NotFoundException('Phòng chiếu không tồn tại');
-        }
-
-        const showtime = await this.prisma.sUATCHIEU.create({
-            data: {
-                MaPhienBanPhim: payload.MaPhienBanPhim,
-                MaPhongChieu: payload.MaPhongChieu,
-                ThoiGianBatDau: new Date(payload.ThoiGianBatDau),
-                ThoiGianKetThuc: new Date(payload.ThoiGianKetThuc),
-                CreatedAt: new Date(),
-            },
-        });
-
-        return {
-            message: 'Tạo suất chiếu thành công',
-            showtime,
-        };
     }
 
     async updateShowtime(id: string, updateDto: UpdateShowtimeDto) {
-        const showtime = await this.prisma.sUATCHIEU.findFirst({
-            where: { MaSuatChieu: id, DeletedAt: null },
+        return this.prisma.$transaction(async (tx) => {
+
+            const showtime = await tx.sUATCHIEU.findFirst({
+                where: { MaSuatChieu: id, DeletedAt: null },
+            });
+
+            if (!showtime) {
+                throw new NotFoundException(`Suất chiếu với ID ${id} không tồn tại`);
+            }
+
+            const updateData: any = {
+                UpdatedAt: new Date(),
+            };
+
+            if (updateDto.MaPhienBanPhim !== undefined) {
+                updateData.MaPhienBanPhim = updateDto.MaPhienBanPhim;
+            }
+
+            if (updateDto.ThoiGianBatDau !== undefined) {
+                updateData.ThoiGianBatDau = new Date(updateDto.ThoiGianBatDau);
+            }
+
+            if (updateDto.ThoiGianKetThuc !== undefined) {
+                updateData.ThoiGianKetThuc = new Date(updateDto.ThoiGianKetThuc);
+            }
+
+            if (updateDto.TrangThai !== undefined) {
+                updateData.TrangThai = updateDto.TrangThai;
+            }
+
+            if (
+                updateDto.MaPhongChieu !== undefined &&
+                updateDto.MaPhongChieu !== showtime.MaPhongChieu
+            ) {
+                const phongMoi = await tx.pHONGCHIEU.findFirst({
+                    where: {
+                        MaPhongChieu: updateDto.MaPhongChieu,
+                        DeletedAt: null,
+                    },
+                });
+
+                if (!phongMoi) {
+                    throw new NotFoundException('Phòng chiếu mới không tồn tại');
+                }
+
+                await tx.gHE_SUATCHIEU.updateMany({
+                    where: {
+                        MaSuatChieu: id,
+                        DeletedAt: null,
+                    },
+                    data: {
+                        DeletedAt: new Date(),
+                    },
+                });
+
+                const ghePhongChieus = await tx.gHE_PHONGCHIEU.findMany({
+                    where: {
+                        MaPhongChieu: updateDto.MaPhongChieu,
+                        DeletedAt: null,
+                    },
+                    select: {
+                        MaGhePhongChieu: true,
+                    },
+                });
+
+                if (ghePhongChieus.length === 0) {
+                    throw new Error('Phòng chiếu mới chưa được cấu hình ghế');
+                }
+
+                await tx.gHE_SUATCHIEU.createMany({
+                    data: ghePhongChieus.map(ghe => ({
+                        MaSuatChieu: id,
+                        MaGhePhongChieu: ghe.MaGhePhongChieu,
+                        TrangThai: 'CONTRONG',
+                    })),
+                });
+
+                updateData.MaPhongChieu = updateDto.MaPhongChieu;
+            }
+
+            const updated = await tx.sUATCHIEU.update({
+                where: { MaSuatChieu: id },
+                data: updateData,
+            });
+
+            return {
+                message: 'Cập nhật suất chiếu thành công',
+                showtime: updated,
+            };
         });
-
-        if (!showtime) {
-            throw new NotFoundException(`Suất chiếu với ID ${id} không tồn tại`);
-        }
-
-        const updateData: any = {
-            UpdatedAt: new Date(),
-        };
-
-        if (updateDto.MaPhienBanPhim !== undefined) {
-            updateData.MaPhienBanPhim = updateDto.MaPhienBanPhim;
-        }
-
-        if (updateDto.MaPhongChieu !== undefined) {
-            updateData.MaPhongChieu = updateDto.MaPhongChieu;
-        }
-
-        if (updateDto.ThoiGianBatDau !== undefined) {
-            updateData.ThoiGianBatDau = new Date(updateDto.ThoiGianBatDau);
-        }
-
-        if (updateDto.ThoiGianKetThuc !== undefined) {
-            updateData.ThoiGianKetThuc = new Date(updateDto.ThoiGianKetThuc);
-        }
-
-        if (updateDto.TrangThai !== undefined) {
-            updateData.TrangThai = updateDto.TrangThai;
-        }
-
-        const updated = await this.prisma.sUATCHIEU.update({
-            where: { MaSuatChieu: id },
-            data: updateData,
-        });
-
-        return {
-            message: 'Cập nhật suất chiếu thành công',
-            showtime: updated,
-        };
     }
 
     async removeShowtime(id: string) {
