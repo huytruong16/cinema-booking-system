@@ -1,10 +1,15 @@
-import { Controller, Get, Param, BadRequestException, UseGuards, Patch, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException, UseGuards, Patch, Body, UseInterceptors, UploadedFile, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { isUUID } from 'class-validator';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
+import { AssignEmployeeDto } from './dtos/assign-employee.dto';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Người dùng')
 @Controller('users')
@@ -71,6 +76,41 @@ export class UserController {
         @UploadedFile() file?: Express.Multer.File,
     ) {
         return this.userService.updateProfile(dto, file);
+    }
+
+    @Post('change-password')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Đổi mật khẩu người dùng hiện tại' })
+    @ApiBody({
+        description: 'Nhập mật khẩu hiện tại và mật khẩu mới',
+        type: ChangePasswordDto,
+    })
+    @ApiResponse({ status: 200, description: 'Đổi mật khẩu thành công' })
+    @ApiResponse({ status: 401, description: 'Mật khẩu hiện tại không đúng hoặc chưa đăng nhập' })
+    @ApiResponse({ status: 404, description: 'Người dùng không tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async changePassword(@Body() dto: ChangePasswordDto) {
+        return this.userService.changePassword(dto);
+    }
+
+    @Post('assign-employee')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(RoleEnum.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'ADMIN tạo tài khoản nhân viên mới' })
+    @ApiBody({
+        description: 'Thông tin tạo tài khoản nhân viên',
+        type: AssignEmployeeDto,
+    })
+    @ApiResponse({ status: 201, description: 'Tạo tài khoản nhân viên thành công' })
+    @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token không hợp lệ' })
+    @ApiResponse({ status: 409, description: 'Email đã tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async assignEmployee(
+        @Body() dto: AssignEmployeeDto,
+    ) {
+        return this.userService.assignEmployee(dto);
     }
 
 }

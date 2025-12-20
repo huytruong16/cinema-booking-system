@@ -6,7 +6,8 @@ import { Calendar, Clock, Ticket, Armchair, Ban, AlertCircle, CheckCircle2, Uten
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TicketDetail } from './TicketDetail'; // <--- IMPORT MỚI
+import { TicketDetail } from './TicketDetail';
+import { RefundDialog } from './RefundDialog';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ interface TicketProps {
 
 export function TicketCard({ ticket }: TicketProps) {
   const [currentStatus, setCurrentStatus] = useState(ticket.status);
-  const [isCancelling, setIsCancelling] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [resultDialog, setResultDialog] = useState<{
     open: boolean;
     type: 'success' | 'error';
@@ -55,22 +56,25 @@ export function TicketCard({ ticket }: TicketProps) {
 
   const isUpcoming = currentStatus === 'upcoming';
   const isCancelled = currentStatus === 'cancelled';
+  const isPendingRefund = currentStatus === 'pending_refund';
 
   const statusColor = isUpcoming 
     ? 'bg-green-500 hover:bg-green-600' 
     : isCancelled 
       ? 'bg-red-500 hover:bg-red-600' 
-      : 'bg-zinc-500 hover:bg-zinc-600';
+      : isPendingRefund
+        ? 'bg-yellow-500 hover:bg-yellow-600'
+        : 'bg-zinc-500 hover:bg-zinc-600';
 
   const statusText = isUpcoming 
     ? 'Sắp chiếu' 
     : isCancelled 
       ? 'Đã hủy' 
-      : 'Đã xem';
+      : isPendingRefund
+        ? 'Chờ hoàn tiền'
+        : 'Đã xem';
 
-  const handleCancelTicket = () => {
-    setIsCancelling(true);
-
+  const handleRefundClick = () => {
     const showDateTimeString = `${ticket.showDate}T${ticket.showTime}:00`;
     const showDateTime = new Date(showDateTimeString);
     const now = new Date();
@@ -78,27 +82,27 @@ export function TicketCard({ ticket }: TicketProps) {
     const diffInMs = showDateTime.getTime() - now.getTime();
     const diffInHours = diffInMs / (1000 * 60 * 60);
 
-    setTimeout(() => {
-      setIsCancelling(false);
-      if (diffInHours < 24) {
-        setResultDialog({
-          open: true,
-          type: 'error',
-          title: 'Yêu cầu thất bại',
-          message: 'Đã quá thời gian cho phép hoàn vé (phải trước giờ chiếu 24h).',
-        });
-        return;
-      }
-
-      setCurrentStatus('cancelled');
+    if (diffInHours < 24) {
       setResultDialog({
         open: true,
-        type: 'success',
-        title: 'Hủy vé thành công',
-        message: `Vé #${ticket.id.split('-')[1]} đã được hủy. Số tiền ${ticket.price.toLocaleString('vi-VN')}đ sẽ được hoàn về ví của bạn trong 24h.`,
+        type: 'error',
+        title: 'Yêu cầu thất bại',
+        message: 'Đã quá thời gian cho phép hoàn vé (phải trước giờ chiếu 24h).',
       });
+      return;
+    }
 
-    }, 1500); 
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundSuccess = () => {
+    setCurrentStatus('pending_refund');
+    setResultDialog({
+      open: true,
+      type: 'success',
+      title: 'Gửi yêu cầu thành công',
+      message: `Yêu cầu hoàn vé #${ticket.id.split('-')[1]} đã được gửi. Chúng tôi sẽ xử lý trong thời gian sớm nhất.`,
+    });
   };
 
   return (
@@ -168,33 +172,15 @@ export function TicketCard({ ticket }: TicketProps) {
 
               <div className="flex gap-2">
                   {isUpcoming && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-                          <Ban className="w-4 h-4 mr-2" /> 
-                          Hủy vé
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Yêu cầu hoàn vé?</AlertDialogTitle>
-                          <AlertDialogDescription className="text-zinc-400">
-                            Bạn có chắc chắn muốn hủy vé này không? <br/>
-                            Hành động này không thể hoàn tác.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-transparent border-zinc-700 hover:bg-zinc-800 text-white">Đóng</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleCancelTicket}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                            disabled={isCancelling}
-                          >
-                            {isCancelling ? "Đang xử lý..." : "Xác nhận hủy"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                      onClick={handleRefundClick}
+                    >
+                      <Ban className="w-4 h-4 mr-2" /> 
+                      Hoàn vé
+                    </Button>
                   )}
 
                   <Dialog>
@@ -214,6 +200,13 @@ export function TicketCard({ ticket }: TicketProps) {
           </CardContent>
         </div>
       </Card>
+
+      <RefundDialog 
+        open={refundDialogOpen} 
+        onOpenChange={setRefundDialogOpen}
+        ticketId={ticket.id}
+        onSuccess={handleRefundSuccess}
+      />
 
       <AlertDialog open={resultDialog.open} onOpenChange={(open) => setResultDialog(prev => ({ ...prev, open }))}>
         <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
