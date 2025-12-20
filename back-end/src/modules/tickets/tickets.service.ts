@@ -73,6 +73,16 @@ export class TicketsService {
         });
     }
 
+    async getTicketById(id: string) {
+        return await this.prisma.vE.findUnique({
+            where: {
+                MaVe: id,
+                DeletedAt: null
+            },
+            include: ticketIncludes
+        });
+    }
+
     async updateTicketStatus(id: string, status: TicketStatusEnum) {
         return this.prisma.vE.update({
             where: { MaVe: id },

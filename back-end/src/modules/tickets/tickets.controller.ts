@@ -21,7 +21,7 @@ export class TicketsController {
     @ApiParam({ name: 'id', description: 'Mã vé', required: true })
     findOne(@Param('id') id: string) {
         if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-        const ticket = this.ticketsService.getTicketByCode(id);
+        const ticket = this.ticketsService.getTicketById(id);
         if (!ticket) {
             throw new NotFoundException('Vé không tồn tại');
         }
