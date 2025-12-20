@@ -1,10 +1,11 @@
-import { Controller, Get, Param, BadRequestException, UseGuards, Patch, Body, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Param, BadRequestException, UseGuards, Patch, Body, UseInterceptors, UploadedFile, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { isUUID } from 'class-validator';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 
 @ApiTags('Người dùng')
 @Controller('users')
@@ -73,4 +74,19 @@ export class UserController {
         return this.userService.updateProfile(dto, file);
     }
 
+    @Post('change-password')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Đổi mật khẩu người dùng hiện tại' })
+    @ApiBody({
+        description: 'Nhập mật khẩu hiện tại và mật khẩu mới',
+        type: ChangePasswordDto,
+    })
+    @ApiResponse({ status: 200, description: 'Đổi mật khẩu thành công' })
+    @ApiResponse({ status: 401, description: 'Mật khẩu hiện tại không đúng hoặc chưa đăng nhập' })
+    @ApiResponse({ status: 404, description: 'Người dùng không tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async changePassword(@Body() dto: ChangePasswordDto) {
+        return this.userService.changePassword(dto);
+    }
 }
