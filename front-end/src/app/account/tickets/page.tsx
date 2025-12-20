@@ -97,8 +97,14 @@ function mapTicketResponseToCardProps(apiTicket: TicketResponse) {
   const now = new Date();
   
   let status = 'upcoming';
-  if (apiTicket.TrangThaiThanhToan === 'THATBAI') {
+  
+  const hasPendingRefund = apiTicket.Ves.some(v => v.TrangThai === 'CHOHOANTIEN');
+  const hasRefunded = apiTicket.Ves.some(v => v.TrangThai === 'DAHOAN');
+  
+  if (apiTicket.TrangThaiThanhToan === 'THATBAI' || hasRefunded) {
     status = 'cancelled';
+  } else if (hasPendingRefund) {
+    status = 'pending_refund';
   } else if (showDateObj < now) {
     status = 'completed';
   }
