@@ -1,4 +1,4 @@
-import { TicketStatusEnum, TransactionStatusEnum } from "src/libs/common/enums";
+import { TicketStatusEnum, TransactionEnum, TransactionStatusEnum } from "src/libs/common/enums";
 import VoucherTargetEnum from "src/libs/common/enums/voucher_target.enum";
 
 export default class GetInvoiceResponseDto {
@@ -8,11 +8,11 @@ export default class GetInvoiceResponseDto {
     Phim: Film;
     ThoiGianChieu: Date;
     PhongChieu: string;
-    Ves: Ve[];
+    Ves: Ticket[];
     Combos: Combo[];
-    KhuyenMais: KhuyenMai[];
+    KhuyenMais: Voucher[];
     NgayLap: Date;
-    TrangThaiGiaoDich: TransactionStatusEnum;
+    GiaoDich: Transaction;
     TongTien: number;
 }
 
@@ -27,14 +27,24 @@ class Film {
     PosterUrl: string | null;
 }
 
-class Ve {
+class Ticket {
     SoGhe: string;
     TrangThai: TicketStatusEnum;
     DonGia: number;
 }
 
-class KhuyenMai {
+class Voucher {
     TenKhuyenMai: string;
     LoaiKhuyenMai: VoucherTargetEnum;
     SoTienGiam: number;
+}
+
+class Transaction {
+    MaGiaoDich: string;
+    Code: string;
+    NgayGiaoDich: Date;
+    PhuongThuc: TransactionEnum;
+    TrangThai: TransactionStatusEnum;
+    LoaiGiaoDich: string;
+    NoiDung: string | null;
 }
