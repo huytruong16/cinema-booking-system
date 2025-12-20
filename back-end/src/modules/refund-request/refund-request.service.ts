@@ -35,7 +35,7 @@ export class RefundRequestService {
         const inv = await prisma.hOADON.findUnique(
             {
                 where: {
-                    MaHoaDon: refundRequestData.Code,
+                    MaHoaDon: refundRequestData.MaHoaDon,
                     DeletedAt: null
                 },
                 include: {

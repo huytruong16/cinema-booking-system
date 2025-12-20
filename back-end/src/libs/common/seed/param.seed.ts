@@ -24,6 +24,11 @@ const params = [
         GiaTri: '240',
         KieuDuLieu: 'number',
     },
+    {
+        TenThamSo: 'SeatHoldDuration',
+        GiaTri: '5',
+        KieuDuLieu: 'number',
+    }
 ];
 
 async function seed() {

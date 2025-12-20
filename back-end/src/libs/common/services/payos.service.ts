@@ -14,7 +14,7 @@ export class PayosService {
         );
     }
 
-    async getPaymentLinkUrl(orderCode: number, amount: number, description: string): Promise<{ paymentLinkId: string, checkoutUrl: string }> {
+    async getPaymentLinkUrl(orderCode: number, amount: number, description: string): Promise<{ paymentLinkId: string, checkoutUrl: string, description: string }> {
         const now = Math.floor(Date.now() / 1000);
         const expiredAt = now + 10 * 60;
 
@@ -31,6 +31,7 @@ export class PayosService {
         return {
             paymentLinkId: data.paymentLinkId,
             checkoutUrl: data.checkoutUrl,
+            description: data.description,
         };
     }
 

@@ -2,12 +2,12 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 export class TransactionDto {
     GiaoDich: {
+        NgayGiaoDich: string;
         HoaDon: InvoiceDto;
     };
 }
 
 export class InvoiceDto {
-    CreatedAt: string;
     TongTien: Decimal;
     Email: string;
     Code: string;

@@ -22,12 +22,13 @@ export class TransactionService {
         @Inject(REQUEST) private readonly request: any
     ) { }
 
-    private async sendInvoiceEmail(invoice: NonNullable<any>) {
+    private async sendInvoiceEmail(transaction: NonNullable<any>) {
+        const invoice = transaction.HoaDon;
         const emailData: InvoiceMailDto = {
             Transaction: {
                 GiaoDich: {
+                    NgayGiaoDich: transaction.NgayGiaoDich,
                     HoaDon: {
-                        CreatedAt: invoice.CreatedAt.toLocaleDateString('vi-VN'),
                         TongTien: invoice.TongTien,
                         Email: invoice.Email,
                         Code: invoice.Code,
@@ -124,6 +125,7 @@ export class TransactionService {
                 LoaiGiaoDich: true,
                 TrangThai: true,
                 MaGiaoDich: true,
+                NgayGiaoDich: true,
                 HoaDon: {
                     select: {
                         CreatedAt: true,
@@ -230,7 +232,7 @@ export class TransactionService {
         });
 
         if (isPaid) {
-            await this.sendInvoiceEmail(transaction.HoaDon);
+            await this.sendInvoiceEmail(transaction);
         }
 
         return { success: true };
@@ -340,7 +342,8 @@ export class TransactionService {
                     MaNhanVien: staff!.MaNhanVien,
                     Code: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
                     GiaoDichUrl: '',
-                    LinkId: ''
+                    LinkId: '',
+                    NoiDung: `Hoàn tiền`,
                 }
             });
 

@@ -2,9 +2,9 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsString, IsUUID, Matches } from "class-validator";
 
 export class CreateRefundRequestDto {
-    @ApiProperty({ description: "Danh sách mã hóa đơn", example: "550e8400-e29b-41d4-a716-446655440000" })
+    @ApiProperty({ description: "Mã hóa đơn", example: "550e8400-e29b-41d4-a716-446655440000" })
     @IsUUID("4", { message: 'Mỗi mã hóa đơn phải là UUID v4 hợp lệ' })
-    Code: string;
+    MaHoaDon: string;
 
     @ApiProperty({ description: "Lý do hoàn vé", example: "Khách hàng có việc bận" })
     @IsString({ message: 'Lý do hoàn vé phải là chuỗi ký tự' })
