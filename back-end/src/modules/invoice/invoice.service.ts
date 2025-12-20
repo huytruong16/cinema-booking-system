@@ -55,8 +55,13 @@ export class InvoiceService {
         TongTien: true,
         GiaoDichs: {
           select: {
+            MaGiaoDich: true,
+            Code: true,
             TrangThai: true,
             LoaiGiaoDich: true,
+            PhuongThuc: true,
+            NgayGiaoDich: true,
+            NoiDung: true
           }
         },
         HoaDonCombos: {
@@ -242,7 +247,15 @@ export class InvoiceService {
         SoTienGiam: Number(hdkm.GiaTriGiam)
       })),
       NgayLap: invoice.NgayLap,
-      TrangThaiGiaoDich: transaction?.TrangThai as TransactionStatusEnum,
+      GiaoDich: {
+        MaGiaoDich: transaction.MaGiaoDich,
+        Code: transaction.Code,
+        NgayGiaoDich: transaction.NgayGiaoDich,
+        PhuongThuc: transaction.PhuongThuc,
+        TrangThai: transaction.TrangThai,
+        LoaiGiaoDich: transaction.LoaiGiaoDich,
+        NoiDung: transaction.NoiDung
+      },
       TongTien: Number(invoice.TongTien)
     };
   }
@@ -352,7 +365,7 @@ export class InvoiceService {
       });
     }
 
-    let paymentData: { paymentLinkId: string, checkoutUrl: string } | undefined;
+    let paymentData: { paymentLinkId: string, checkoutUrl: string, description: string } | undefined;
 
     if (request.LoaiGiaoDich === TransactionEnum.TRUCTUYEN) {
       paymentData =
@@ -373,6 +386,7 @@ export class InvoiceService {
           LinkId: paymentData ? paymentData.paymentLinkId : '',
           GiaoDichUrl: paymentData ? paymentData.checkoutUrl : '',
           MaNhanVien: (user && user.VaiTro === RoleEnum.NHANVIEN) ? user.MaNguoiDung : null,
+          NoiDung: paymentData ? paymentData.description : null
         }
       });
     } else {
