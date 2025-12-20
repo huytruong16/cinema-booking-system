@@ -22,11 +22,12 @@ export class TransactionService {
         @Inject(REQUEST) private readonly request: any
     ) { }
 
-    private async sendInvoiceEmail(invoice: NonNullable<any>) {
+    private async sendInvoiceEmail(transaction: NonNullable<any>) {
+        const invoice = transaction.HoaDon;
         const emailData: InvoiceMailDto = {
             Transaction: {
                 GiaoDich: {
-                    NgayGiaoDich: invoice.HoaDon.GiaoDich.NgayGiaoDich,
+                    NgayGiaoDich: transaction.NgayGiaoDich,
                     HoaDon: {
                         TongTien: invoice.TongTien,
                         Email: invoice.Email,
@@ -231,7 +232,7 @@ export class TransactionService {
         });
 
         if (isPaid) {
-            await this.sendInvoiceEmail(transaction.HoaDon);
+            await this.sendInvoiceEmail(transaction);
         }
 
         return { success: true };
