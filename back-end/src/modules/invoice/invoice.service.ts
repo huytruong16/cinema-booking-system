@@ -9,6 +9,7 @@ import VoucherTargetEnum from 'src/libs/common/enums/voucher_target.enum';
 import { ConfigService } from '@nestjs/config';
 import { GetInvoiceDto } from './dtos/get-invoice.dto';
 import GetInvoiceResponseDto from './dtos/get-invoice-response.dto';
+import { TicketsService } from '../tickets/tickets.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
@@ -16,6 +17,7 @@ export class InvoiceService {
     private readonly prisma: PrismaService,
     private readonly payosService: PayosService,
     private readonly configService: ConfigService,
+    private readonly ticketsService: TicketsService,
     @Inject(REQUEST) private readonly request: any,
   ) { }
 
@@ -558,5 +560,29 @@ export class InvoiceService {
       });
       return seatPrices;
     }
+  }
+
+  async checkIn(code: string) {
+    const invoice = await this.prisma.hOADON.findFirst({
+      where: {
+        Code: code,
+      },
+      include: {
+        Ves: true,
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException('Hóa đơn không tồn tại');
+    }
+
+    let ticketCodeAvailableList: string[] = [];
+    for (const ticket of invoice.Ves) {
+      if (ticket.TrangThaiVe === TicketStatusEnum.CHUASUDUNG) {
+        ticketCodeAvailableList.push(ticket.Code);
+      }
+    }
+
+    return await this.ticketsService.generateTicketsPdf(ticketCodeAvailableList);
   }
 }
