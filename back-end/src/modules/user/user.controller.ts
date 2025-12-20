@@ -6,6 +6,10 @@ import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { AssignEmployeeDto } from './dtos/assign-employee.dto';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Người dùng')
 @Controller('users')
@@ -89,4 +93,24 @@ export class UserController {
     async changePassword(@Body() dto: ChangePasswordDto) {
         return this.userService.changePassword(dto);
     }
+
+    @Post('assign-employee')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(RoleEnum.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'ADMIN tạo tài khoản nhân viên mới' })
+    @ApiBody({
+        description: 'Thông tin tạo tài khoản nhân viên',
+        type: AssignEmployeeDto,
+    })
+    @ApiResponse({ status: 201, description: 'Tạo tài khoản nhân viên thành công' })
+    @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token không hợp lệ' })
+    @ApiResponse({ status: 409, description: 'Email đã tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async assignEmployee(
+        @Body() dto: AssignEmployeeDto,
+    ) {
+        return this.userService.assignEmployee(dto);
+    }
+
 }
