@@ -6,19 +6,6 @@ import { SeatStatusEnum } from 'src/libs/common/enums';
 
 @Injectable()
 export class SeatService {
-    async checkAvailableSeats(dto: SeatCheckRequestDto): Promise<SeatCheckResponseDto> {
-        const seat = await this.prisma.gHE_SUATCHIEU.findFirst(
-            {
-                where: { MaGheSuatChieu: dto.MaGheSuatChieu, DeletedAt: null },
-            }
-        );
-
-        if (!seat) {
-            throw new NotFoundException('Ghế suất chiếu không tồn tại');
-        }
-
-        return { ConTrong: seat.TrangThai === SeatStatusEnum.CONTRONG };
-    }
     constructor(
         readonly prisma: PrismaService,
     ) { }
@@ -75,5 +62,59 @@ export class SeatService {
         }
 
         return seat;
+    }
+
+    async checkAvailableSeats(id: string): Promise<SeatCheckResponseDto> {
+        const prisma = this.prisma;
+        const seat = await this.prisma.gHE_SUATCHIEU.findFirst(
+            {
+                where: { MaGheSuatChieu: id, DeletedAt: null },
+            }
+        );
+
+        if (!seat) {
+            throw new NotFoundException('Ghế suất chiếu không tồn tại');
+        }
+
+        if (seat.TrangThai === SeatStatusEnum.CONTRONG) {
+            await this.prisma.gHE_SUATCHIEU.update({
+                where: { MaGheSuatChieu: id },
+                data: { TrangThai: SeatStatusEnum.DANGGIU, UpdatedAt: new Date() },
+            });
+
+            await holdSeatForDuration();
+
+            return { ConTrong: true };
+        }
+
+        return { ConTrong: false };
+
+        async function holdSeatForDuration() {
+            let holdMinutes = 5;
+
+            const param = await prisma.tHAMSO.findFirst({ where: { TenThamSo: 'SeatHoldDuration' } });
+            if (param && param.GiaTri && param.KieuDuLieu === 'number') {
+                const n = Number(param.GiaTri);
+                if (!isNaN(n) && n > 0) holdMinutes = n;
+            }
+
+            const timeoutMs = holdMinutes * 60 * 1000;
+
+            setTimeout(async () => {
+                try {
+                    const current = await prisma.gHE_SUATCHIEU.findFirst({
+                        where: { MaGheSuatChieu: id },
+                    });
+                    if (current && current.TrangThai === SeatStatusEnum.DANGGIU) {
+                        await prisma.gHE_SUATCHIEU.update({
+                            where: { MaGheSuatChieu: id },
+                            data: { TrangThai: SeatStatusEnum.CONTRONG, UpdatedAt: new Date() },
+                        });
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }, timeoutMs);
+        }
     }
 }

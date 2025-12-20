@@ -51,10 +51,12 @@ export class SeatController {
         return this.seatService.getSeatById(id);
     }
 
-    @Post('/check-available')
-    @ApiOperation({ summary: 'Kiểm tra ghế phòng chiếu có còn trống không', description: 'Được gọi khi khách hàng nhấn chọn vào 1 ghế trong suất chiếu để đặt vé' })
+    @Get(':id/check-available')
+    @ApiOperation({ summary: 'Kiểm tra ghế phòng chiếu có còn trống không, giữ ghế', description: 'Được gọi khi khách hàng nhấn chọn vào 1 ghế trong suất chiếu để đặt vé' })
+    @ApiParam({ name: 'id', description: 'Mã ghế suất chiếu', required: true })
     @ApiResponse({ status: 200 })
-    async checkAvailableSeats(@Body() dto: SeatCheckRequestDto) {
-        return this.seatService.checkAvailableSeats(dto);
+    async checkAvailableSeats(@Param('id') id: string) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.seatService.checkAvailableSeats(id);
     }
 }
