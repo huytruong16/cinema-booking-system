@@ -1,10 +1,12 @@
-import { Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { REQUEST } from '@nestjs/core';
 import { StorageService } from '../storage/storage.service';
 import { UpdateProfileDto } from './dtos/update-profile.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import bcryptUtil from '../../libs/common/utils/bcrypt.util';
+import { AssignEmployeeDto } from './dtos/assign-employee.dto';
+import { RoleEnum, UserStatusEnum } from 'src/libs/common/enums';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
@@ -163,4 +165,42 @@ export class UserService {
         return { message: 'Đổi mật khẩu thành công' };
     }
 
+    async assignEmployee(dto: AssignEmployeeDto) {
+        const { Email, MatKhau, HoTen, NgayVaoLam } = dto;
+
+        const existingUser = await this.prisma.nGUOIDUNGPHANMEM.findUnique({
+            where: { Email },
+        });
+
+        if (existingUser) {
+            throw new ConflictException('Email đã tồn tại');
+        }
+
+        const hashedPassword = await bcryptUtil.hashPassword(MatKhau);
+
+        return this.prisma.$transaction(async (tx) => {
+            const user = await tx.nGUOIDUNGPHANMEM.create({
+                data: {
+                    Email,
+                    HoTen,
+                    MatKhau: hashedPassword,
+                    VaiTro: RoleEnum.NHANVIEN,
+                    TrangThai: UserStatusEnum.CONHOATDONG,
+                },
+            });
+
+            const employee = await tx.nHANVIEN.create({
+                data: {
+                    MaNguoiDung: user.MaNguoiDung,
+                    NgayVaoLam: new Date(NgayVaoLam),
+                },
+            });
+
+            return {
+                message: 'Tạo tài khoản nhân viên thành công',
+                user,
+                employee,
+            };
+        });
+    }
 }
