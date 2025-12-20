@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -194,7 +195,6 @@ export default function InvoiceManagementPage() {
       const rawData: any[] = res.data || [];
 
       const mappedData: HoaDon[] = rawData.map((inv) => {
-        // Map Giao dịch
         const listGiaoDich: GiaoDich[] = (inv.GiaoDichs || []).map(
           (gd: any) => ({
             MaGiaoDich: gd.MaGiaoDich,
@@ -727,7 +727,7 @@ function InvoiceDetailDialog({
                         <TableCell className="text-center">
                           <Badge
                             variant="secondary"
-                            className="bg-slate-800 min-w-[3rem] justify-center"
+                            className="bg-slate-800 min-w-[3rem] justify-center text-white"
                           >
                             {ve.Ghe}
                           </Badge>
@@ -838,7 +838,7 @@ function InvoiceDetailDialog({
                           {km.Code}
                         </Badge>
                         <span className="text-slate-400 text-xs truncate max-w-[300px]">
-                          {km.MoTa || "Giảm giá hóa đơn"}
+                          {km.MoTa || "Giảm giá"}
                         </span>
                       </div>
                       <span className="text-green-400 font-medium">
@@ -846,6 +846,15 @@ function InvoiceDetailDialog({
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {totalGiamGia > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Tổng giảm giá:</span>
+                  <span className="text-green-400 font-bold">
+                    -{formatCurrency(totalGiamGia)}
+                  </span>
                 </div>
               )}
 

@@ -116,8 +116,12 @@ export default function AdminDashboard() {
       const mappedMovies: TopMovie[] = Array.isArray(moviesRes)
         ? moviesRes.map((item: any) => ({
             id: item.Phim?.MaPhim || Math.random(),
-            name: item.Phim?.TenPhim || "Unknown",
-            image: item.Phim?.AnhBia || "",
+            name:
+              item.Phim?.TenHienThi ||
+              item.Phim?.TenPhim ||
+              item.Phim?.TenGoc ||
+              "Unknown",
+            image: item.Phim?.PosterUrl || item.Phim?.AnhBia || "",
             revenue: Number(item.DoanhThu || 0),
             ticketCount: Number(item.SoVeDaBan || 0),
             rating: 5,
