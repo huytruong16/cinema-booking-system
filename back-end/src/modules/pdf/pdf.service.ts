@@ -94,7 +94,15 @@ export class PdfService {
         doc.rect(0, 0, 600, 250).fill('#ffffff');
         doc.rect(10, 10, 580, 230).strokeColor('#333').lineWidth(2).stroke();
 
-        const logoPath = path.join(process.cwd(), 'assets', 'images', 'logo.png');
+        const prodLogoPath = path.join(process.cwd(), 'dist', 'assets', 'images', 'logo.png');
+        const localLogoPath = path.join(process.cwd(), 'assets', 'images', 'logo.png');
+
+        let logoPath = '';
+        if (fs.existsSync(prodLogoPath)) {
+            logoPath = prodLogoPath;
+        } else if (fs.existsSync(localLogoPath)) {
+            logoPath = localLogoPath;
+        }
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 });
         }
