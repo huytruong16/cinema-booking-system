@@ -27,7 +27,8 @@ export class ScreeningRoomService {
                             select: {
                                 MaLoaiGhe: true,
                                 LoaiGhe: true,
-                                HeSoGiaGhe: true
+                                HeSoGiaGhe: true,
+                                MauSac: true
                             }
                         }
                     }

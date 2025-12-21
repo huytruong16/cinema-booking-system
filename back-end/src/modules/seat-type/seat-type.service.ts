@@ -46,6 +46,7 @@ export class SeatTypeService {
                 LoaiGhe: payload.LoaiGhe,
                 HeSoGiaGhe: payload.HeSoGiaGhe ?? 1.0,
                 CreatedAt: new Date(),
+                MauSac: payload.MauSac,
             },
         });
 
@@ -93,6 +94,10 @@ export class SeatTypeService {
 
         if (updateDto.HeSoGiaGhe !== undefined) {
             updateData.HeSoGiaGhe = updateDto.HeSoGiaGhe;
+        }
+
+        if (updateDto.MauSac !== undefined) {
+            updateData.MauSac = updateDto.MauSac;
         }
 
         const updated = await this.prisma.lOAIGHE.update({
