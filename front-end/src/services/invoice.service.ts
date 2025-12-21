@@ -71,6 +71,13 @@ export const invoiceService = {
     return res.data;
   },
 
+  printInvoice: async (code: string) => {
+    const res = await apiClient.get(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob', 
+    });
+    return res.data; 
+  },
+
   createRefundRequest: async (data: { Code: string[]; LyDo: string; MaNganHang?: string; SoTaiKhoan?: string; ChuTaiKhoan?: string }) => {
 
     const payload = {

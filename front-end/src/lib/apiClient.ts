@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 
 const isServer = typeof window === 'undefined';
@@ -51,7 +52,7 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 && 
       !originalRequest._retry && 
-      !originalRequest.url?.includes('/auth/refresh') 
+      !originalRequest.url?.includes('/auth/refresh-token') 
     ) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
@@ -70,7 +71,12 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await api.get<RefreshTokenResponse>('/auth/refresh'); 
+        const res = await axios.get<RefreshTokenResponse>(
+            `${process.env.NEXT_PUBLIC_API_URL || "https://cinema-booking-system-xkgg.onrender.com"}/auth/refresh-token`,
+            { 
+                withCredentials: true 
+            }
+        ); 
 
         const { accessToken } = res.data;
 
@@ -89,6 +95,7 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         
         if (!isServer) {
+          console.error("Refresh token failed, logging out...");
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
           

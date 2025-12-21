@@ -58,6 +58,7 @@ import {
   Clock,
   Ticket,
   Popcorn,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
@@ -178,7 +179,6 @@ export default function InvoiceManagementPage() {
   const [invoices, setInvoices] = useState<HoaDon[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // States cho Filter
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -187,7 +187,6 @@ export default function InvoiceManagementPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
-  // --- FETCH DATA ---
   const fetchInvoices = async () => {
     setLoading(true);
     try {
@@ -195,34 +194,47 @@ export default function InvoiceManagementPage() {
       const rawData: any[] = res.data || [];
 
       const mappedData: HoaDon[] = rawData.map((inv) => {
-        const listGiaoDich: GiaoDich[] = (inv.GiaoDichs || []).map(
-          (gd: any) => ({
+        let listGiaoDich: GiaoDich[] = [];
+        if (inv.GiaoDich) {
+          listGiaoDich.push({
+            MaGiaoDich: inv.GiaoDich.MaGiaoDich,
+            Code: inv.GiaoDich.Code,
+            PhuongThuc: inv.GiaoDich.PhuongThuc,
+            TongTien: Number(inv.GiaoDich.TongTien || inv.TongTien),
+            TrangThai: inv.GiaoDich.TrangThai,
+            NgayGiaoDich: parseSafeDate(inv.GiaoDich.NgayGiaoDich),
+            LoaiGiaoDich: inv.GiaoDich.LoaiGiaoDich,
+            NoiDung: inv.GiaoDich.NoiDung,
+          });
+        } else if (inv.GiaoDichs && Array.isArray(inv.GiaoDichs)) {
+          listGiaoDich = inv.GiaoDichs.map((gd: any) => ({
             MaGiaoDich: gd.MaGiaoDich,
-            Code: gd.Code || "GD-UNK",
-            PhuongThuc: gd.PhuongThuc || "TRUCTUYEN",
+            Code: gd.Code,
+            PhuongThuc: gd.PhuongThuc,
             TongTien: Number(gd.TongTien),
             TrangThai: gd.TrangThai,
-            NgayGiaoDich: parseSafeDate(gd.NgayGiaoDich || inv.NgayLap),
-            LoaiGiaoDich: gd.LoaiGiaoDich || "MUAVE",
+            NgayGiaoDich: parseSafeDate(gd.NgayGiaoDich),
+            LoaiGiaoDich: gd.LoaiGiaoDich,
             NoiDung: gd.NoiDung,
-          })
-        );
-
-        if (listGiaoDich.length === 0) {
+          }));
+        }
+        // 3. Fallback
+        else {
           listGiaoDich.push({
             MaGiaoDich: "temp-" + inv.MaHoaDon,
             Code: "TXN-" + inv.Code,
             PhuongThuc: "TRUCTUYEN",
             TongTien: Number(inv.TongTien),
-            TrangThai: "THANHCONG",
+            TrangThai: inv.TrangThaiGiaoDich || "THANHCONG",
             NgayGiaoDich: parseSafeDate(inv.NgayLap),
             LoaiGiaoDich: "MUAVE",
           });
         }
 
+        // Map Vé
         const listVe: VeMua[] = (inv.Ves || []).map((v: any, idx: number) => ({
-          MaVe: `${inv.MaHoaDon}_${idx}`,
-          Code: `${inv.Code}_${idx}`,
+          MaVe: `${inv.MaHoaDon}_ve_${idx}`,
+          Code: `${inv.Code}_ve_${idx}`,
           TenPhim: inv.Phim?.TenPhim || "Không xác định",
           PosterUrl: inv.Phim?.PosterUrl || "",
           PhongChieu: inv.PhongChieu || "Không xác định",
@@ -231,18 +243,20 @@ export default function InvoiceManagementPage() {
           DaHoan: v.TrangThai === "DAHOAN" || v.TrangThai === "CHOHOANTIEN",
         }));
 
+        // Map Combo - GIỮ NGUYÊN ĐƠN GIÁ TỪ BACKEND
         const listCombo: ComboMua[] = (inv.Combos || []).map(
           (c: any, idx: number) => ({
-            MaCombo: c.MaCombo || `${inv.MaHoaDon}_C_${idx}`,
+            MaCombo: `${inv.MaHoaDon}_cb_${idx}`,
             TenCombo: c.TenCombo || "Combo",
             HinhAnh: c.HinhAnh || "",
-            SoLuong: c.SoLuong || 1,
-            DonGia: Number(c.DonGia || 0),
+            SoLuong: Number(c.SoLuong || 0),
+            DonGia: Number(c.DonGia || 0), // Sử dụng trực tiếp đơn giá từ BE
           })
         );
 
+        // Map Khuyến Mãi
         const listKhuyenMai: KhuyenMai[] = (inv.KhuyenMais || []).map(
-          (k: any) => ({
+          (k: any, idx: number) => ({
             Code: k.TenKhuyenMai || "KM",
             SoTienGiam: Number(k.SoTienGiam || 0),
             MoTa: k.LoaiKhuyenMai,
@@ -304,15 +318,67 @@ export default function InvoiceManagementPage() {
     });
   }, [invoices, searchTerm, statusFilter, dateRange]);
 
-  // --- HANDLERS ---
   const handleViewDetail = (invoice: HoaDon) => {
     setSelectedInvoice(invoice);
     setIsDetailOpen(true);
   };
 
-  const handlePrintInvoice = () => {
-    toast.info("Chức năng đang phát triển...");
+  const handlePrintInvoice = async () => {
+    if (!selectedInvoice) return;
+
+    // 1. Kiểm tra nhanh ở Frontend trước khi gọi API (Optional)
+    if (!selectedInvoice.Ves || selectedInvoice.Ves.length === 0) {
+      toast.error("Hóa đơn này chỉ có Combo hoặc không có vé để in.");
+      return;
+    }
+
+    const toastId = toast.loading("Đang tải hóa đơn PDF...");
+
+    try {
+      // Gọi API
+      const blobData = await invoiceService.printInvoice(selectedInvoice.Code);
+
+      // Xử lý file PDF thành công
+      const blob = new Blob([blobData], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const pdfWindow = window.open(url, "_blank");
+
+      if (!pdfWindow) {
+        toast.error(
+          "Trình duyệt đã chặn cửa sổ bật lên. Vui lòng cho phép để xem hóa đơn.",
+          { id: toastId }
+        );
+      } else {
+        toast.success("Đã mở hóa đơn thành công!", { id: toastId });
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error: any) {
+      console.error("Print invoice error:", error);
+
+      // 2. XỬ LÝ LỖI BLOB: Đọc message JSON từ Blob lỗi
+      if (error.response && error.response.data instanceof Blob) {
+        try {
+          // Đọc text từ blob
+          const errorText = await error.response.data.text();
+          // Parse JSON: { "message": "Không có vé nào để in", ... }
+          const errorJson = JSON.parse(errorText);
+
+          // Hiển thị message từ BE
+          toast.error(errorJson.message || "Không thể in hóa đơn này.", {
+            id: toastId,
+          });
+        } catch (e) {
+          // Fallback nếu không parse được JSON
+          toast.error("Lỗi khi tải file hóa đơn.", { id: toastId });
+        }
+      } else {
+        // Lỗi mạng hoặc lỗi khác không có response data
+        toast.error("Lỗi kết nối đến máy chủ.", { id: toastId });
+      }
+    }
   };
+
 
   const handleCreateRefundRequest = async (reason: string) => {
     if (!selectedInvoice) return;
@@ -874,60 +940,66 @@ function InvoiceDetailDialog({
                 <CreditCard className="size-4" /> Lịch sử giao dịch
               </h3>
               <div className="space-y-3">
-                {invoice.GiaoDichs.map((gd) => (
-                  <div
-                    key={gd.MaGiaoDich}
-                    className="flex items-center justify-between p-3 rounded border border-slate-800 bg-slate-900/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "p-2 rounded-full",
-                          gd.TrangThai === "THANHCONG"
-                            ? "bg-green-500/10 text-green-500"
-                            : "bg-red-500/10 text-red-500"
-                        )}
-                      >
-                        <CreditCard className="size-5" />
+                {invoice.GiaoDichs && invoice.GiaoDichs.length > 0 ? (
+                  invoice.GiaoDichs.map((gd) => (
+                    <div
+                      key={gd.MaGiaoDich}
+                      className="flex items-center justify-between p-3 rounded border border-slate-800 bg-slate-900/30"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "p-2 rounded-full",
+                            gd.TrangThai === "THANHCONG"
+                              ? "bg-green-500/10 text-green-500"
+                              : "bg-red-500/10 text-red-500"
+                          )}
+                        >
+                          <CreditCard className="size-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm text-slate-200">
+                            {getPaymentMethodLabel(gd.PhuongThuc)}
+                            <span className="text-slate-500 mx-2">•</span>
+                            <span className="text-xs font-normal text-slate-400 font-mono">
+                              {gd.Code}
+                            </span>
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {format(gd.NgayGiaoDich, "HH:mm:ss dd/MM/yyyy")}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm text-slate-200">
-                          {getPaymentMethodLabel(gd.PhuongThuc)}
-                          <span className="text-slate-500 mx-2">•</span>
-                          <span className="text-xs font-normal text-slate-400 font-mono">
-                            {gd.Code}
-                          </span>
+                      <div className="text-right">
+                        <p
+                          className={cn(
+                            "font-bold",
+                            gd.LoaiGiaoDich === "HOANTIEN"
+                              ? "text-red-400"
+                              : "text-slate-200"
+                          )}
+                        >
+                          {gd.LoaiGiaoDich === "HOANTIEN" ? "-" : "+"}
+                          {formatCurrency(gd.TongTien)}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          {format(gd.NgayGiaoDich, "HH:mm:ss dd/MM/yyyy")}
-                        </p>
+                        <span
+                          className={cn(
+                            "text-xs",
+                            gd.TrangThai === "THANHCONG"
+                              ? "text-green-500"
+                              : "text-red-500"
+                          )}
+                        >
+                          {getStatusLabel(gd.TrangThai)}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={cn(
-                          "font-bold",
-                          gd.LoaiGiaoDich === "HOANTIEN"
-                            ? "text-red-400"
-                            : "text-slate-200"
-                        )}
-                      >
-                        {gd.LoaiGiaoDich === "HOANTIEN" ? "-" : "+"}
-                        {formatCurrency(gd.TongTien)}
-                      </p>
-                      <span
-                        className={cn(
-                          "text-xs",
-                          gd.TrangThai === "THANHCONG"
-                            ? "text-green-500"
-                            : "text-red-500"
-                        )}
-                      >
-                        {getStatusLabel(gd.TrangThai)}
-                      </span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-slate-500 py-4 italic text-sm border border-dashed border-slate-800 rounded">
+                    Chưa có lịch sử giao dịch nào.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
