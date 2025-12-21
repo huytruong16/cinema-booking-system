@@ -74,10 +74,19 @@ export class PdfService {
     }
 
     private registerFonts(doc: PDFKit.PDFDocument) {
-        const fontPathRegular = path.join(process.cwd(), 'assets', 'fonts', 'Arial.ttf');
-        const fontPathBold = path.join(process.cwd(), 'assets', 'fonts', 'Arial-Bold.ttf');
-        doc.registerFont('Arial', fontPathRegular);
-        doc.registerFont('Arial-Bold', fontPathBold);
+        const prodPath = path.join(process.cwd(), 'dist', 'assets', 'fonts', 'Arial.ttf');
+        const localPath = path.join(process.cwd(), 'assets', 'fonts', 'Arial.ttf');
+
+        let finalPath = '';
+
+        if (fs.existsSync(prodPath)) {
+            finalPath = prodPath;
+        } else if (fs.existsSync(localPath)) {
+            finalPath = localPath;
+        }
+
+        doc.registerFont('Arial', finalPath);
+        doc.registerFont('Arial-Bold', finalPath.replace('Arial.ttf', 'Arial-Bold.ttf'));
     }
 
     private drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
