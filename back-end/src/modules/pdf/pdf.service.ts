@@ -42,18 +42,31 @@ export class PdfService {
             },
         });
 
-        return new Promise(async (resolve) => {
+        const ticketsWithQR = await Promise.all(tickets.map(async (ticket) => {
+            try {
+                const qrBuffer = await QRCode.toBuffer(ticket.Code, {
+                    errorCorrectionLevel: 'H',
+                    width: 150,
+                });
+                return { ...ticket, qrBuffer };
+            } catch (e) {
+                return { ...ticket, qrBuffer: null };
+            }
+        }));
+
+        return new Promise((resolve, reject) => {
             const doc = new PDFDocument({ size: [600, 250], margin: 0, autoFirstPage: false });
             const buffers: Buffer[] = [];
 
-            doc.on('data', (buffer) => buffers.push(buffer));
+            doc.on('data', (chunk) => buffers.push(chunk));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', (err) => reject(err));
 
             this.registerFonts(doc);
 
-            for (const ticket of tickets) {
+            for (const ticket of ticketsWithQR) {
                 doc.addPage({ size: [600, 250], margin: 0 });
-                await this.drawTicket(doc, ticket);
+                this.drawTicket(doc, ticket);
             }
 
             doc.end();
@@ -67,7 +80,7 @@ export class PdfService {
         doc.registerFont('Arial-Bold', fontPathBold);
     }
 
-    private async drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
+    private drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
         doc.font('Arial');
         doc.rect(0, 0, 600, 250).fill('#ffffff');
         doc.rect(10, 10, 580, 230).strokeColor('#333').lineWidth(2).stroke();
@@ -133,19 +146,9 @@ export class PdfService {
         doc.fontSize(10).text('MÃ VÉ', 470, 100);
         doc.fontSize(12).text(ticket.Code, 470, 120);
 
-        try {
-            const qrBuffer = await QRCode.toBuffer(ticket.Code, {
-                errorCorrectionLevel: 'H',
-                margin: 1,
-                width: 100,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
-                }
-            });
-            doc.image(qrBuffer, 470, 145, { width: 80, height: 80 });
-        } catch (err) {
-            console.error('Error generating QR code:', err);
+        if (ticket.qrBuffer) {
+            doc.image(ticket.qrBuffer, 470, 145, { width: 80, height: 80 });
+        } else {
             doc.rect(470, 150, 100, 40).fill('#000');
             doc.fillColor('#fff').fontSize(10).text(ticket.Code, 470, 165, { width: 100, align: 'center' });
         }
