@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateScreeningRoomDto } from './dtos/create-screening-room.dto';
+import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
 
 @Injectable()
 export class ScreeningRoomService {
@@ -170,5 +171,164 @@ export class ScreeningRoomService {
                 throw new BadRequestException(`Các ghế sau có thông tin chi tiết nhưng không có trong sơ đồ: ${missingInLayout.join(', ')}`);
             }
         }
+    }
+
+    async updateScreeningRoom(
+        id: string,
+        updateDto: UpdateScreeningRoomDto,
+    ) {
+        const prisma = this.prisma;
+
+        const screeningRoom = await prisma.pHONGCHIEU.findFirst({
+            where: { MaPhongChieu: id, DeletedAt: null },
+        });
+
+        if (!screeningRoom) {
+            throw new NotFoundException(`Phòng chiếu với ID ${id} không tồn tại`);
+        }
+
+        if (
+            updateDto.TenPhongChieu &&
+            updateDto.TenPhongChieu !== screeningRoom.TenPhongChieu
+        ) {
+            const exists = await prisma.pHONGCHIEU.findFirst({
+                where: {
+                    TenPhongChieu: updateDto.TenPhongChieu,
+                    MaPhongChieu: { not: id },
+                    DeletedAt: null,
+                },
+            });
+
+            if (exists) {
+                throw new BadRequestException('Tên phòng chiếu đã tồn tại');
+            }
+        }
+
+        const updateData: any = {
+            UpdatedAt: new Date(),
+        };
+
+        if (updateDto.TenPhongChieu !== undefined) {
+            updateData.TenPhongChieu = updateDto.TenPhongChieu;
+        }
+
+        if (updateDto.SoDoPhongChieu !== undefined) {
+            updateData.SoDoGhe = updateDto.SoDoPhongChieu;
+        }
+
+        if (updateDto.TrangThai !== undefined) {
+            updateData.TrangThai = updateDto.TrangThai;
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.pHONGCHIEU.update({
+                where: { MaPhongChieu: id },
+                data: updateData,
+            });
+
+            if (updateDto.DanhSachGhe) {
+                await tx.gHE_PHONGCHIEU.updateMany({
+                    where: {
+                        MaPhongChieu: id,
+                        DeletedAt: null,
+                    },
+                    data: {
+                        DeletedAt: new Date(),
+                    },
+                });
+
+                for (const seat of updateDto.DanhSachGhe) {
+                    const { Hang, Cot, MaLoaiGhe } = seat;
+
+                    const ghe = await tx.gHE.findFirst({
+                        where: { Hang, Cot, DeletedAt: null },
+                        select: { MaGhe: true },
+                    });
+
+                    if (!ghe) {
+                        throw new BadRequestException(
+                            `Ghế tại hàng ${Hang} cột ${Cot} không tồn tại`,
+                        );
+                    }
+
+                    const gheLoai = await tx.gHE_LOAIGHE.findFirst({
+                        where: {
+                            MaGhe: ghe.MaGhe,
+                            MaLoaiGhe,
+                            DeletedAt: null,
+                        },
+                        select: { MaGheLoaiGhe: true },
+                    });
+
+                    if (!gheLoai) {
+                        throw new BadRequestException(
+                            `Ghế ${Hang}${Cot} không có loại ghế được chọn`,
+                        );
+                    }
+
+                    await tx.gHE_PHONGCHIEU.create({
+                        data: {
+                            MaPhongChieu: id,
+                            MaGheLoaiGhe: gheLoai.MaGheLoaiGhe,
+                        },
+                    });
+                }
+            }
+        });
+
+        return {
+            message: 'Cập nhật phòng chiếu thành công',
+        };
+    }
+
+    async removeScreeningRoom(id: string) {
+        return this.prisma.$transaction(async (tx) => {
+
+            const phong = await tx.pHONGCHIEU.findFirst({
+                where: {
+                    MaPhongChieu: id,
+                    DeletedAt: null,
+                },
+            });
+
+            if (!phong) {
+                throw new NotFoundException(`Phòng chiếu với ID ${id} không tồn tại`);
+            }
+
+            const existShowtime = await tx.sUATCHIEU.findFirst({
+                where: {
+                    MaPhongChieu: id,
+                    DeletedAt: null,
+                },
+                select: { MaSuatChieu: true },
+            });
+
+            if (existShowtime) {
+                throw new BadRequestException(
+                    'Không thể xoá phòng chiếu vì vẫn còn suất chiếu'
+                );
+            }
+
+            await tx.gHE_PHONGCHIEU.updateMany({
+                where: {
+                    MaPhongChieu: id,
+                    DeletedAt: null,
+                },
+                data: {
+                    DeletedAt: new Date(),
+                },
+            });
+
+            await tx.pHONGCHIEU.update({
+                where: { MaPhongChieu: id },
+                data: {
+                    DeletedAt: new Date(),
+                },
+            });
+
+            return {
+                message: 'Xóa phòng chiếu thành công',
+            };
+        });
     }
 }

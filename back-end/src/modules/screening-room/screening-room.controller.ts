@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException, BadRequestException, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, BadRequestException, Post, Body, Patch, Delete } from '@nestjs/common';
 import { ScreeningRoomService } from './screening-room.service';
 import {
     ApiTags,
@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateScreeningRoomDto } from './dtos/create-screening-room.dto';
+import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
 
 @ApiTags('Phòng chiếu')
 @Controller('screening-rooms')
@@ -33,5 +34,33 @@ export class ScreeningRoomController {
         const room = await this.screeningRoomService.getScreeningRoomById(id);
         if (!room) throw new NotFoundException('Phòng chiếu không tồn tại');
         return room;
+    }
+
+    @Patch(':id')
+    @ApiOperation({ summary: 'Cập nhật phòng chiếu (partial)' })
+    @ApiParam({ name: 'id', description: 'Mã phòng chiếu', required: true })
+    async updateScreeningRoom(
+        @Param('id') id: string,
+        @Body() updateScreeningRoomDto: UpdateScreeningRoomDto,
+    ) {
+        if (!isUUID(id, '4')) {
+            throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        }
+
+        return this.screeningRoomService.updateScreeningRoom(
+            id,
+            updateScreeningRoomDto,
+        );
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Xóa mềm phòng chiếu' })
+    @ApiParam({ name: 'id', description: 'Mã phòng chiếu', required: true })
+    async removeScreeningRoom(@Param('id') id: string) {
+        if (!isUUID(id, '4')) {
+            throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        }
+
+        return this.screeningRoomService.removeScreeningRoom(id);
     }
 }
