@@ -1,626 +1,1058 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Armchair,
+  Map as MapIcon,
+  Settings,
+  X,
+  Save,
+  Loader2,
+  Ticket,
+  Palette,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
-
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Armchair, Map, Settings, X, Save, Eraser } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
-type TrangThaiPhongChieu = "HOATDONG" | "BAOTRI" | "NGUNGHOATDONG";
-type LoaiGhe = 'thuong' | 'vip' | 'doi' | 'disabled';
+import { cn } from "@/lib/utils";
+import { roomService } from "@/services/room.service";
+import { seatTypeService } from "@/services/seat-type.service";
+import { SeatType } from "@/types/seat-management";
+
+type TrangThaiPhongChieu = "TRONG" | "SAPCHIEU" | "DANGCHIEU";
+
+interface PhongChieu {
+  MaPhongChieu: string;
+  TenPhongChieu: string;
+  TrangThai: TrangThaiPhongChieu;
+  SoLuongGhe: number;
+  SoDoGhe: any; 
+  GhePhongChieus?: any[]; 
+}
 
 interface SeatMapData {
   rows: string[];
   cols: number;
-  seats: Record<string, 'vip' | 'doi' | 'disabled'>;
+  seats: Record<string, string>; 
 }
 
-interface PhongChieu {
-  MaPhongChieu: number;
-  TenPhongChieu: string;
-  TrangThai: TrangThaiPhongChieu;
-  SoLuongGhe: number; 
-  SoDoGhe: string; 
-}
-
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-
-const mockSeatMap: SeatMapData = {
-  rows: ["A", "B", "C", "D", "E", "F", "G", "H"],
-  cols: 14,
-  seats: {
-    // Ghế disabled (lối đi)
-    "A1": "disabled", "A14": "disabled",
-    "B1": "disabled", "B14": "disabled",
-    // Hàng VIP (ví dụ)
-    "E1": "vip", "E2": "vip", "E3": "vip", "E4": "vip", "E5": "vip", "E6": "vip", "E7": "vip", "E8": "vip", "E9": "vip", "E10": "vip", "E11": "vip", "E12": "vip", "E13": "vip", "E14": "vip",
-    "F1": "vip", "F2": "vip", "F3": "vip", "F4": "vip", "F5": "vip", "F6": "vip", "F7": "vip", "F8": "vip", "F9": "vip", "F10": "vip", "F11": "vip", "F12": "vip", "F13": "vip", "F14": "vip",
-    // Hàng Đôi (ví dụ)
-    "G1": "doi", "G2": "doi", "G3": "doi", "G4": "doi", "G5": "doi", "G6": "doi", "G7": "doi", "G8": "doi", "G9": "doi", "G10": "doi", "G11": "doi", "G12": "doi", "G13": "doi", "G14": "doi",
-    "H1": "doi", "H2": "doi", "H3": "doi", "H4": "doi", "H5": "doi", "H6": "doi", "H7": "doi", "H8": "doi", "H9": "doi", "H10": "doi", "H11": "doi", "H12": "doi", "H13": "doi", "H14": "doi",
-  }
+const TRANG_THAI_CONFIG: Record<
+  TrangThaiPhongChieu,
+  { label: string; color: string }
+> = {
+  TRONG: {
+    label: "Trống",
+    color: "bg-slate-500/10 text-slate-400 border-slate-500/50",
+  },
+  SAPCHIEU: {
+    label: "Sắp chiếu",
+    color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/50",
+  },
+  DANGCHIEU: {
+    label: "Đang chiếu",
+    color: "bg-green-500/10 text-green-500 border-green-500/50",
+  },
 };
-const mockSeatMapJson = JSON.stringify(mockSeatMap);
 
-// Đếm số ghế có thể bán từ sơ đồ
-const calculateTotalSeats = (map: SeatMapData): number => {
-    let count = 0;
-    map.rows.forEach(row => {
-        for (let i = 1; i <= map.cols; i++) {
-            const seatId = `${row}${i}`;
-            if (map.seats[seatId] !== 'disabled') {
-                count++;
-            }
-        }
-    });
-    return count;
+const getSeatColorClass = (typeName: string = ""): string => {
+  const lower = typeName.toLowerCase();
+  if (lower === "disabled")
+    return "bg-slate-800 border-slate-700 text-slate-600";
+  if (lower.includes("vip"))
+    return "bg-yellow-500/20 border-yellow-500 text-yellow-500 hover:bg-yellow-500/30";
+  if (lower.includes("đôi") || lower.includes("doi"))
+    return "bg-pink-500/20 border-pink-500 text-pink-500 hover:bg-pink-500/30";
+  return "bg-slate-700 border-slate-500 text-slate-300 hover:bg-slate-600";
 };
-const initialSeats = calculateTotalSeats(mockSeatMap); // = 104
 
-const mockRooms: PhongChieu[] = [
-  { MaPhongChieu: 1, TenPhongChieu: "Phòng 1 (IMAX)", TrangThai: "HOATDONG", SoLuongGhe: initialSeats, SoDoGhe: mockSeatMapJson },
-  { MaPhongChieu: 2, TenPhongChieu: "Phòng 2 (2D)", TrangThai: "HOATDONG", SoLuongGhe: initialSeats, SoDoGhe: mockSeatMapJson },
-  { MaPhongChieu: 3, TenPhongChieu: "Phòng 3 (3D)", TrangThai: "BAOTRI", SoLuongGhe: initialSeats, SoDoGhe: mockSeatMapJson },
-  { MaPhongChieu: 4, TenPhongChieu: "Phòng 4 (CINE FOREST)", TrangThai: "NGUNGHOATDONG", SoLuongGhe: initialSeats, SoDoGhe: mockSeatMapJson },
-  { MaPhongChieu: 5, TenPhongChieu: "Phòng 5 (2D)", TrangThai: "HOATDONG", SoLuongGhe: initialSeats, SoDoGhe: mockSeatMapJson },
-];
 
-const trangThaiOptions: { value: TrangThaiPhongChieu; label: string }[] = [
-  { value: "HOATDONG", label: "Đang hoạt động" },
-  { value: "BAOTRI", label: "Đang bảo trì" },
-  { value: "NGUNGHOATDONG", label: "Ngừng hoạt động" },
-];
-// --- HẾT DỮ LIỆU GIẢ ---
+const parseBackendToMap = (room: PhongChieu): SeatMapData => {
+  const defaultMap = { rows: ["A", "B", "C", "D", "E"], cols: 10, seats: {} };
 
-// Helper lấy màu badge
-const getBadgeVariant = (trangThai: TrangThaiPhongChieu) => {
-    switch (trangThai) {
-        case "HOATDONG": return "bg-green-600 text-white";
-        case "BAOTRI": return "bg-yellow-600 text-white";
-        case "NGUNGHOATDONG": return "bg-slate-500 text-slate-200 border-slate-400";
-        default: return "outline";
+  let layout: any = room.SoDoGhe;
+  if (typeof layout === "string") {
+    try {
+      layout = JSON.parse(layout);
+    } catch {
+      layout = {};
     }
-};
-const getBadgeLabel = (trangThai: TrangThaiPhongChieu) => {
-  return trangThaiOptions.find(o => o.value === trangThai)?.label || trangThai;
+  }
+
+  if (!layout || Object.keys(layout).length === 0) return defaultMap;
+
+  const rows = Object.keys(layout).sort();
+  const cols = layout[rows[0]]?.length || 10;
+  const seats: Record<string, string> = {};
+
+  const seatLookup = new Map<string, string>();
+  if (Array.isArray(room.GhePhongChieus)) {
+    room.GhePhongChieus.forEach((gp: any) => {
+      const ghe = gp.GheLoaiGhe?.Ghe;
+      const loai = gp.GheLoaiGhe?.LoaiGhe;
+      if (ghe && loai) {
+        seatLookup.set(`${ghe.Hang}-${ghe.Cot}`, loai.MaLoaiGhe);
+      }
+    });
+  }
+
+  rows.forEach((rowKey) => {
+    const colCells = layout[rowKey];
+    if (Array.isArray(colCells)) {
+      colCells.forEach((cellValue, colIndex) => {
+        const gridKey = `${rowKey}-${colIndex + 1}`;
+
+        if (cellValue && cellValue !== "") {
+          const typeId = seatLookup.get(`${rowKey}-${cellValue}`);
+          if (typeId) {
+            seats[gridKey] = typeId;
+          }
+        }
+      });
+    }
+  });
+
+  return { rows, cols, seats };
 };
 
-
-// --- COMPONENT CHÍNH ---
 export default function RoomManagementPage() {
-  const [rooms, setRooms] = useState<PhongChieu[]>(mockRooms);
+  const [rooms, setRooms] = useState<PhongChieu[]>([]);
+  const [seatTypes, setSeatTypes] = useState<SeatType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  
+
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isSeatTypeManagerOpen, setIsSeatTypeManagerOpen] = useState(false);
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<PhongChieu | null>(null);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [roomsData, typesData] = await Promise.all([
+        roomService.getAll(),
+        seatTypeService.getAll(),
+      ]);
+      setRooms(roomsData || []);
+      setSeatTypes(typesData || []);
+    } catch (error) {
+      toast.error("Không thể tải dữ liệu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const filteredRooms = useMemo(() => {
-    return rooms.filter(room => {
-      const matchesSearch = room.TenPhongChieu.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || room.TrangThai === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [rooms, searchTerm, statusFilter]);
+    return rooms.filter((r) =>
+      r.TenPhongChieu.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [rooms, searchTerm]);
 
   const handleAddNew = () => {
-    setSelectedRoom(null); 
+    setSelectedRoom(null);
     setIsInfoModalOpen(true);
   };
-  
   const handleEditInfo = (room: PhongChieu) => {
-    setSelectedRoom(room); 
+    setSelectedRoom(room);
     setIsInfoModalOpen(true);
   };
-  
   const handleEditMap = (room: PhongChieu) => {
     setSelectedRoom(room);
     setIsMapModalOpen(true);
   };
 
-  // Xử lý submit form thông tin (Tên, Trạng thái)
-  const handleFormSubmit = (formData: PhongChieu) => {
-    if (selectedRoom) {
-        setRooms(prev => prev.map(r => r.MaPhongChieu === formData.MaPhongChieu ? formData : r));
-    } else {
-        // Khi thêm mới, tạo 1 sơ đồ ghế rỗng
-        const emptySeatMap: SeatMapData = { rows: ["A","B","C","D","E","F"], cols: 10, seats: {} };
-        const newRoom = { 
-            ...formData, 
-            SoDoGhe: JSON.stringify(emptySeatMap),
-            SoLuongGhe: calculateTotalSeats(emptySeatMap), // = 60
-            MaPhongChieu: Math.max(...rooms.map(r => r.MaPhongChieu)) + 1 
-        };
-        setRooms(prev => [newRoom, ...prev]);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await roomService.delete(deleteId);
+      toast.success("Đã xóa phòng chiếu.");
+      fetchData();
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        "Xóa thất bại. Có thể phòng đang có dữ liệu liên quan.";
+      toast.error(msg);
+    } finally {
+      setDeleteId(null);
     }
-    setIsInfoModalOpen(false);
   };
 
-  const handleSeatMapSave = (room: PhongChieu, newSeatMapData: SeatMapData) => {
-      const newTotalSeats = calculateTotalSeats(newSeatMapData);
+  const handleFormSubmit = async (formData: Partial<PhongChieu>) => {
+    try {
+      if (selectedRoom) {
+        await roomService.update(selectedRoom.MaPhongChieu, {
+          TenPhongChieu: formData.TenPhongChieu,
+        });
+        toast.success("Cập nhật tên phòng thành công!");
+      } else {
+        const payload = {
+          TenPhongChieu: formData.TenPhongChieu,
+          SoDoPhongChieu: {},
+          DanhSachGhe: [],
+        };
+        await roomService.create(payload as any);
+        toast.success("Tạo phòng mới thành công! Hãy thiết lập sơ đồ ghế.");
+      }
+      setIsInfoModalOpen(false);
+      fetchData();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Lỗi khi lưu thông tin.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    }
+  };
 
-      const updatedRoom: PhongChieu = {
-          ...room,
-          SoDoGhe: JSON.stringify(newSeatMapData),
-          SoLuongGhe: newTotalSeats
+  const handleSeatMapSave = async (
+    room: PhongChieu,
+    soDoPhongChieu: any,
+    danhSachGhe: any[]
+  ) => {
+    try {
+      const payload = {
+        TenPhongChieu: room.TenPhongChieu, 
+        SoDoPhongChieu: soDoPhongChieu,
+        DanhSachGhe: danhSachGhe,
       };
-      
-      setRooms(prev => prev.map(r => r.MaPhongChieu === updatedRoom.MaPhongChieu ? updatedRoom : r));
+      await roomService.update(room.MaPhongChieu, payload);
+      toast.success("Cập nhật sơ đồ ghế thành công!");
       setIsMapModalOpen(false);
-  };
-
-  const handleDelete = (maPhongChieu: number) => {
-      setRooms(prev => prev.filter(r => r.MaPhongChieu !== maPhongChieu));
+      fetchData();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Lỗi khi lưu sơ đồ.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    }
   };
 
   return (
-    <div className="space-y-6 text-white">
-      {/* Header */}
+    <div className="space-y-6 text-white h-full p-2">
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-        <h1 className="text-2xl font-bold">Quản lý Phòng chiếu</h1>
-        
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative w-full md:w-auto md:max-w-sm">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <MapIcon className="size-6 text-primary" /> Quản lý Phòng & Ghế
+          </h1>
+        </div>
+        <div className="flex gap-3">
+          <div className="relative">
             <Input
-              placeholder="Tìm kiếm theo tên phòng..."
+              placeholder="Tìm phòng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-transparent border-slate-700"
+              className="pl-9 bg-[#1C1C1C] border-slate-700"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px] bg-transparent border-slate-700">
-              <SelectValue placeholder="Lọc theo trạng thái" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-              <SelectItem value="all" className="cursor-pointer focus:bg-slate-700">Tất cả trạng thái</SelectItem>
-              {trangThaiOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value} className="cursor-pointer focus:bg-slate-700">
-                      {opt.label}
-                  </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-           <Button onClick={handleAddNew} className="bg-primary hover:bg-primary/90">
-            <Plus className="size-4 mr-2" />
-            Thêm phòng mới
+          <Button
+            variant="outline"
+            onClick={() => setIsSeatTypeManagerOpen(true)}
+            className="border-slate-700 bg-[#1C1C1C] hover:bg-slate-800"
+          >
+            <Ticket className="size-4 mr-2" /> Loại Ghế
+          </Button>
+          <Button
+            onClick={handleAddNew}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Plus className="size-4 mr-2" /> Thêm Phòng
           </Button>
         </div>
       </div>
 
-      {/* Grid Layout (Thay cho Table) */}
-      <ScrollArea className="h-[calc(100vh-200px)] pr-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredRooms.map((room) => (
-            <RoomCard 
-                key={room.MaPhongChieu} 
-                room={room} 
+      {/* LIST */}
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin text-primary size-8" />
+        </div>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-180px)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
+            {filteredRooms.map((room) => (
+              <RoomCard
+                key={room.MaPhongChieu}
+                room={room}
                 onEditInfo={() => handleEditInfo(room)}
                 onEditMap={() => handleEditMap(room)}
-                onDelete={() => handleDelete(room.MaPhongChieu)}
-            />
-          ))}
-        </div>
-      </ScrollArea>
-
-      {/* Modal Form Sửa thông tin */}
-      {isInfoModalOpen && (
-        <RoomFormDialog
-          isOpen={isInfoModalOpen}
-          onClose={() => setIsInfoModalOpen(false)}
-          onSubmit={handleFormSubmit}
-          room={selectedRoom}
-        />
+                onDelete={() => setDeleteId(room.MaPhongChieu)}
+              />
+            ))}
+            {filteredRooms.length === 0 && (
+              <div className="col-span-full text-center text-slate-500 pt-10">
+                Chưa có phòng chiếu nào.
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       )}
-      
-      {/* Modal Chỉnh sửa Sơ đồ ghế */}
-      {isMapModalOpen && selectedRoom && (
+
+      {/* MODALS */}
+      <RoomFormDialog
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        onSubmit={handleFormSubmit}
+        room={selectedRoom}
+      />
+
+      {selectedRoom && (
         <SeatMapEditorDialog
           isOpen={isMapModalOpen}
           onClose={() => setIsMapModalOpen(false)}
           room={selectedRoom}
+          seatTypes={seatTypes}
           onSave={handleSeatMapSave}
         />
       )}
+
+      <SeatTypeManagerDialog
+        isOpen={isSeatTypeManagerOpen}
+        onClose={() => setIsSeatTypeManagerOpen(false)}
+        seatTypes={seatTypes}
+        refreshData={fetchData}
+      />
+
+      {/* DELETE CONFIRM */}
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Hành động này sẽ xóa phòng và toàn bộ sơ đồ ghế. <br />
+              <span className="text-yellow-500 font-medium">
+                Lưu ý: Không thể xóa nếu phòng đang có suất chiếu.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-slate-700 text-white hover:bg-slate-800">
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Xóa ngay
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-// --- COMPONENT CON: CARD PHÒNG CHIẾU ---
-interface RoomCardProps {
-    room: PhongChieu;
-    onEditInfo: () => void;
-    onEditMap: () => void;
-    onDelete: () => void;
-}
-function RoomCard({ room, onEditInfo, onEditMap }: RoomCardProps) {
-    return (
-         <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex flex-col">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-                <CardTitle className="text-lg font-semibold text-slate-100">{room.TenPhongChieu}</CardTitle>
-                <Badge variant="outline" className={cn("text-xs", getBadgeVariant(room.TrangThai))}>
-                    {getBadgeLabel(room.TrangThai)}
-                </Badge>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
-                <Armchair className="size-24 text-slate-600" />
-                <p className="text-xl font-bold mt-2">{room.SoLuongGhe} ghế</p>
-                <p className="text-sm text-slate-400">(Tổng số ghế có thể bán)</p>
-            </CardContent>
-            <CardFooter className="grid grid-cols-2 gap-2 !pt-4 border-t border-slate-800">
-                <Button variant="outline" className="w-full bg-transparent border-slate-700 hover:bg-slate-800" onClick={onEditMap}>
-                    <Map className="size-4 mr-2" />
-                    Sơ đồ ghế
-                </Button>
-                <Button variant="outline" className="w-full bg-transparent border-slate-700 hover:bg-slate-800" onClick={onEditInfo}>
-                    <Settings className="size-4 mr-2" />
-                    Chi tiết
-                </Button>
-            </CardFooter>
-        </Card>
-    );
-}
-
-
-// --- COMPONENT CON: DIALOG FORM (Sửa thông tin) ---
-interface RoomFormDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSubmit: (data: PhongChieu) => void;
-    room: PhongChieu | null;
-}
-function RoomFormDialog({ isOpen, onClose, onSubmit, room }: RoomFormDialogProps) {
-    const [tenPhongChieu, setTenPhongChieu] = useState(room?.TenPhongChieu || "");
-    const [trangThai, setTrangThai] = useState<TrangThaiPhongChieu>(room?.TrangThai || "HOATDONG");
-
-    useEffect(() => {
-        if (room) {
-            setTenPhongChieu(room.TenPhongChieu);
-            setTrangThai(room.TrangThai);
-        } else {
-            setTenPhongChieu("");
-            setTrangThai("HOATDONG");
-        }
-    }, [room, isOpen]);
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const dataToSubmit: PhongChieu = {
-            MaPhongChieu: room?.MaPhongChieu || 0,
-            SoLuongGhe: room?.SoLuongGhe || 0,
-            SoDoGhe: room?.SoDoGhe || "{}",
-            TenPhongChieu: tenPhongChieu,
-            TrangThai: trangThai,
-        };
-        onSubmit(dataToSubmit);
-    };
-    
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{room ? "Cập nhật phòng chiếu" : "Thêm phòng chiếu mới"}</DialogTitle>
-                    <DialogDescription className="text-slate-400">
-                        Quản lý thông tin cơ bản của phòng. Sơ đồ ghế được quản lý riêng.
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="TenPhongChieu">Tên phòng chiếu</Label>
-                            <Input 
-                                id="TenPhongChieu" 
-                                name="TenPhongChieu" 
-                                value={tenPhongChieu} 
-                                onChange={(e) => setTenPhongChieu(e.target.value)} 
-                                className="bg-transparent border-slate-700" 
-                                required 
-                            />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="TrangThai">Trạng thái</Label>
-                            <Select 
-                                name="TrangThai" 
-                                value={trangThai} 
-                                onValueChange={(v: TrangThaiPhongChieu) => setTrangThai(v)}
-                            >
-                                <SelectTrigger className="w-full bg-transparent border-slate-700">
-                                    <SelectValue placeholder="Chọn trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-                                    {trangThaiOptions.map(opt => (
-                                        <SelectItem key={opt.value} value={opt.value} className="cursor-pointer focus:bg-slate-700">
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <DialogFooter className="!mt-6 pt-6 border-t border-slate-700">
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline" className="bg-transparent border-slate-700 hover:bg-slate-800">Hủy</Button>
-                        </DialogClose>
-                        <Button type="submit">{room ? "Cập nhật" : "Lưu"}</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-// --- COMPONENT CON: DIALOG CHỈNH SỬA SƠ ĐỒ GHẾ (NÂNG CAO) ---
-interface SeatMapEditorDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    room: PhongChieu;
-    onSave: (room: PhongChieu, newMapData: SeatMapData) => void;
-}
-
-// Helper: Chuyển "A-C" thành ["A", "B", "C"]
-const parseRowRange = (range: string): string[] => {
-    const [start, end] = range.split('-').map(s => s.trim().toUpperCase());
-    if (!end || start.charCodeAt(0) > end.charCodeAt(0)) {
-        return [start];
+function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
+  const totalSeats = useMemo(() => {
+    let count = 0;
+    try {
+      const soDo =
+        typeof room.SoDoGhe === "string"
+          ? JSON.parse(room.SoDoGhe)
+          : room.SoDoGhe;
+      if (soDo && typeof soDo === "object") {
+        Object.values(soDo).forEach((cols: any) => {
+          if (Array.isArray(cols)) {
+            count += cols.filter((c) => c !== "").length;
+          }
+        });
+      }
+    } catch {
+      count = 0;
     }
-    const result: string[] = [];
-    for (let i = start.charCodeAt(0); i <= end.charCodeAt(0); i++) {
-        result.push(String.fromCharCode(i));
-    }
+    return count;
+  }, [room.SoDoGhe]);
+
+  const statusInfo =
+    TRANG_THAI_CONFIG[room.TrangThai as TrangThaiPhongChieu] ||
+    TRANG_THAI_CONFIG["TRONG"];
+
+  return (
+    <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex flex-col hover:border-slate-600 transition group">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex justify-between items-center w-full">
+            <CardTitle
+              className="text-lg font-semibold text-slate-100 truncate flex-1"
+              title={room.TenPhongChieu}
+            >
+              {room.TenPhongChieu}
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] whitespace-nowrap ml-2 h-5 font-normal",
+                statusInfo.color
+              )}
+            >
+              {statusInfo.label}
+            </Badge>
+          </div>
+          <Badge
+            variant="secondary"
+            className="bg-slate-800 text-slate-400 w-fit text-[10px]"
+          >
+            {totalSeats} ghế
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col items-center justify-center text-center py-6">
+        <div className="relative flex items-center justify-center p-4 bg-slate-900/50 rounded-full mb-2 group-hover:bg-slate-900 transition-colors">
+          <Armchair className="size-16 text-slate-600 group-hover:text-primary transition-colors" />
+        </div>
+      </CardContent>
+      <CardFooter className="grid grid-cols-2 gap-2 !pt-4 border-t border-slate-800">
+        <Button
+          variant="outline"
+          className="w-full bg-transparent border-slate-700 hover:bg-slate-800 text-slate-300"
+          onClick={onEditMap}
+        >
+          <MapIcon className="size-4 mr-2" /> Sơ đồ
+        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="flex-1 bg-transparent border-slate-700 hover:bg-slate-800 text-blue-400"
+            onClick={onEditInfo}
+          >
+            <Edit className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="flex-1 bg-transparent border-slate-700 hover:bg-red-900/20 text-red-400"
+            onClick={onDelete}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function RoomFormDialog({ isOpen, onClose, onSubmit, room }: any) {
+  const [name, setName] = useState("");
+  useEffect(() => {
+    setName(room?.TenPhongChieu || "");
+  }, [room, isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {room ? "Cập nhật phòng" : "Thêm phòng mới"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Tên phòng chiếu</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="bg-slate-900 border-slate-700"
+              placeholder="VD: Phòng 01"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            onClick={() => onSubmit({ TenPhongChieu: name })}
+            className="bg-primary"
+          >
+            Lưu
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SeatMapEditorDialog({
+  isOpen,
+  onClose,
+  room,
+  seatTypes,
+  onSave,
+}: any) {
+  const initialMapData = useMemo(() => parseBackendToMap(room), [room]);
+  const [seatMapData, setSeatMapData] = useState<SeatMapData>(initialMapData);
+  const [selectedTool, setSelectedTool] = useState<string>("disabled");
+
+  const [rowInput, setRowInput] = useState(() => {
+    if (initialMapData.rows.length > 0)
+      return `${initialMapData.rows[0]}-${
+        initialMapData.rows[initialMapData.rows.length - 1]
+      }`;
+    return "A-E";
+  });
+  const [colInput, setColInput] = useState(() =>
+    initialMapData.cols > 0 ? initialMapData.cols.toString() : "10"
+  );
+
+  useEffect(() => {
+    if (seatTypes.length > 0 && selectedTool === "disabled")
+      setSelectedTool(seatTypes[0].MaLoaiGhe);
+  }, [seatTypes]);
+
+  const parseRowRange = (range: string): string[] => {
+    const [start, end] = range.split("-").map((s) => s.trim().toUpperCase());
+    if (!start) return [];
+    const startCode = start.charCodeAt(0);
+    const endCode = end ? end.charCodeAt(0) : startCode;
+    if (endCode < startCode) return [start];
+    const result = [];
+    for (let i = startCode; i <= endCode; i++)
+      result.push(String.fromCharCode(i));
     return result;
-};
-// Helper: Chuyển ["A", "B", "C"] thành "A-C"
-const formatRowRange = (rows: string[]): string => {
-    if (rows.length === 0) return "";
-    return `${rows[0]}-${rows[rows.length - 1]}`;
-};
+  };
 
-function SeatMapEditorDialog({ isOpen, onClose, room, onSave }: SeatMapEditorDialogProps) {
-    
-    const initialMapData = useMemo(() => {
-        try {
-            return JSON.parse(room.SoDoGhe) as SeatMapData;
-        } catch (e) {
-            return { rows: ["A", "B", "C"], cols: 10, seats: {} } as SeatMapData;
+  const handleResizeGrid = () => {
+    const newRows = parseRowRange(rowInput);
+    const newCols = parseInt(colInput, 10) || 10;
+    const newSeats = { ...seatMapData.seats };
+    setSeatMapData({ rows: newRows, cols: newCols, seats: newSeats });
+  };
+
+  const handleSeatClick = (row: string, col: number) => {
+    const seatId = `${row}-${col}`;
+    setSeatMapData((prev) => {
+      const newSeats = { ...prev.seats };
+      if (newSeats[seatId] === selectedTool) {
+        delete newSeats[seatId];
+      } else {
+        newSeats[seatId] = selectedTool;
+      }
+      return { ...prev, seats: newSeats };
+    });
+  };
+
+  const handleApplySave = () => {
+    const soDoObj: Record<string, string[]> = {};
+    const danhSachGheArr: any[] = [];
+
+    seatMapData.rows.forEach((r) => {
+      const colArr: string[] = [];
+      let seatLabelCounter = 1;
+
+      for (let i = 1; i <= seatMapData.cols; i++) {
+        const key = `${r}-${i}`;
+        const typeId = seatMapData.seats[key];
+
+        if (typeId) {
+          const label = seatLabelCounter.toString().padStart(2, "0");
+          colArr.push(label);
+          danhSachGheArr.push({
+            Hang: r,
+            Cot: label,
+            MaLoaiGhe: typeId,
+          });
+          seatLabelCounter++;
+        } else {
+          colArr.push("");
         }
-    }, [room.SoDoGhe]);
+      }
+      soDoObj[r] = colArr;
+    });
 
-    const [seatMapData, setSeatMapData] = useState<SeatMapData>(initialMapData);
-    const [selectedTool, setSelectedTool] = useState<LoaiGhe>('thuong');
-    const [rowInput, setRowInput] = useState(formatRowRange(initialMapData.rows));
-    const [colInput, setColInput] = useState(initialMapData.cols.toString());
+    onSave(room, soDoObj, danhSachGheArr);
+  };
 
-    useEffect(() => {
-        setSeatMapData(initialMapData);
-        setRowInput(formatRowRange(initialMapData.rows));
-        setColInput(initialMapData.cols.toString());
-    }, [initialMapData, isOpen]);
+  const activeSeatCount = Object.keys(seatMapData.seats).length;
 
-    const getSeatType = (seatId: string): LoaiGhe => {
-        return seatMapData.seats[seatId] || 'thuong';
-    };
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white w-[80vw] h-[95vh] max-w-none sm:max-w-[98vw] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-4 border-b border-slate-800 shrink-0 bg-[#1C1C1C] z-10">
+          <DialogTitle>Sơ đồ: {room.TenPhongChieu}</DialogTitle>
+        </DialogHeader>
 
-    // Xử lý khi click vào 1 ghế
-    const handleSeatClick = (row: string, col: number) => {
-        const seatId = `${row}${col}`;
-        setSeatMapData(prevData => {
-            const newSeats = { ...prevData.seats };
-            if (selectedTool === 'thuong') {
-                delete newSeats[seatId];
-            } else {
-                newSeats[seatId] = selectedTool;
-            }
-            return { ...prevData, seats: newSeats };
-        });
-    };
-
-    const handleRowClick = (row: string) => {
-        setSeatMapData(prevData => {
-            const newSeats = { ...prevData.seats };
-            for (let i = 1; i <= prevData.cols; i++) {
-                const seatId = `${row}${i}`;
-                if (selectedTool === 'thuong') {
-                    delete newSeats[seatId];
-                } else {
-                    newSeats[seatId] = selectedTool;
-                }
-            }
-            return { ...prevData, seats: newSeats };
-        });
-    };
-
-    const handleResizeGrid = () => {
-        const newRows = parseRowRange(rowInput);
-        const newCols = parseInt(colInput, 10) || 10;
-        setSeatMapData(prevData => ({
-            ...prevData,
-            rows: newRows,
-            cols: newCols,
-        }));
-    };
-    
-    const handleSaveClick = () => {
-        onSave(room, seatMapData);
-    };
-
-    return (
-         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-6xl">
-                <DialogHeader>
-                    <DialogTitle>Chỉnh sửa Sơ đồ ghế: {room.TenPhongChieu}</DialogTitle>
-                    <DialogDescription className="text-slate-400">
-                        Thay đổi kích thước lưới hoặc chọn công cụ để &quot;vẽ&quot; loại ghế.
-                    </DialogDescription>
-                </DialogHeader>
-
-                {/* Thanh công cụ (Toolbar) */}
-                <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-lg">
-                    <div className="flex items-end gap-2">
-                        <div>
-                            <Label htmlFor="rows">Hàng (ví dụ: A-H)</Label>
-                            <Input id="rows" value={rowInput} onChange={e => setRowInput(e.target.value)} className="bg-transparent mt-2 border-slate-700 w-28" />
-                        </div>
-                        <div>
-                            <Label htmlFor="cols">Cột (ví dụ: 14)</Label>
-                            <Input id="cols" type="number" value={colInput} onChange={e => setColInput(e.target.value)} className="bg-transparent mt-2 border-slate-700 w-20" />
-                        </div>
-                        <Button variant="outline" className="bg-transparent border-slate-700 hover:bg-slate-800" onClick={handleResizeGrid}>
-                            Cập nhật lưới
-                        </Button>
-                    </div>
-
-                    <div className="h-px md:h-auto md:w-px bg-slate-700"></div>
-
-                    {/* Công cụ "Vẽ" */}
-                    <div>
-                        <Label>Công cụ (Chọn cọ vẽ)</Label>
-                        <div className="flex flex-wrap gap-2">
-                          <Button 
-                              variant={selectedTool === 'thuong' ? 'default' : 'outline'} 
-                              onClick={() => setSelectedTool('thuong')} 
-                              className={cn(
-                                  "mt-2",
-                                  selectedTool === 'thuong' 
-                                      ? "bg-slate-600 text-white hover:bg-slate-500 ring-2 ring-offset-2 ring-offset-slate-900 ring-white" 
-                                      : "bg-slate-800 border-slate-700 hover:bg-slate-700" 
-                              )}
-                          >
-                              Ghế thường
-                          </Button>
-                          <Button 
-                              variant={selectedTool === 'vip' ? 'default' : 'outline'} 
-                              onClick={() => setSelectedTool('vip')} 
-                              className={cn(
-                                  "mt-2",
-                                  selectedTool === 'vip' 
-                                      ? "bg-yellow-500 text-black hover:bg-yellow-600 ring-2 ring-offset-2 ring-offset-slate-900 ring-white"
-                                      : "bg-yellow-800/20 border-yellow-700 text-yellow-500 hover:bg-yellow-800/30" 
-                              )}
-                          >
-                              Ghế VIP
-                          </Button>
-                          <Button 
-                              variant={selectedTool === 'doi' ? 'default' : 'outline'} 
-                              onClick={() => setSelectedTool('doi')} 
-                              className={cn(
-                                  "mt-2",
-                                  selectedTool === 'doi'
-                                      ? "bg-purple-500 text-white hover:bg-purple-600 ring-2 ring-offset-2 ring-offset-slate-900 ring-white" 
-                                      : "bg-purple-800/20 border-purple-700 text-purple-500 hover:bg-purple-800/30"
-                              )}
-                          >
-                              Ghế đôi
-                          </Button>
-                          <Button 
-                              variant={selectedTool === 'disabled' ? 'default' : 'outline'} 
-                              onClick={() => setSelectedTool('disabled')} 
-                              className={cn(
-                                  "mt-2",
-                                  selectedTool === 'disabled'
-                                      ? "bg-red-600 text-white hover:bg-red-700 ring-2 ring-offset-2 ring-offset-slate-900 ring-white" 
-                                      : "bg-slate-900 border-slate-700 text-slate-500 hover:bg-slate-800" 
-                              )}
-                          >
-                              Lối đi / Hỏng
-                          </Button>
-                      </div>
-                    </div>
+        <div className="flex flex-1 overflow-hidden">
+          {/* SIDEBAR TOOLS */}
+          <div className="w-72 bg-slate-900 border-r border-slate-800 p-4 flex flex-col gap-6 overflow-y-auto shrink-0">
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                <Settings size={16} /> Kích thước lưới
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-slate-400">Hàng (A-Z)</Label>
+                  <Input
+                    value={rowInput}
+                    onChange={(e) => setRowInput(e.target.value)}
+                    className="h-8 bg-black border-slate-700 mt-1 focus:ring-primary"
+                  />
                 </div>
+                <div>
+                  <Label className="text-xs text-slate-400">Số cột</Label>
+                  <Input
+                    value={colInput}
+                    onChange={(e) => setColInput(e.target.value)}
+                    className="h-8 bg-black border-slate-700 mt-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
+                onClick={handleResizeGrid}
+              >
+                Cập nhật lưới
+              </Button>
+            </div>
 
-                <ScrollArea className="max-h-[60vh] pr-4">
-                    <div className="flex flex-col items-center justify-center p-4">
-                        
-                        <div className="bg-slate-700 text-center py-1.5 px-12 text-sm rounded-md mb-8 w-full uppercase tracking-widest">
-                            Màn hình
-                        </div>
-
-                        <div className="flex flex-col gap-2 w-full items-center py-2">
-                            {seatMapData.rows.map(row => (
-                                <div key={row} className="flex gap-2 items-center">
-                                    {/* Nút tô cả hàng */}
-                                    <Button size="sm" variant="ghost" className="w-8 h-8 p-0 text-slate-500 hover:bg-slate-800" onClick={() => handleRowClick(row)}>
-                                        {row}
-                                    </Button>
-                                    
-                                    {/* Các ghế */}
-                                    {Array.from({ length: seatMapData.cols }, (_, i) => {
-                                        const col = i + 1;
-                                        const seatId = `${row}${col}`;
-                                        const type = getSeatType(seatId);
-                                        const isDisabled = type === 'disabled';
-
-                                        return (
-                                            <Button
-                                                key={seatId}
-                                                variant="outline"
-                                                size="icon"
-                                                className={cn(
-                                                    "size-8 p-0 text-xs cursor-pointer", 
-                                                    type === 'thuong' && "bg-slate-800 border-slate-700 hover:bg-slate-700 text-slate-500",
-                                                    type === 'vip' && "bg-yellow-800/20 border-yellow-700 hover:bg-yellow-700/30 text-yellow-500",
-                                                    type === 'doi' && "bg-purple-800/20 border-purple-700 hover:bg-purple-700/30 text-purple-500",
-                                                    isDisabled && "bg-slate-900 border-slate-800 text-slate-700 opacity-50",
-                                                    "hover:ring-2 hover:ring-primary"
-                                                )}
-                                                onClick={() => handleSeatClick(row, col)}
-                                            >
-                                                {isDisabled ? <X className="size-4"/> : col}
-                                            </Button>
-                                        );
-                                    })}
-                                    
-                                    <span className="text-sm font-medium w-6 text-center text-slate-500">{row}</span>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        {/* Chú thích */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400 pt-8">
-                            <div className="flex items-center gap-1.5"><Armchair className="size-4 text-slate-500" /> Thường</div>
-                            <div className="flex items-center gap-1.5"><Armchair className="size-4 text-yellow-500" /> VIP</div>
-                            <div className="flex items-center gap-1.5"><Armchair className="size-4 text-purple-500" /> Ghế đôi</div>
-                            <div className="flex items-center gap-1.5"><Armchair className="size-4 text-slate-700" /> Lối đi / Hỏng</div>
-                        </div>
-
+            <div className="space-y-3 flex-1">
+              <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                <Palette size={16} /> Loại ghế (Chọn để vẽ)
+              </h4>
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
+                {seatTypes.map((type: any) => (
+                  <button
+                    key={type.MaLoaiGhe}
+                    onClick={() => setSelectedTool(type.MaLoaiGhe)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-2 rounded-md border transition text-sm",
+                      selectedTool === type.MaLoaiGhe
+                        ? "bg-slate-800 border-primary ring-1 ring-primary"
+                        : "bg-slate-900 border-slate-700 hover:bg-slate-800"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded border flex items-center justify-center shadow-sm",
+                        !type.MauSac && getSeatColorClass(type.LoaiGhe)
+                      )}
+                      style={
+                        type.MauSac
+                          ? {
+                              backgroundColor: type.MauSac,
+                              borderColor: type.MauSac,
+                            }
+                          : {}
+                      }
+                    >
+                      {type.MauSac && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
+                      )}
                     </div>
-                </ScrollArea>
-                <DialogFooter className="!mt-6 pt-6 border-t border-slate-700">
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline" className="bg-transparent border-slate-700 hover:bg-slate-800">
-                            Hủy
+                    <span className="truncate flex-1 text-left">
+                      {type.LoaiGhe}
+                    </span>
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setSelectedTool("disabled")}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-2 rounded-md border transition text-sm",
+                    selectedTool === "disabled"
+                      ? "bg-slate-800 border-red-500 ring-1 ring-red-500"
+                      : "bg-slate-900 border-slate-700 hover:bg-slate-800"
+                  )}
+                >
+                  <div className="w-5 h-5 rounded bg-slate-950 border border-slate-700 flex items-center justify-center text-slate-500">
+                    <X size={12} />
+                  </div>
+                  <span className="truncate flex-1 text-left text-slate-400">
+                    Xóa / Lối đi
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700 mt-auto">
+              <div className="text-3xl font-bold text-primary">
+                {activeSeatCount}
+              </div>
+              <div className="text-xs text-slate-400 uppercase tracking-wider font-medium">
+                Tổng số ghế
+              </div>
+            </div>
+          </div>
+
+          {/* MAIN CANVAS */}
+          <ScrollArea className="flex-1 bg-black/80 relative">
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.03]"
+              style={{
+                backgroundImage: "radial-gradient(#fff 1px, transparent 1px)",
+                backgroundSize: "20px 20px",
+              }}
+            ></div>
+
+            <div className="p-16 min-w-max mx-auto flex flex-col items-center justify-start min-h-full">
+              {/* Màn hình */}
+              <div className="w-[600px] h-2 bg-gradient-to-r from-transparent via-slate-500 to-transparent mb-16 rounded-full opacity-60 relative shrink-0">
+                <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-slate-500 uppercase tracking-[0.3em] font-medium">
+                  Màn hình chiếu
+                </span>
+                <div className="absolute top-0 left-0 w-full h-10 bg-gradient-to-b from-slate-500/10 to-transparent -z-10 blur-xl"></div>
+              </div>
+
+              {/* Grid */}
+              <div className="flex flex-col gap-3">
+                {seatMapData.rows.map((row) => (
+                  <div
+                    key={row}
+                    className="flex gap-3 items-center justify-center"
+                  >
+                    {/* Label Trái */}
+                    <div className="w-8 text-center text-sm font-bold text-slate-500 tabular-nums">
+                      {row}
+                    </div>
+
+                    {/* Cột Ghế */}
+                    {Array.from({ length: seatMapData.cols }, (_, i) => {
+                      const col = i + 1;
+                      const seatId = `${row}-${col}`;
+                      const currentTypeId = seatMapData.seats[seatId];
+                      const isSeat =
+                        currentTypeId && currentTypeId !== "disabled";
+                      const typeObj = seatTypes.find(
+                        (t: any) => t.MaLoaiGhe === currentTypeId
+                      );
+
+                      return (
+                        <button
+                          key={seatId}
+                          onClick={() => handleSeatClick(row, col)}
+                          className={cn(
+                            "w-9 h-9 rounded-md text-[11px] font-medium border flex items-center justify-center transition-all duration-150 hover:scale-110 hover:shadow-lg hover:z-10 relative",
+                            !isSeat
+                              ? "bg-[#1a1a1a] border-slate-800/50 text-transparent hover:text-slate-600 hover:border-slate-700"
+                              : cn(
+                                  !typeObj?.MauSac &&
+                                    getSeatColorClass(typeObj?.LoaiGhe),
+                                  "shadow-sm text-white"
+                                )
+                          )}
+                          style={
+                            isSeat && typeObj?.MauSac
+                              ? {
+                                  backgroundColor: typeObj.MauSac,
+                                  borderColor: typeObj.MauSac,
+                                }
+                              : {}
+                          }
+                          title={`${row}${col} - ${
+                            typeObj?.LoaiGhe || "Trống"
+                          }`}
+                        >
+                          {isSeat ? (
+                            col
+                          ) : (
+                            <span className="opacity-0 hover:opacity-100 text-[8px]">
+                              {col}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {/* Label Phải */}
+                    <div className="w-8 text-center text-sm font-bold text-slate-500 tabular-nums">
+                      {row}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Chú thích */}
+              <div className="mt-16 flex gap-6 text-xs text-slate-500">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-[#1a1a1a] border border-slate-800"></div>
+                  Lối đi (Trống)
+                </div>
+                {seatTypes.slice(0, 5).map((t: any) => (
+                  <div key={t.MaLoaiGhe} className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-4 h-4 rounded border",
+                        !t.MauSac && getSeatColorClass(t.LoaiGhe)
+                      )}
+                      style={
+                        t.MauSac
+                          ? { backgroundColor: t.MauSac, borderColor: t.MauSac }
+                          : {}
+                      }
+                    ></div>
+                    {t.LoaiGhe}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
+
+        <DialogFooter className="p-4 border-t border-slate-800 bg-[#1C1C1C] shrink-0">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-slate-700"
+          >
+            Đóng
+          </Button>
+          <Button
+            onClick={handleApplySave}
+            className="bg-primary hover:bg-primary/90 px-8"
+          >
+            <Save className="size-4 mr-2" /> Lưu Sơ Đồ
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SeatTypeManagerDialog({
+  isOpen,
+  onClose,
+  seatTypes,
+  refreshData,
+}: any) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    LoaiGhe: "",
+    HeSoGiaGhe: 1.0,
+    MauSac: "#3b82f6",
+  });
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({ LoaiGhe: "", HeSoGiaGhe: 1.0, MauSac: "#3b82f6" });
+  };
+
+  const handleEdit = (type: any) => {
+    setEditingId(type.MaLoaiGhe);
+    setFormData({
+      LoaiGhe: type.LoaiGhe,
+      HeSoGiaGhe: type.HeSoGiaGhe,
+      MauSac: type.MauSac || "#3b82f6",
+    });
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (editingId) {
+        await seatTypeService.update(editingId, formData);
+        toast.success("Cập nhật thành công");
+      } else {
+        await seatTypeService.create(formData);
+        toast.success("Thêm mới thành công");
+      }
+      resetForm();
+      refreshData();
+    } catch {
+      toast.error("Lỗi khi lưu loại ghế.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Xóa loại ghế này?")) return;
+    try {
+      await seatTypeService.delete(id);
+      refreshData();
+      toast.success("Đã xóa.");
+    } catch {
+      toast.error("Không thể xóa (đang được sử dụng).");
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Quản lý Loại Ghế</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
+          {/* List Table */}
+          <div className="rounded-md border border-slate-800 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-slate-900">
+                <TableRow className="border-slate-800 hover:bg-slate-900">
+                  <TableHead className="text-slate-300">Tên Loại</TableHead>
+                  <TableHead className="text-slate-300">Màu sắc</TableHead>
+                  <TableHead className="text-slate-300">Hệ số</TableHead>
+                  <TableHead className="text-right text-slate-300">
+                    Thao tác
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {seatTypes.map((t: any) => (
+                  <TableRow
+                    key={t.MaLoaiGhe}
+                    className="border-slate-800 hover:bg-slate-800/50"
+                  >
+                    <TableCell>{t.LoaiGhe}</TableCell>
+                    <TableCell>
+                      <div
+                        className={cn(
+                          "w-5 h-5 rounded border shadow-sm",
+                          !t.MauSac && getSeatColorClass(t.LoaiGhe)
+                        )}
+                        style={
+                          t.MauSac
+                            ? {
+                                backgroundColor: t.MauSac,
+                                borderColor: t.MauSac,
+                              }
+                            : {}
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>x{t.HeSoGiaGhe}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                          onClick={() => handleEdit(t)}
+                        >
+                          <Edit className="size-4" />
                         </Button>
-                    </DialogClose>
-                    <Button onClick={handleSaveClick}>
-                        <Save className="size-4 mr-2" />
-                        Lưu Sơ đồ
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                          onClick={() => handleDelete(t.MaLoaiGhe)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Form Create/Edit */}
+          <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800 grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-400">Tên loại ghế</Label>
+              <Input
+                placeholder="VD: VIP"
+                value={formData.LoaiGhe}
+                onChange={(e) =>
+                  setFormData({ ...formData, LoaiGhe: e.target.value })
+                }
+                className="h-9 bg-black border-slate-700"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-400">Hệ số giá</Label>
+              <Input
+                type="number"
+                placeholder="1.0"
+                value={formData.HeSoGiaGhe}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    HeSoGiaGhe: parseFloat(e.target.value),
+                  })
+                }
+                className="h-9 bg-black border-slate-700"
+              />
+            </div>
+
+            {/* Color Picker */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-slate-400">Màu hiển thị</Label>
+              <div className="flex items-center gap-2">
+                <div
+                  className="relative w-9 h-9 rounded border border-slate-700 overflow-hidden cursor-pointer shadow-sm hover:border-slate-500 transition-colors"
+                  style={{ backgroundColor: formData.MauSac }}
+                >
+                  <input
+                    type="color"
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    value={formData.MauSac}
+                    onChange={(e) =>
+                      setFormData({ ...formData, MauSac: e.target.value })
+                    }
+                  />
+                </div>
+                <Input
+                  value={formData.MauSac}
+                  onChange={(e) =>
+                    setFormData({ ...formData, MauSac: e.target.value })
+                  }
+                  className="h-9 bg-black border-slate-700 font-mono uppercase"
+                  maxLength={7}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-end gap-2">
+              {editingId && (
+                <Button
+                  variant="ghost"
+                  onClick={resetForm}
+                  className="h-9 px-3 text-slate-400"
+                >
+                  Hủy
+                </Button>
+              )}
+              <Button onClick={handleSubmit} className="h-9 bg-primary flex-1">
+                {editingId ? "Lưu thay đổi" : "Thêm mới"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
