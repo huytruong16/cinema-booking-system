@@ -64,10 +64,12 @@ import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
-import { DateRange } from "react-day-picker";
-import { invoiceService, BackendInvoice } from "@/services/invoice.service";
+import { DateRange } from "react-day-picker";import {
+  invoiceService,
+  RefundRequestPayload,
+} from "@/services/invoice.service";
+import apiClient from "@/lib/apiClient";
 
-// --- TYPES (Frontend Only) ---
 type TrangThaiThanhToan = "DANGCHO" | "THANHCONG" | "THATBAI";
 type PhuongThucThanhToan =
   | "TRUCTIEP"
@@ -218,7 +220,6 @@ export default function InvoiceManagementPage() {
             NoiDung: gd.NoiDung,
           }));
         }
-        // 3. Fallback
         else {
           listGiaoDich.push({
             MaGiaoDich: "temp-" + inv.MaHoaDon,
@@ -231,7 +232,6 @@ export default function InvoiceManagementPage() {
           });
         }
 
-        // Map Vé
         const listVe: VeMua[] = (inv.Ves || []).map((v: any, idx: number) => ({
           MaVe: `${inv.MaHoaDon}_ve_${idx}`,
           Code: `${inv.Code}_ve_${idx}`,
@@ -243,18 +243,16 @@ export default function InvoiceManagementPage() {
           DaHoan: v.TrangThai === "DAHOAN" || v.TrangThai === "CHOHOANTIEN",
         }));
 
-        // Map Combo - GIỮ NGUYÊN ĐƠN GIÁ TỪ BACKEND
         const listCombo: ComboMua[] = (inv.Combos || []).map(
           (c: any, idx: number) => ({
             MaCombo: `${inv.MaHoaDon}_cb_${idx}`,
             TenCombo: c.TenCombo || "Combo",
             HinhAnh: c.HinhAnh || "",
             SoLuong: Number(c.SoLuong || 0),
-            DonGia: Number(c.DonGia || 0), // Sử dụng trực tiếp đơn giá từ BE
+            DonGia: Number(c.DonGia || 0), 
           })
         );
 
-        // Map Khuyến Mãi
         const listKhuyenMai: KhuyenMai[] = (inv.KhuyenMais || []).map(
           (k: any, idx: number) => ({
             Code: k.TenKhuyenMai || "KM",
@@ -290,7 +288,6 @@ export default function InvoiceManagementPage() {
     fetchInvoices();
   }, []);
 
-  // --- FILTER LOGIC ---
   const filteredInvoices = useMemo(() => {
     return invoices.filter((inv) => {
       const term = searchTerm.toLowerCase();
@@ -326,7 +323,6 @@ export default function InvoiceManagementPage() {
   const handlePrintInvoice = async () => {
     if (!selectedInvoice) return;
 
-    // 1. Kiểm tra nhanh ở Frontend trước khi gọi API (Optional)
     if (!selectedInvoice.Ves || selectedInvoice.Ves.length === 0) {
       toast.error("Hóa đơn này chỉ có Combo hoặc không có vé để in.");
       return;
@@ -335,11 +331,9 @@ export default function InvoiceManagementPage() {
     const toastId = toast.loading("Đang tải hóa đơn PDF...");
 
     try {
-      // Gọi API
       const blobData = await invoiceService.printInvoice(selectedInvoice.Code);
 
-      // Xử lý file PDF thành công
-      const blob = new Blob([blobData], { type: "application/pdf" });
+      const blob = new Blob([blobData as BlobPart], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const pdfWindow = window.open(url, "_blank");
 
@@ -356,48 +350,42 @@ export default function InvoiceManagementPage() {
     } catch (error: any) {
       console.error("Print invoice error:", error);
 
-      // 2. XỬ LÝ LỖI BLOB: Đọc message JSON từ Blob lỗi
       if (error.response && error.response.data instanceof Blob) {
         try {
-          // Đọc text từ blob
           const errorText = await error.response.data.text();
-          // Parse JSON: { "message": "Không có vé nào để in", ... }
           const errorJson = JSON.parse(errorText);
 
-          // Hiển thị message từ BE
           toast.error(errorJson.message || "Không thể in hóa đơn này.", {
             id: toastId,
           });
         } catch (e) {
-          // Fallback nếu không parse được JSON
           toast.error("Lỗi khi tải file hóa đơn.", { id: toastId });
         }
       } else {
-        // Lỗi mạng hoặc lỗi khác không có response data
         toast.error("Lỗi kết nối đến máy chủ.", { id: toastId });
       }
     }
   };
 
 
-  const handleCreateRefundRequest = async (reason: string) => {
+  const handleCreateRefundRequest = async (data: RefundRequestPayload) => {
     if (!selectedInvoice) return;
 
     try {
-      const mockTicketCodes = selectedInvoice.Ves.map(
-        (v, i) => `${selectedInvoice.Code}_${i + 1}`
-      );
-
       await invoiceService.createRefundRequest({
-        Code: mockTicketCodes,
-        LyDo: reason,
+        MaHoaDon: selectedInvoice.MaHoaDon,
+        LyDo: data.LyDo,
+        MaNganHang: data.MaNganHang,
+        SoTaiKhoan: data.SoTaiKhoan,
+        ChuTaiKhoan: data.ChuTaiKhoan,
       });
 
       toast.success("Đã gửi yêu cầu hoàn tiền thành công!");
       setIsRefundDialogOpen(false);
       setIsDetailOpen(false);
-      fetchInvoices();
+      fetchInvoices(); // Tải lại dữ liệu
     } catch (error: any) {
+      console.error("Refund error:", error);
       toast.error(
         error.response?.data?.message || "Lỗi khi gửi yêu cầu hoàn tiền"
       );
@@ -424,7 +412,6 @@ export default function InvoiceManagementPage() {
         </div>
       </div>
 
-      {/* FILTER BAR */}
       <div className="flex flex-col xl:flex-row gap-4 shrink-0">
         <div className="relative flex-1 max-w-md">
           <Input
@@ -640,8 +627,6 @@ export default function InvoiceManagementPage() {
   );
 }
 
-// --- SUB COMPONENTS ---
-
 function InvoiceDetailDialog({
   isOpen,
   onClose,
@@ -659,7 +644,6 @@ function InvoiceDetailDialog({
     invoice.GiaoDichs.some((gd) => gd.TrangThai === "THANHCONG") &&
     invoice.Ves.some((v) => !v.DaHoan);
 
-  // Tính toán
   const totalVe = invoice.Ves.reduce((sum, v) => sum + v.GiaVe, 0);
   const totalCombo = invoice.Combos.reduce(
     (sum, c) => sum + c.DonGia * c.SoLuong,
@@ -1047,27 +1031,65 @@ function CreateRefundDialog({
   isOpen: boolean;
   onClose: () => void;
   invoice: HoaDon;
-  onSubmit: (reason: string) => void;
+  onSubmit: (data: any) => void;
 }) {
   const [reason, setReason] = useState("");
+  const [selectedBank, setSelectedBank] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountHolder, setAccountHolder] = useState("");
+  const [banks, setBanks] = useState<any[]>([]);
+  const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchBanks = async () => {
+        setIsLoadingBanks(true);
+        try {
+          const res = await apiClient.get("/banks");
+          setBanks(res.data as any[] || []);
+        } catch (error) {
+          console.error("Failed to fetch banks", error);
+          toast.error("Không thể tải danh sách ngân hàng");
+        } finally {
+          setIsLoadingBanks(false);
+        }
+      };
+      fetchBanks();
+    }
+  }, [isOpen]);
 
   const availableRefundAmount = invoice.Ves.filter((v) => !v.DaHoan).reduce(
     (sum, v) => sum + v.GiaVe,
     0
   );
 
+  const handleSubmit = () => {
+    onSubmit({
+      MaHoaDon: invoice.MaHoaDon,
+      LyDo: reason,
+      MaNganHang: selectedBank,
+      SoTaiKhoan: accountNumber,
+      ChuTaiKhoan: accountHolder,
+    });
+  };
+
+  const isValid =
+    reason.trim() &&
+    selectedBank &&
+    accountNumber.trim() &&
+    accountHolder.trim();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg">
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-yellow-500" />
             Xác nhận hoàn hóa đơn
           </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Bạn đang yêu cầu hoàn tiền cho{" "}
-            <span className="text-white font-bold">toàn bộ vé</span> trong hóa
-            đơn <span className="font-mono text-white">{invoice.Code}</span>.
+            Bạn đang yêu cầu hoàn tiền cho hóa đơn{" "}
+            <span className="font-mono text-white">{invoice.Code}</span>.
           </DialogDescription>
         </DialogHeader>
 
@@ -1079,6 +1101,7 @@ function CreateRefundDialog({
             </p>
           </div>
 
+          {/* Form nhập lý do */}
           <div className="space-y-2">
             <Label>
               Lý do hoàn tiền <span className="text-red-500">*</span>
@@ -1089,6 +1112,63 @@ function CreateRefundDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
+          </div>
+
+          <Separator className="bg-slate-800" />
+
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-slate-300">
+              Thông tin nhận tiền hoàn
+            </h4>
+
+            {/* Chọn Ngân hàng */}
+            <div className="space-y-2">
+              <Label>
+                Ngân hàng <span className="text-red-500">*</span>
+              </Label>
+              <Select value={selectedBank} onValueChange={setSelectedBank}>
+                <SelectTrigger className="bg-transparent border-slate-700">
+                  <SelectValue
+                    placeholder={
+                      isLoadingBanks ? "Đang tải..." : "Chọn ngân hàng"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white max-h-[200px]">
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.MaNganHang} value={bank.MaNganHang}>
+                      {bank.TenNganHang} ({bank.Code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Số tài khoản */}
+            <div className="space-y-2">
+              <Label>
+                Số tài khoản <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="VD: 123456789"
+                className="bg-transparent border-slate-700"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+              />
+            </div>
+
+            {/* Chủ tài khoản */}
+            <div className="space-y-2">
+              <Label>
+                Tên chủ tài khoản <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="VD: NGUYEN VAN A"
+                className="bg-transparent border-slate-700 uppercase"
+                value={accountHolder}
+                onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
+              />
+            </div>
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-slate-800">
@@ -1110,9 +1190,9 @@ function CreateRefundDialog({
             Hủy
           </Button>
           <Button
-            onClick={() => onSubmit(reason)}
+            onClick={handleSubmit}
             className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={!reason.trim()}
+            disabled={!isValid}
           >
             Gửi yêu cầu hoàn
           </Button>

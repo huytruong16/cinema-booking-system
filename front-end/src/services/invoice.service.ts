@@ -55,6 +55,14 @@ export interface GetInvoicesParams {
   status?: string;
 }
 
+export interface RefundRequestPayload {
+  MaHoaDon: string;
+  LyDo: string;
+  MaNganHang: string;
+  SoTaiKhoan: string;
+  ChuTaiKhoan: string;
+}
+
 export const invoiceService = {
   create: async (data: CreateInvoiceDto) => {
     const res = await apiClient.post<InvoiceResponse>('/invoices', data);
@@ -78,16 +86,7 @@ export const invoiceService = {
     return res.data; 
   },
 
-  createRefundRequest: async (data: { Code: string[]; LyDo: string; MaNganHang?: string; SoTaiKhoan?: string; ChuTaiKhoan?: string }) => {
-
-    const payload = {
-        Code: data.Code,
-        LyDo: data.LyDo,
-        MaNganHang: 'e499763d-2f52-4752-b437-020556779354', 
-        SoTaiKhoan: '0000000000',
-        ChuTaiKhoan: 'KHACH HANG'
-    };
-    const res = await apiClient.post('/refund-requests', payload);
-    return res.data;
-  }
+  createRefundRequest: async (payload: RefundRequestPayload) => {
+    return await apiClient.post('/refund-requests', payload);
+  },
 };

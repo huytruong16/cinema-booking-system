@@ -2,12 +2,14 @@
 import axios from 'axios';
 
 const isServer = typeof window === 'undefined';
+
 interface RefreshTokenResponse {
   accessToken: string;
 }
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://cinema-booking-system-xkgg.onrender.com";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://cinema-booking-system-xkgg.onrender.com",
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,8 +20,7 @@ api.interceptors.request.use(
   (config) => {
     if (!isServer) {
       const token = localStorage.getItem('accessToken');
-      if (token) {
-        config.headers = config.headers || {};
+      if (token && config.headers) {
         config.headers['Authorization'] = `Bearer ${token}`;
       }
     }
@@ -50,8 +51,9 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (
-      error.response?.status === 401 && 
-      !originalRequest._retry && 
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403) && 
+      !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh-token') 
     ) {
       if (isRefreshing) {
@@ -72,9 +74,9 @@ api.interceptors.response.use(
 
       try {
         const res = await axios.get<RefreshTokenResponse>(
-            `${process.env.NEXT_PUBLIC_API_URL || "https://cinema-booking-system-xkgg.onrender.com"}/auth/refresh-token`,
+            `${API_URL}/auth/refresh-token`,
             { 
-                withCredentials: true 
+                withCredentials: true
             }
         ); 
 
@@ -95,7 +97,7 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         
         if (!isServer) {
-          console.error("Refresh token failed, logging out...");
+          console.error("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.", refreshError);
           localStorage.removeItem('user');
           localStorage.removeItem('accessToken');
           

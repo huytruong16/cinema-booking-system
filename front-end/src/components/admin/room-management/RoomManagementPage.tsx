@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -15,10 +16,8 @@ import {
   Loader2,
   Ticket,
   Palette,
-  Check,
 } from "lucide-react";
 
-// --- UI COMPONENTS ---
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -57,13 +56,11 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-// --- SERVICES ---
 import { cn } from "@/lib/utils";
 import { roomService } from "@/services/room.service";
 import { seatTypeService } from "@/services/seat-type.service";
 import { SeatType } from "@/types/seat-management";
 
-// --- TYPES ---
 type TrangThaiPhongChieu = "TRONG" | "SAPCHIEU" | "DANGCHIEU";
 
 interface PhongChieu {
@@ -71,17 +68,16 @@ interface PhongChieu {
   TenPhongChieu: string;
   TrangThai: TrangThaiPhongChieu;
   SoLuongGhe: number;
-  SoDoGhe: any;
-  GhePhongChieus?: any[];
+  SoDoGhe: any; 
+  GhePhongChieus?: any[]; 
 }
 
 interface SeatMapData {
   rows: string[];
   cols: number;
-  seats: Record<string, string>; // Key: "Row-ColIndex", Value: MaLoaiGhe
+  seats: Record<string, string>; 
 }
 
-// Cấu hình hiển thị trạng thái
 const TRANG_THAI_CONFIG: Record<
   TrangThaiPhongChieu,
   { label: string; color: string }
@@ -100,7 +96,6 @@ const TRANG_THAI_CONFIG: Record<
   },
 };
 
-// Cấu hình màu sắc loại ghế mặc định (Fallback)
 const getSeatColorClass = (typeName: string = ""): string => {
   const lower = typeName.toLowerCase();
   if (lower === "disabled")
@@ -112,11 +107,11 @@ const getSeatColorClass = (typeName: string = ""): string => {
   return "bg-slate-700 border-slate-500 text-slate-300 hover:bg-slate-600";
 };
 
-// --- HELPER FUNCTIONS ---
+
 const parseBackendToMap = (room: PhongChieu): SeatMapData => {
   const defaultMap = { rows: ["A", "B", "C", "D", "E"], cols: 10, seats: {} };
-  let layout: any = room.SoDoGhe;
 
+  let layout: any = room.SoDoGhe;
   if (typeof layout === "string") {
     try {
       layout = JSON.parse(layout);
@@ -147,9 +142,12 @@ const parseBackendToMap = (room: PhongChieu): SeatMapData => {
     if (Array.isArray(colCells)) {
       colCells.forEach((cellValue, colIndex) => {
         const gridKey = `${rowKey}-${colIndex + 1}`;
+
         if (cellValue && cellValue !== "") {
           const typeId = seatLookup.get(`${rowKey}-${cellValue}`);
-          if (typeId) seats[gridKey] = typeId;
+          if (typeId) {
+            seats[gridKey] = typeId;
+          }
         }
       });
     }
@@ -158,14 +156,12 @@ const parseBackendToMap = (room: PhongChieu): SeatMapData => {
   return { rows, cols, seats };
 };
 
-// --- COMPONENT CHÍNH ---
 export default function RoomManagementPage() {
   const [rooms, setRooms] = useState<PhongChieu[]>([]);
   const [seatTypes, setSeatTypes] = useState<SeatType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Modal States
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isSeatTypeManagerOpen, setIsSeatTypeManagerOpen] = useState(false);
@@ -173,7 +169,6 @@ export default function RoomManagementPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<PhongChieu | null>(null);
 
-  // FETCH DATA
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -200,7 +195,6 @@ export default function RoomManagementPage() {
     );
   }, [rooms, searchTerm]);
 
-  // HANDLERS
   const handleAddNew = () => {
     setSelectedRoom(null);
     setIsInfoModalOpen(true);
@@ -221,8 +215,9 @@ export default function RoomManagementPage() {
       toast.success("Đã xóa phòng chiếu.");
       fetchData();
     } catch (error: any) {
-      // Hiển thị lỗi từ BE nếu có (VD: Phòng đang có suất chiếu)
-      const msg = error.response?.data?.message || "Xóa thất bại.";
+      const msg =
+        error.response?.data?.message ||
+        "Xóa thất bại. Có thể phòng đang có dữ liệu liên quan.";
       toast.error(msg);
     } finally {
       setDeleteId(null);
@@ -235,7 +230,7 @@ export default function RoomManagementPage() {
         await roomService.update(selectedRoom.MaPhongChieu, {
           TenPhongChieu: formData.TenPhongChieu,
         });
-        toast.success("Cập nhật thành công!");
+        toast.success("Cập nhật tên phòng thành công!");
       } else {
         const payload = {
           TenPhongChieu: formData.TenPhongChieu,
@@ -243,7 +238,7 @@ export default function RoomManagementPage() {
           DanhSachGhe: [],
         };
         await roomService.create(payload as any);
-        toast.success("Tạo phòng mới thành công!");
+        toast.success("Tạo phòng mới thành công! Hãy thiết lập sơ đồ ghế.");
       }
       setIsInfoModalOpen(false);
       fetchData();
@@ -260,7 +255,7 @@ export default function RoomManagementPage() {
   ) => {
     try {
       const payload = {
-        TenPhongChieu: room.TenPhongChieu,
+        TenPhongChieu: room.TenPhongChieu, 
         SoDoPhongChieu: soDoPhongChieu,
         DanhSachGhe: danhSachGhe,
       };
@@ -276,6 +271,7 @@ export default function RoomManagementPage() {
 
   return (
     <div className="space-y-6 text-white h-full p-2">
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -308,6 +304,7 @@ export default function RoomManagementPage() {
         </div>
       </div>
 
+      {/* LIST */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-primary size-8" />
@@ -340,6 +337,7 @@ export default function RoomManagementPage() {
         onSubmit={handleFormSubmit}
         room={selectedRoom}
       />
+
       {selectedRoom && (
         <SeatMapEditorDialog
           isOpen={isMapModalOpen}
@@ -349,6 +347,7 @@ export default function RoomManagementPage() {
           onSave={handleSeatMapSave}
         />
       )}
+
       <SeatTypeManagerDialog
         isOpen={isSeatTypeManagerOpen}
         onClose={() => setIsSeatTypeManagerOpen(false)}
@@ -365,8 +364,10 @@ export default function RoomManagementPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              Hành động này sẽ xóa phòng và toàn bộ ghế liên quan. Không thể
-              hoàn tác.
+              Hành động này sẽ xóa phòng và toàn bộ sơ đồ ghế. <br />
+              <span className="text-yellow-500 font-medium">
+                Lưu ý: Không thể xóa nếu phòng đang có suất chiếu.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -386,8 +387,6 @@ export default function RoomManagementPage() {
   );
 }
 
-// --- SUB-COMPONENTS ---
-
 function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
   const totalSeats = useMemo(() => {
     let count = 0;
@@ -398,7 +397,9 @@ function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
           : room.SoDoGhe;
       if (soDo && typeof soDo === "object") {
         Object.values(soDo).forEach((cols: any) => {
-          if (Array.isArray(cols)) count += cols.filter((c) => c !== "").length;
+          if (Array.isArray(cols)) {
+            count += cols.filter((c) => c !== "").length;
+          }
         });
       }
     } catch {
@@ -414,8 +415,8 @@ function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex flex-col hover:border-slate-600 transition group">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-        <div className="flex flex-col gap-1 w-full">
-          <div className="flex justify-between w-full">
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex justify-between items-center w-full">
             <CardTitle
               className="text-lg font-semibold text-slate-100 truncate flex-1"
               title={room.TenPhongChieu}
@@ -425,7 +426,7 @@ function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
             <Badge
               variant="outline"
               className={cn(
-                "text-[10px] whitespace-nowrap ml-2 h-5",
+                "text-[10px] whitespace-nowrap ml-2 h-5 font-normal",
                 statusInfo.color
               )}
             >
@@ -527,13 +528,14 @@ function SeatMapEditorDialog({
   const initialMapData = useMemo(() => parseBackendToMap(room), [room]);
   const [seatMapData, setSeatMapData] = useState<SeatMapData>(initialMapData);
   const [selectedTool, setSelectedTool] = useState<string>("disabled");
-  const [rowInput, setRowInput] = useState(() =>
-    initialMapData.rows.length > 0
-      ? `${initialMapData.rows[0]}-${
-          initialMapData.rows[initialMapData.rows.length - 1]
-        }`
-      : "A-E"
-  );
+
+  const [rowInput, setRowInput] = useState(() => {
+    if (initialMapData.rows.length > 0)
+      return `${initialMapData.rows[0]}-${
+        initialMapData.rows[initialMapData.rows.length - 1]
+      }`;
+    return "A-E";
+  });
   const [colInput, setColInput] = useState(() =>
     initialMapData.cols > 0 ? initialMapData.cols.toString() : "10"
   );
@@ -566,8 +568,11 @@ function SeatMapEditorDialog({
     const seatId = `${row}-${col}`;
     setSeatMapData((prev) => {
       const newSeats = { ...prev.seats };
-      if (newSeats[seatId] === selectedTool) delete newSeats[seatId];
-      else newSeats[seatId] = selectedTool;
+      if (newSeats[seatId] === selectedTool) {
+        delete newSeats[seatId];
+      } else {
+        newSeats[seatId] = selectedTool;
+      }
       return { ...prev, seats: newSeats };
     });
   };
@@ -575,16 +580,23 @@ function SeatMapEditorDialog({
   const handleApplySave = () => {
     const soDoObj: Record<string, string[]> = {};
     const danhSachGheArr: any[] = [];
+
     seatMapData.rows.forEach((r) => {
       const colArr: string[] = [];
       let seatLabelCounter = 1;
+
       for (let i = 1; i <= seatMapData.cols; i++) {
         const key = `${r}-${i}`;
         const typeId = seatMapData.seats[key];
+
         if (typeId) {
           const label = seatLabelCounter.toString().padStart(2, "0");
           colArr.push(label);
-          danhSachGheArr.push({ Hang: r, Cot: label, MaLoaiGhe: typeId });
+          danhSachGheArr.push({
+            Hang: r,
+            Cot: label,
+            MaLoaiGhe: typeId,
+          });
           seatLabelCounter++;
         } else {
           colArr.push("");
@@ -592,6 +604,7 @@ function SeatMapEditorDialog({
       }
       soDoObj[r] = colArr;
     });
+
     onSave(room, soDoObj, danhSachGheArr);
   };
 
@@ -599,11 +612,13 @@ function SeatMapEditorDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white w-[98vw] h-[95vh] max-w-none sm:max-w-[98vw] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white w-[80vw] h-[95vh] max-w-none sm:max-w-[98vw] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 border-b border-slate-800 shrink-0 bg-[#1C1C1C] z-10">
           <DialogTitle>Sơ đồ: {room.TenPhongChieu}</DialogTitle>
         </DialogHeader>
+
         <div className="flex flex-1 overflow-hidden">
+          {/* SIDEBAR TOOLS */}
           <div className="w-72 bg-slate-900 border-r border-slate-800 p-4 flex flex-col gap-6 overflow-y-auto shrink-0">
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
@@ -636,6 +651,7 @@ function SeatMapEditorDialog({
                 Cập nhật lưới
               </Button>
             </div>
+
             <div className="space-y-3 flex-1">
               <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
                 <Palette size={16} /> Loại ghế (Chọn để vẽ)
@@ -675,6 +691,7 @@ function SeatMapEditorDialog({
                     </span>
                   </button>
                 ))}
+
                 <button
                   onClick={() => setSelectedTool("disabled")}
                   className={cn(
@@ -693,6 +710,7 @@ function SeatMapEditorDialog({
                 </button>
               </div>
             </div>
+
             <div className="bg-slate-800 p-3 rounded-lg text-center border border-slate-700 mt-auto">
               <div className="text-3xl font-bold text-primary">
                 {activeSeatCount}
@@ -702,6 +720,8 @@ function SeatMapEditorDialog({
               </div>
             </div>
           </div>
+
+          {/* MAIN CANVAS */}
           <ScrollArea className="flex-1 bg-black/80 relative">
             <div
               className="absolute inset-0 pointer-events-none opacity-[0.03]"
@@ -710,22 +730,29 @@ function SeatMapEditorDialog({
                 backgroundSize: "20px 20px",
               }}
             ></div>
+
             <div className="p-16 min-w-max mx-auto flex flex-col items-center justify-start min-h-full">
+              {/* Màn hình */}
               <div className="w-[600px] h-2 bg-gradient-to-r from-transparent via-slate-500 to-transparent mb-16 rounded-full opacity-60 relative shrink-0">
                 <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs text-slate-500 uppercase tracking-[0.3em] font-medium">
                   Màn hình chiếu
                 </span>
                 <div className="absolute top-0 left-0 w-full h-10 bg-gradient-to-b from-slate-500/10 to-transparent -z-10 blur-xl"></div>
               </div>
+
+              {/* Grid */}
               <div className="flex flex-col gap-3">
                 {seatMapData.rows.map((row) => (
                   <div
                     key={row}
                     className="flex gap-3 items-center justify-center"
                   >
+                    {/* Label Trái */}
                     <div className="w-8 text-center text-sm font-bold text-slate-500 tabular-nums">
                       {row}
                     </div>
+
+                    {/* Cột Ghế */}
                     {Array.from({ length: seatMapData.cols }, (_, i) => {
                       const col = i + 1;
                       const seatId = `${row}-${col}`;
@@ -735,6 +762,7 @@ function SeatMapEditorDialog({
                       const typeObj = seatTypes.find(
                         (t: any) => t.MaLoaiGhe === currentTypeId
                       );
+
                       return (
                         <button
                           key={seatId}
@@ -771,18 +799,22 @@ function SeatMapEditorDialog({
                         </button>
                       );
                     })}
+
+                    {/* Label Phải */}
                     <div className="w-8 text-center text-sm font-bold text-slate-500 tabular-nums">
                       {row}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Chú thích */}
               <div className="mt-16 flex gap-6 text-xs text-slate-500">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-[#1a1a1a] border border-slate-800"></div>{" "}
+                  <div className="w-4 h-4 rounded bg-[#1a1a1a] border border-slate-800"></div>
                   Lối đi (Trống)
                 </div>
-                {seatTypes.slice(0, 3).map((t: any) => (
+                {seatTypes.slice(0, 5).map((t: any) => (
                   <div key={t.MaLoaiGhe} className="flex items-center gap-2">
                     <div
                       className={cn(
@@ -794,7 +826,7 @@ function SeatMapEditorDialog({
                           ? { backgroundColor: t.MauSac, borderColor: t.MauSac }
                           : {}
                       }
-                    ></div>{" "}
+                    ></div>
                     {t.LoaiGhe}
                   </div>
                 ))}
@@ -802,6 +834,7 @@ function SeatMapEditorDialog({
             </div>
           </ScrollArea>
         </div>
+
         <DialogFooter className="p-4 border-t border-slate-800 bg-[#1C1C1C] shrink-0">
           <Button
             variant="outline"
@@ -839,6 +872,7 @@ function SeatTypeManagerDialog({
     setEditingId(null);
     setFormData({ LoaiGhe: "", HeSoGiaGhe: 1.0, MauSac: "#3b82f6" });
   };
+
   const handleEdit = (type: any) => {
     setEditingId(type.MaLoaiGhe);
     setFormData({
@@ -871,7 +905,7 @@ function SeatTypeManagerDialog({
       refreshData();
       toast.success("Đã xóa.");
     } catch {
-      toast.error("Không thể xóa.");
+      toast.error("Không thể xóa (đang được sử dụng).");
     }
   };
 
@@ -882,6 +916,7 @@ function SeatTypeManagerDialog({
           <DialogTitle>Quản lý Loại Ghế</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
+          {/* List Table */}
           <div className="rounded-md border border-slate-800 overflow-hidden">
             <Table>
               <TableHeader className="bg-slate-900">
@@ -943,6 +978,8 @@ function SeatTypeManagerDialog({
               </TableBody>
             </Table>
           </div>
+
+          {/* Form Create/Edit */}
           <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800 grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs text-slate-400">Tên loại ghế</Label>
@@ -970,6 +1007,8 @@ function SeatTypeManagerDialog({
                 className="h-9 bg-black border-slate-700"
               />
             </div>
+
+            {/* Color Picker */}
             <div className="space-y-1.5">
               <Label className="text-xs text-slate-400">Màu hiển thị</Label>
               <div className="flex items-center gap-2">
@@ -996,6 +1035,7 @@ function SeatTypeManagerDialog({
                 />
               </div>
             </div>
+
             <div className="flex items-end gap-2">
               {editingId && (
                 <Button
