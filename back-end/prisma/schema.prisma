@@ -119,6 +119,7 @@ model LOAIGHE {
   CreatedAt  DateTime       @default(now()) @db.Timestamptz(6)
   UpdatedAt  DateTime       @default(now()) @db.Timestamptz(6)
   DeletedAt  DateTime?      @db.Timestamptz(6)
+  MauSac     String        
 }
 
 model GHE {

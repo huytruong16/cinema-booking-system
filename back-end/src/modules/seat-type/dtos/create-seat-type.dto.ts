@@ -21,4 +21,13 @@ export class CreateSeatTypeDto {
     @IsNumber()
     @Min(0)
     HeSoGiaGhe?: number;
+
+    @ApiProperty({
+        description: 'Màu sắc',
+        example: '#FF5733',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    MauSac: string;
 }
