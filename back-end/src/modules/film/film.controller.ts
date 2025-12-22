@@ -16,6 +16,7 @@ import {
     ApiConsumes,
     ApiBody
 } from '@nestjs/swagger';
+import { GetFilmReviewDto } from './dtos/get-film-review.dto';
 
 @ApiTags('Phim')
 @Controller('films')
@@ -40,6 +41,15 @@ export class FilmController {
     @ApiQuery({ name: 'MaNgonNgu', required: false, description: 'Lọc theo mã ngôn ngữ' })
     async getAllFilmFormats(@Query() filters: FilterFilmDto) {
         return this.filmService.getAllFilmFormats(filters);
+    }
+
+    @Get(':id/reviews')
+    @ApiOperation({ summary: 'Lấy danh sách đánh giá của phim theo mã phim' })
+    @ApiParam({ name: 'id', description: 'Mã phim', required: true })
+    @ApiResponse({ status: 200, description: 'Danh sách đánh giá của phim' })
+    async getFilmReviews(@Param('id') id: string, @Query() query: GetFilmReviewDto) {
+        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+        return this.filmService.getFilmReviews(id, query);
     }
 
     @Get(':id')
