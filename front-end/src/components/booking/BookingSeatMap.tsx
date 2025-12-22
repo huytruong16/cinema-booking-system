@@ -21,6 +21,7 @@ export interface SeatRenderMeta {
   type: string;
   price: number;
   status?: string;
+  color?: string;
 }
 
 interface BookingSeatMapProps {
@@ -79,7 +80,10 @@ export default function BookingSeatMap({
           {seatTypes.length > 0 ? (
             seatTypes.map(st => (
               <div key={st.MaLoaiGhe} className="flex items-center gap-1.5">
-                <Armchair className={cn("size-4", getSeatIconColor(st.LoaiGhe))} /> {st.LoaiGhe}
+                <Armchair 
+                  className={cn("size-4", !st.MauSac && getSeatIconColor(st.LoaiGhe))} 
+                  style={st.MauSac ? { color: st.MauSac } : undefined}
+                /> {st.LoaiGhe}
               </div>
             ))
           ) : (
@@ -119,7 +123,7 @@ export default function BookingSeatMap({
                     const seatId = `${rowName}${seatNum}`;
                     const meta = seatMetaById?.[seatId];
 
-                    let type: 'thuong' | 'vip' | 'doi' = meta?.type ?? 'thuong';
+                    let type = meta?.type ?? 'thuong';
                     let price = meta?.price ?? basePrice;
 
                     if (!meta) {
@@ -130,15 +134,27 @@ export default function BookingSeatMap({
                     const isBooked = meta?.status ? meta.status !== 'CONTRONG' : bookedSeats.includes(seatId);
                     const isSelected = selectedSeats.some(s => s.id === seatId);
 
+                    const customStyle = (!isSelected && !isBooked && meta?.color) ? {
+                        borderColor: meta.color,
+                        color: meta.color,
+                        backgroundColor: `${meta.color}33`
+                    } : {};
+
                     return (
                       <Button
                         key={seatId}
                         variant="outline"
+                        style={customStyle}
                         className={cn(
                           "p-0 text-xs flex-shrink-0 transition-all duration-200",
                           isDouble ? "w-[4.5rem] h-8 rounded-lg" : "size-8 rounded-md",
+                          
+                          // Use default classes only if no custom color is provided
+                          !meta?.color && getSeatColor(type),
+                          
+                          // If custom color is provided, add generic hover effect
+                          meta?.color && !isSelected && !isBooked && "hover:brightness-125",
 
-                          getSeatColor(type),
                           isSelected && "bg-primary border-primary text-primary-foreground hover:bg-primary/80 ring-2 ring-offset-2 ring-offset-background ring-primary",
                           isBooked && "bg-slate-800/50 border-transparent text-slate-600 cursor-not-allowed hover:bg-slate-800/50"
                         )}
