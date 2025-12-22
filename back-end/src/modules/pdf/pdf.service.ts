@@ -78,6 +78,7 @@ export class PdfService {
         const fontPathBold = path.join(__dirname, '..', '..', '..', 'assets', 'fonts', 'Arial-Bold.ttf');
         doc.registerFont('Arial', fontPathRegular);
         doc.registerFont('Arial-Bold', fontPathBold);
+
     }
 
     private drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
@@ -86,6 +87,7 @@ export class PdfService {
         doc.rect(10, 10, 580, 230).strokeColor('#333').lineWidth(2).stroke();
 
         const logoPath = path.join(__dirname, '..', '..', '..', 'assets', 'images', 'logo.png');
+
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 });
         }
