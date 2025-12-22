@@ -4,10 +4,114 @@ import PDFDocument from 'pdfkit';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as QRCode from 'qrcode';
+import GetInvoiceResponseDto from '../invoice/dtos/get-invoice-response.dto';
 
 @Injectable()
 export class PdfService {
     constructor(private prisma: PrismaService) { }
+
+    async generateInvoicePdf(invoice: GetInvoiceResponseDto): Promise<Buffer> {
+        const qrCodeBuffer = await QRCode.toBuffer(invoice.Code);
+
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ size: 'A4', margin: 50 });
+            const buffers: Buffer[] = [];
+
+            doc.on('data', (chunk) => buffers.push(chunk));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', (err) => reject(err));
+
+            this.registerFonts(doc);
+
+            const logoPath = path.join(__dirname, '..', '..', 'images', 'logo.png');
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, 50, 45, { width: 50 });
+            }
+
+            doc.image(qrCodeBuffer, 480, 45, { width: 60 });
+
+            doc.font('Arial-Bold').fontSize(20).text('MOVIX CINEMA', 110, 57);
+            doc.fontSize(10).font('Arial').text('123 Đường ABC, TP.HCM', 110, 80);
+            doc.text('Hotline: 1900 1234', 110, 95);
+
+            doc.moveDown();
+            doc.moveTo(50, 115).lineTo(550, 115).stroke();
+
+            doc.moveDown(2);
+            doc.font('Arial-Bold').fontSize(16).text('HÓA ĐƠN THANH TOÁN', { align: 'center' });
+            doc.moveDown();
+
+            const startY = doc.y;
+            doc.font('Arial').fontSize(11);
+
+            doc.text(`Mã hóa đơn: ${invoice.Code}`, 50, startY);
+            doc.text(`Ngày lập: ${new Date(invoice.NgayLap).toLocaleDateString('vi-VN')}`, 50, startY + 20);
+            doc.text(`Email khách hàng: ${invoice.Email}`, 50, startY + 40);
+
+            doc.text(`Phim: ${invoice.Phim.TenPhim}`, 300, startY, { width: 250 });
+            doc.text(`Rạp: ${invoice.PhongChieu}`, 300, startY + 20);
+            doc.text(`Suất chiếu: ${new Date(invoice.ThoiGianChieu).toLocaleString('vi-VN')}`, 300, startY + 40);
+
+            doc.moveDown(4);
+
+            const tableTop = doc.y;
+            const itemX = 50;
+            const qtyX = 300;
+            const priceX = 380;
+            const totalX = 480;
+
+            doc.font('Arial-Bold');
+            doc.text('Mô tả', itemX, tableTop);
+            doc.text('SL', qtyX, tableTop);
+            doc.text('Đơn giá', priceX, tableTop);
+            doc.text('Thành tiền', totalX, tableTop);
+
+            doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+            let currentY = tableTop + 25;
+            doc.font('Arial');
+
+            invoice.Ves.forEach((ticket: any) => {
+                const seatInfo = `Vé xem phim - Ghế ${ticket.SoGhe}`;
+                doc.text(seatInfo, itemX, currentY);
+                doc.text('1', qtyX, currentY);
+                doc.text(Number(ticket.DonGia).toLocaleString('vi-VN'), priceX, currentY);
+                doc.text(Number(ticket.DonGia).toLocaleString('vi-VN'), totalX, currentY);
+                currentY += 20;
+            });
+
+            invoice.Combos.forEach((combo: any) => {
+                doc.text(`Combo: ${combo.TenCombo}`, itemX, currentY);
+                doc.text(combo.SoLuong.toString(), qtyX, currentY);
+                doc.text(Number(combo.DonGia).toLocaleString('vi-VN'), priceX, currentY);
+                doc.text((Number(combo.DonGia) * combo.SoLuong).toLocaleString('vi-VN'), totalX, currentY);
+                currentY += 20;
+            });
+
+            doc.moveTo(50, currentY).lineTo(550, currentY).stroke();
+            currentY += 10;
+
+            doc.font('Arial-Bold');
+            doc.text('Tổng tiền:', 350, currentY);
+            doc.text(`${Number(invoice.TongTien).toLocaleString('vi-VN')} đ`, totalX, currentY);
+
+            doc.moveDown(4);
+            const signatureY = doc.y;
+
+            doc.font('Arial-Bold').fontSize(11);
+            doc.text('Khách hàng', 80, signatureY);
+            doc.text('Người lập phiếu', 400, signatureY);
+
+            doc.font('Arial').fontSize(10);
+            doc.text('(Ký, ghi rõ họ tên)', 75, signatureY + 15);
+            doc.text('(Ký, ghi rõ họ tên)', 395, signatureY + 15);
+
+            doc.moveDown(6);
+            doc.font('Arial').fontSize(10).text('Cảm ơn quý khách đã sử dụng dịch vụ!', { align: 'center' });
+
+            doc.end();
+        });
+    }
 
     async generateTicketsPdf(ticketCodes: string[]): Promise<Buffer> {
         const tickets = await this.prisma.vE.findMany({
