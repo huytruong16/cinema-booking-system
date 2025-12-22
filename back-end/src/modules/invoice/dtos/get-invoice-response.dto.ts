@@ -28,6 +28,7 @@ class Film {
 }
 
 class Ticket {
+    Code: string;
     SoGhe: string;
     TrangThai: TicketStatusEnum;
     DonGia: number;
