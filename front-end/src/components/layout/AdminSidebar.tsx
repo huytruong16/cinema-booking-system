@@ -255,7 +255,7 @@ export default function AdminSidebar({
     <aside
       className={clsx(
         "fixed top-0 left-0 h-screen bg-[#262626] text-white flex flex-col p-4 border-r border-slate-800 z-40 transition-all duration-300 ease-in-out",
-        open ? "w-64" : "w-18",
+        open ? "w-64" : "w-24",
         className
       )}
     >

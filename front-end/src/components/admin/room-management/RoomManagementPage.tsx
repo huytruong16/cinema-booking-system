@@ -176,7 +176,7 @@ export default function RoomManagementPage() {
         roomService.getAll(),
         seatTypeService.getAll(),
       ]);
-      setRooms(roomsData || []);
+      setRooms(roomsData as any|| []);
       setSeatTypes(typesData || []);
     } catch (error) {
       toast.error("Không thể tải dữ liệu.");

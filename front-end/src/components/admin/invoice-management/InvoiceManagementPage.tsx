@@ -38,7 +38,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   Search,
@@ -53,30 +52,40 @@ import {
   Loader2,
   AlertTriangle,
   Tag,
-  Image as ImageIcon,
+  ImageIcon,
   MapPin,
-  Clock,
   Ticket,
   Popcorn,
-  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
-import { DateRange } from "react-day-picker";import {
+import { DateRange } from "react-day-picker";
+import {
   invoiceService,
   RefundRequestPayload,
 } from "@/services/invoice.service";
 import apiClient from "@/lib/apiClient";
+import { BankCombobox } from "@/components/movies/BankCombobox";
 
+// --- TYPES & INTERFACES ---
 type TrangThaiThanhToan = "DANGCHO" | "THANHCONG" | "THATBAI";
+type TrangThaiVe =
+  | "CHUASUDUNG"
+  | "DASUDUNG"
+  | "DAHETHAN"
+  | "CHUAHOANTIEN"
+  | "CHOHOANTIEN"
+  | "DAHOAN";
+
 type PhuongThucThanhToan =
   | "TRUCTIEP"
   | "TRUCTUYEN"
   | "MOMO"
   | "VNPAY"
   | "PAYOS";
+
 type LoaiGiaoDich = "MUAVE" | "HOANTIEN";
 
 interface GiaoDich {
@@ -98,7 +107,7 @@ interface VeMua {
   PhongChieu: string;
   Ghe: string;
   GiaVe: number;
-  DaHoan: boolean;
+  TrangThai: TrangThaiVe; // Sử dụng enum trạng thái vé chuẩn xác
 }
 
 interface ComboMua {
@@ -155,6 +164,26 @@ const getStatusLabel = (status: string) => {
   }
 };
 
+// Hàm hiển thị trạng thái vé tiếng Việt
+const getTicketStatusLabel = (status: TrangThaiVe) => {
+  switch (status) {
+    case "CHUASUDUNG":
+      return "Chưa sử dụng";
+    case "DASUDUNG":
+      return "Đã sử dụng";
+    case "DAHETHAN":
+      return "Đã hết hạn";
+    case "CHOHOANTIEN":
+      return "Chờ hoàn tiền";
+    case "DAHOAN":
+      return "Đã hoàn";
+    case "CHUAHOANTIEN":
+      return "Chưa hoàn tiền";
+    default:
+      return status;
+  }
+};
+
 const getPaymentMethodLabel = (method: string) => {
   const map: Record<string, string> = {
     TRUCTIEP: "Tiền mặt",
@@ -177,6 +206,7 @@ const formatCurrency = (value: number) =>
     value
   );
 
+// --- MAIN COMPONENT ---
 export default function InvoiceManagementPage() {
   const [invoices, setInvoices] = useState<HoaDon[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,8 +249,8 @@ export default function InvoiceManagementPage() {
             LoaiGiaoDich: gd.LoaiGiaoDich,
             NoiDung: gd.NoiDung,
           }));
-        }
-        else {
+        } else {
+          // Fallback data ảo nếu thiếu
           listGiaoDich.push({
             MaGiaoDich: "temp-" + inv.MaHoaDon,
             Code: "TXN-" + inv.Code,
@@ -240,7 +270,7 @@ export default function InvoiceManagementPage() {
           PhongChieu: inv.PhongChieu || "Không xác định",
           Ghe: v.SoGhe || "N/A",
           GiaVe: Number(v.DonGia || 0),
-          DaHoan: v.TrangThai === "DAHOAN" || v.TrangThai === "CHOHOANTIEN",
+          TrangThai: v.TrangThai || "CHUASUDUNG", 
         }));
 
         const listCombo: ComboMua[] = (inv.Combos || []).map(
@@ -249,12 +279,12 @@ export default function InvoiceManagementPage() {
             TenCombo: c.TenCombo || "Combo",
             HinhAnh: c.HinhAnh || "",
             SoLuong: Number(c.SoLuong || 0),
-            DonGia: Number(c.DonGia || 0), 
+            DonGia: Number(c.DonGia || 0),
           })
         );
 
         const listKhuyenMai: KhuyenMai[] = (inv.KhuyenMais || []).map(
-          (k: any, idx: number) => ({
+          (k: any) => ({
             Code: k.TenKhuyenMai || "KM",
             SoTienGiam: Number(k.SoTienGiam || 0),
             MoTa: k.LoaiKhuyenMai,
@@ -332,8 +362,9 @@ export default function InvoiceManagementPage() {
 
     try {
       const blobData = await invoiceService.printInvoice(selectedInvoice.Code);
-
-      const blob = new Blob([blobData as BlobPart], { type: "application/pdf" });
+      const blob = new Blob([blobData as BlobPart], {
+        type: "application/pdf",
+      });
       const url = window.URL.createObjectURL(blob);
       const pdfWindow = window.open(url, "_blank");
 
@@ -366,7 +397,6 @@ export default function InvoiceManagementPage() {
       }
     }
   };
-
 
   const handleCreateRefundRequest = async (data: RefundRequestPayload) => {
     if (!selectedInvoice) return;
@@ -640,9 +670,19 @@ function InvoiceDetailDialog({
   onPrint: () => void;
   onRefund: () => void;
 }) {
-  const canRefund =
-    invoice.GiaoDichs.some((gd) => gd.TrangThai === "THANHCONG") &&
-    invoice.Ves.some((v) => !v.DaHoan);
+  // --- LOGIC HOÀN VÉ MỚI ---
+  // 1. Phải có giao dịch thành công
+  const successfulTx = invoice.GiaoDichs.some(
+    (gd) => gd.TrangThai === "THANHCONG"
+  );
+
+  // 2. TẤT CẢ các vé phải ở trạng thái "CHUASUDUNG".
+  const areAllTicketsUnused =
+    invoice.Ves.length > 0 &&
+    invoice.Ves.every((v) => v.TrangThai === "CHUASUDUNG");
+
+  // Điều kiện cuối cùng (Đã bỏ kiểm tra PhuongThuc === TRUCTUYEN theo yêu cầu)
+  const canRefund = successfulTx && areAllTicketsUnused;
 
   const totalVe = invoice.Ves.reduce((sum, v) => sum + v.GiaVe, 0);
   const totalCombo = invoice.Combos.reduce(
@@ -763,14 +803,24 @@ function InvoiceDetailDialog({
                                 <MapPin className="size-3 inline mr-1" />
                                 {ve.PhongChieu}
                               </p>
-                              {ve.DaHoan && (
-                                <Badge
-                                  variant="destructive"
-                                  className="mt-1 text-[10px] px-1.5 py-0 h-4"
-                                >
-                                  Đã hoàn
-                                </Badge>
-                              )}
+                              {/* Hiển thị Badge trạng thái chính xác */}
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "mt-1 text-[10px] px-1.5 py-0 h-4 border",
+                                  ve.TrangThai === "CHUASUDUNG"
+                                    ? "border-green-500 text-green-500"
+                                    : ve.TrangThai === "DASUDUNG"
+                                    ? "border-slate-500 text-slate-500"
+                                    : ve.TrangThai === "CHOHOANTIEN"
+                                    ? "border-yellow-500 text-yellow-500"
+                                    : ve.TrangThai === "DAHOAN"
+                                    ? "border-red-500 text-red-500"
+                                    : ""
+                                )}
+                              >
+                                {getTicketStatusLabel(ve.TrangThai)}
+                              </Badge>
                             </div>
                           </div>
                         </TableCell>
@@ -835,12 +885,14 @@ function InvoiceDetailDialog({
                                   <Receipt className="size-4 text-slate-600" />
                                 )}
                               </div>
-                              <p
-                                className="font-medium text-white text-sm truncate max-w-[250px]"
-                                title={cb.TenCombo}
-                              >
-                                {cb.TenCombo}
-                              </p>
+                              <div className="min-w-0">
+                                <p
+                                  className="font-medium text-white text-sm truncate max-w-[250px]"
+                                  title={cb.TenCombo}
+                                >
+                                  {cb.TenCombo}
+                                </p>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-center text-slate-300">
@@ -1039,6 +1091,7 @@ function CreateRefundDialog({
   const [accountHolder, setAccountHolder] = useState("");
   const [banks, setBanks] = useState<any[]>([]);
   const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+  
 
   useEffect(() => {
     if (isOpen) {
@@ -1046,7 +1099,7 @@ function CreateRefundDialog({
         setIsLoadingBanks(true);
         try {
           const res = await apiClient.get("/banks");
-          setBanks(res.data as any[] || []);
+          setBanks((res.data as any[]) || []);
         } catch (error) {
           console.error("Failed to fetch banks", error);
           toast.error("Không thể tải danh sách ngân hàng");
@@ -1058,10 +1111,10 @@ function CreateRefundDialog({
     }
   }, [isOpen]);
 
-  const availableRefundAmount = invoice.Ves.filter((v) => !v.DaHoan).reduce(
-    (sum, v) => sum + v.GiaVe,
-    0
-  );
+  // Tính tiền dựa trên vé CHƯA SỬ DỤNG
+  const availableRefundAmount = invoice.Ves.filter(
+    (v) => v.TrangThai === "CHUASUDUNG"
+  ).reduce((sum, v) => sum + v.GiaVe, 0);
 
   const handleSubmit = () => {
     onSubmit({
@@ -1126,22 +1179,12 @@ function CreateRefundDialog({
               <Label>
                 Ngân hàng <span className="text-red-500">*</span>
               </Label>
-              <Select value={selectedBank} onValueChange={setSelectedBank}>
-                <SelectTrigger className="bg-transparent border-slate-700">
-                  <SelectValue
-                    placeholder={
-                      isLoadingBanks ? "Đang tải..." : "Chọn ngân hàng"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white max-h-[200px]">
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.MaNganHang} value={bank.MaNganHang}>
-                      {bank.TenNganHang} ({bank.Code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BankCombobox
+                value={selectedBank}
+                onChange={setSelectedBank}
+                banks={banks}
+                isLoading={isLoadingBanks}
+              />
             </div>
 
             {/* Số tài khoản */}
