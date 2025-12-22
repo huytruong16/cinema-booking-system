@@ -10,6 +10,8 @@ import {
 } from '@nestjs/swagger';
 import { GetSeatsDto } from './dtos/get-seat.dto';
 import { SeatCheckRequestDto } from './dtos/post-check-available.dto';
+import { CreateSeatDto } from './dtos/create-seat.dto';
+import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
 
 @ApiTags('Ghế')
 @Controller('seats')
@@ -29,6 +31,20 @@ export class SeatController {
     @ApiResponse({ status: 200 })
     async getAllBaseSeats() {
         return this.seatService.getAllBaseSeats();
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Tạo mới ghế' })
+    @ApiResponse({ status: 201 })
+    async checkSeatsAvailability(@Body() body: CreateSeatDto) {
+        return this.seatService.createSeat(body);
+    }
+
+    @Post('/seat-type')
+    @ApiOperation({ summary: 'Tạo ghế loại ghế' })
+    @ApiResponse({ status: 201 })
+    async createSeatType(@Body() body: CreateSeatSeatTypeDto) {
+        return this.seatService.createSeatSeatType(body);
     }
 
     @Get('/base/:id')

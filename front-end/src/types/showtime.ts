@@ -17,6 +17,7 @@ export interface LoaiGhe {
   MaLoaiGhe: string;
   LoaiGhe: string;
   HeSoGiaGhe: number;
+  MauSac?: string;
   CreatedAt?: string;
   UpdatedAt?: string;
   DeletedAt?: string | null;

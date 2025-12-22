@@ -7,6 +7,7 @@ import { UpdateFilmDto } from './dtos/update-film.dto';
 import { CreateFilmVersionDto } from './dtos/create-film-version.dto';
 import { UpdateFilmVersionDto } from './dtos/update-film-version.dto';
 import { CursorUtils } from 'src/libs/common/utils/pagination.util';
+import { GetFilmReviewDto } from './dtos/get-film-review.dto';
 
 @Injectable()
 export class FilmService {
@@ -456,6 +457,27 @@ export class FilmService {
         });
 
         return { message: 'Xóa phiên bản phim thành công' };
+    }
+
+    async getFilmReviews(filmId: string, query: GetFilmReviewDto) {
+        const film = await this.prisma.pHIM.findUnique({
+            where: { MaPhim: filmId, DeletedAt: null },
+        });
+
+        if (!film) throw new NotFoundException(`Phim không tồn tại`);
+
+        const reviews = await this.prisma.xprisma.dANHGIA.paginate({
+            where: { MaPhim: filmId, DeletedAt: null },
+            orderBy: { CreatedAt: 'desc' },
+            include: {
+                NguoiDungPhanMem: {
+                    include: {
+                        KhachHangs: true,
+                    }
+                }
+            }
+        }).withCursor(CursorUtils.getPrismaOptions(query ?? {}, 'MaDanhGia'));
+        return reviews;
     }
 
 }

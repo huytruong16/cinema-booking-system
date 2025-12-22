@@ -43,6 +43,16 @@ export const showtimeService = {
         }
     },
 
+    checkSeatAvailability: async (seatId: string): Promise<boolean> => {
+        try {
+            const response = await api.get<{ ConTrong: boolean }>(`/seats/${seatId}/check-available`);
+            return response.data.ConTrong;
+        } catch (error) {
+            console.error(`Lỗi khi kiểm tra ghế ${seatId}:`, error);
+            return false;
+        }
+    },
+
     getShowtimesByMovieId: async (movieId: string, params?: { TrangThai?: string, NgayChieu?: string }): Promise<import("@/types/showtime").ShowtimeByMovieResponse | null> => {
         try {
             const response = await api.get<import("@/types/showtime").ShowtimeByMovieResponse>(`/showtimes/movie/${movieId}`, {

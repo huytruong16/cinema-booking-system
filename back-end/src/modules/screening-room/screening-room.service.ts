@@ -6,7 +6,7 @@ import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
 @Injectable()
 export class ScreeningRoomService {
     constructor(
-        readonly prisma: PrismaService,
+        private readonly prisma: PrismaService
     ) { }
 
     private getSeatsIncludeQuery(): any {
@@ -74,7 +74,7 @@ export class ScreeningRoomService {
         await checkScreeningRoomExists();
         validateSeatConsistency();
 
-        await prisma.$transaction(async (tx) => {
+        const newScreeningRoomId = await prisma.$transaction(async (tx) => {
             const screeningRoom = await tx.pHONGCHIEU.create({
                 data: {
                     TenPhongChieu,
@@ -84,23 +84,8 @@ export class ScreeningRoomService {
 
             const screeningRoomId = screeningRoom.MaPhongChieu;
 
-            for (const seat of DanhSachGhe) {
-                const { Hang, Cot, MaLoaiGhe } = seat;
-
-                const existingSeatSeatType = await findExistingSeat(Hang, Cot, MaLoaiGhe);
-
-                await tx.gHE_PHONGCHIEU.create({
-                    data: {
-                        MaPhongChieu: screeningRoomId,
-                        MaGheLoaiGhe: existingSeatSeatType.MaGheLoaiGhe,
-                    }
-                });
-            }
-
-            return screeningRoom;
-
-            async function findExistingSeat(Hang: string, Cot: string, MaLoaiGhe: string) {
-                const existingSeat = await tx.gHE.findFirst({
+            for (const { Hang, Cot, MaLoaiGhe } of DanhSachGhe) {
+                let seat = await tx.gHE.findFirst({
                     where: {
                         Hang: Hang,
                         Cot: Cot,
@@ -111,27 +96,49 @@ export class ScreeningRoomService {
                     }
                 });
 
-                if (!existingSeat) {
-                    throw new BadRequestException(`Ghế tại hàng ${Hang} cột ${Cot} không tồn tại`);
+                if (!seat) {
+                    seat = await tx.gHE.create({
+                        data: {
+                            Hang: Hang,
+                            Cot: Cot,
+                        }
+                    });
                 }
 
-                const existingSeatSeatType = await tx.gHE_LOAIGHE.findFirst({
+                let seatSeatType = await tx.gHE_LOAIGHE.findFirst({
                     where: {
-                        MaGhe: existingSeat.MaGhe,
+                        MaGhe: seat!.MaGhe,
                         MaLoaiGhe: MaLoaiGhe,
-                        DeletedAt: null
+                        DeletedAt: null,
                     },
                     select: {
-                        MaGheLoaiGhe: true
-                    }
+                        MaGheLoaiGhe: true,
+                    },
                 });
 
-                if (!existingSeatSeatType) {
-                    throw new BadRequestException(`Ghế tại hàng ${Hang} cột ${Cot} không có loại ghế được chọn`);
+                if (!seatSeatType) {
+                    seatSeatType = await tx.gHE_LOAIGHE.create({
+                        data: {
+                            MaGhe: seat.MaGhe,
+                            MaLoaiGhe: MaLoaiGhe,
+                        }
+                    });
                 }
-                return existingSeatSeatType;
+
+                await tx.gHE_PHONGCHIEU.create({
+                    data: {
+                        MaPhongChieu: screeningRoomId,
+                        MaGheLoaiGhe: seatSeatType.MaGheLoaiGhe,
+                    }
+                });
             }
+
+            return screeningRoomId;
+        }, {
+            timeout: 100000
         });
+
+        return this.getScreeningRoomById(newScreeningRoomId);
 
         async function checkScreeningRoomExists() {
             const screeningRoom = await prisma.pHONGCHIEU.findFirst({
