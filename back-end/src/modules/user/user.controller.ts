@@ -10,6 +10,8 @@ import { AssignEmployeeDto } from './dtos/assign-employee.dto';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
 import { RoleEnum } from 'src/libs/common/enums';
+import { UpdateGroupPermissionsDto } from './dtos/update-group-permissions.dto';
+import { AssignUserToGroupDto } from './dtos/assign-user-to-group.dto';
 
 @ApiTags('Người dùng')
 @Controller('users')
@@ -113,4 +115,37 @@ export class UserController {
         return this.userService.assignEmployee(dto);
     }
 
+    @Post('assign-group')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(RoleEnum.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'ADMIN gán người dùng vào nhóm' })
+    @ApiBody({
+        description: 'Thông tin gán người dùng vào nhóm',
+        type: AssignUserToGroupDto,
+    })
+    @ApiResponse({ status: 201, description: 'Gán người dùng vào nhóm thành công' })
+    @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token không hợp lệ' })
+    @ApiResponse({ status: 404, description: 'Người dùng hoặc nhóm không tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async assignUserToGroup(@Body() dto: AssignUserToGroupDto) {
+        return this.userService.assignUserToGroup(dto);
+    }
+
+    @Patch('groups/permissions')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(RoleEnum.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'ADMIN cập nhật quyền cho nhóm người dùng' })
+    @ApiBody({
+        description: 'Thông tin quyền của nhóm người dùng',
+        type: UpdateGroupPermissionsDto,
+    })
+    @ApiResponse({ status: 200, description: 'Cập nhật quyền cho nhóm người dùng thành công' })
+    @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token không hợp lệ' })
+    @ApiResponse({ status: 404, description: 'Nhóm người dùng không tồn tại' })
+    @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ' })
+    async updateGroupPermissions(@Body() dto: UpdateGroupPermissionsDto) {
+        return this.userService.updateGroupPermissions(dto);
+    }
 }
