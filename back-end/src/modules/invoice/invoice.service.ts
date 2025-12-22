@@ -308,6 +308,7 @@ export class InvoiceService {
       Ves: invoice.Ves.map((v: any) => {
         const ghe = v.GheSuatChieu?.GhePhongChieu?.GheLoaiGhe?.Ghe;
         return {
+          Code: v.Code,
           SoGhe: ghe ? `${ghe.Hang}${ghe.Cot}` : '',
           TrangThai: v.TrangThaiVe as TicketStatusEnum,
           DonGia: Number(v.GiaVe)
