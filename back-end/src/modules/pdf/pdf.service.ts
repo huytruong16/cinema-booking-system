@@ -74,8 +74,8 @@ export class PdfService {
     }
 
     private registerFonts(doc: PDFKit.PDFDocument) {
-        const fontPathRegular = path.join(__dirname, '..', '..', '..', 'assets', 'fonts', 'Arial.ttf');
-        const fontPathBold = path.join(__dirname, '..', '..', '..', 'assets', 'fonts', 'Arial-Bold.ttf');
+        const fontPathRegular = path.join(__dirname, '..', '..', 'fonts', 'ARIAL.TTF');
+        const fontPathBold = path.join(__dirname, '..', '..', 'fonts', 'Arial-Bold.ttf');
         doc.registerFont('Arial', fontPathRegular);
         doc.registerFont('Arial-Bold', fontPathBold);
     }
@@ -85,7 +85,7 @@ export class PdfService {
         doc.rect(0, 0, 600, 250).fill('#ffffff');
         doc.rect(10, 10, 580, 230).strokeColor('#333').lineWidth(2).stroke();
 
-        const logoPath = path.join(__dirname, '..', '..', '..', 'assets', 'images', 'logo.png');
+        const logoPath = path.join(__dirname, '..', '..', 'images', 'logo.png');
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 });
         }
