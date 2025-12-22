@@ -46,7 +46,7 @@ export class PdfService {
 
             doc.text(`Mã hóa đơn: ${invoice.Code}`, 50, startY);
             doc.text(`Ngày lập: ${new Date(invoice.NgayLap).toLocaleDateString('vi-VN')}`, 50, startY + 20);
-            doc.text(`Email khách hàng: ${invoice.Email}`, 50, startY + 40);
+            doc.text(`Email: ${invoice.Email}`, 50, startY + 40);
 
             doc.text(`Phim: ${invoice.Phim.TenPhim}`, 300, startY, { width: 250 });
             doc.text(`Rạp: ${invoice.PhongChieu}`, 300, startY + 20);
@@ -72,7 +72,7 @@ export class PdfService {
             doc.font('Arial');
 
             invoice.Ves.forEach((ticket: any) => {
-                const seatInfo = `Vé xem phim - Ghế ${ticket.SoGhe}`;
+                const seatInfo = `Vé ghế ${ticket.SoGhe} - Mã vé: ${ticket.Code}`;
                 doc.text(seatInfo, itemX, currentY);
                 doc.text('1', qtyX, currentY);
                 doc.text(Number(ticket.DonGia).toLocaleString('vi-VN'), priceX, currentY);
