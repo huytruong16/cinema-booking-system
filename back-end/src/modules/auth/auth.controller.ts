@@ -6,6 +6,7 @@ import {
     Req,
     Res,
     ForbiddenException,
+    UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -16,6 +17,7 @@ import {
     ApiForbiddenResponse,
     ApiConflictResponse,
     ApiNotFoundResponse,
+    ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
@@ -26,6 +28,7 @@ import {
     ResetPasswordDto,
     VerifyResetOtpDto,
 } from './dtos';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -56,7 +59,9 @@ export class AuthController {
         return res.json({ accessToken });
     }
 
-    @Get('refresh-token')
+    @Post('refresh-token')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Làm mới access token' })
     @ApiOkResponse({
         description: 'Access token mới được cấp thành công.',
@@ -135,6 +140,8 @@ export class AuthController {
     }
 
     @Post('logout')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: 'Đăng xuất người dùng' })
     @ApiOkResponse({
         description: 'Đăng xuất thành công.',
@@ -145,6 +152,6 @@ export class AuthController {
             secure: true,
             sameSite: 'none'
         })
-        return this.authService.logout()
+        return res.json({ message: 'Đăng xuất thành công.' });
     }
 }
