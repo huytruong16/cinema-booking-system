@@ -7,6 +7,9 @@ import { ChangePasswordDto } from './dtos/change-password.dto';
 import bcryptUtil from '../../libs/common/utils/bcrypt.util';
 import { AssignEmployeeDto } from './dtos/assign-employee.dto';
 import { RoleEnum, UserStatusEnum } from 'src/libs/common/enums';
+import { AssignUserToGroupDto } from './dtos/assign-user-to-group.dto';
+import { UpdateGroupPermissionsDto } from './dtos/update-group-permissions.dto';
+import { quyen } from '@prisma/client';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
@@ -203,4 +206,84 @@ export class UserService {
             };
         });
     }
+
+    async assignUserToGroup(dto: AssignUserToGroupDto) {
+        const { userId, groupId } = dto;
+
+        const user = await this.prisma.nGUOIDUNGPHANMEM.findFirst({
+            where: {
+                MaNguoiDung: userId,
+                DeletedAt: null,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('Người dùng không tồn tại');
+        }
+
+        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+            where: {
+                MaNhomNguoiDung: groupId,
+                DeletedAt: null,
+            },
+        });
+
+        if (!group) {
+            throw new NotFoundException('Nhóm người dùng không tồn tại');
+        }
+
+        await this.prisma.nGUOIDUNGPHANMEM.update({
+            where: { MaNguoiDung: userId },
+            data: {
+                MaNhomNguoiDung: groupId,
+                UpdatedAt: new Date(),
+            },
+        });
+
+        return {
+            message: 'Gán người dùng vào nhóm thành công',
+        };
+    }
+
+    async updateGroupPermissions(dto: UpdateGroupPermissionsDto) {
+        const { groupId, permissions } = dto;
+
+        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+            where: {
+                MaNhomNguoiDung: groupId,
+                DeletedAt: null,
+            },
+        });
+
+        if (!group) {
+            throw new NotFoundException('Nhóm người dùng không tồn tại');
+        }
+
+        // Map PermissionEnum -> Prisma enum quyen
+        const mappedPermissions: quyen[] = permissions.map(
+            (p) => p as quyen,
+        );
+
+        return this.prisma.$transaction(async (tx) => {
+            await tx.qUYEN_NHOMNGUOIDUNG.deleteMany({
+                where: {
+                    MaNhomNguoiDung: groupId,
+                },
+            });
+
+            if (mappedPermissions.length > 0) {
+                await tx.qUYEN_NHOMNGUOIDUNG.createMany({
+                    data: mappedPermissions.map((permission) => ({
+                        MaNhomNguoiDung: groupId,
+                        Quyen: permission,
+                    })),
+                });
+            }
+
+            return {
+                message: 'Cập nhật quyền cho nhóm người dùng thành công',
+            };
+        });
+    }
+
 }
