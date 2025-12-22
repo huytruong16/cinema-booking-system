@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GetSeatsDto } from './dtos/get-seat.dto';
 import { SeatCheckRequestDto, SeatCheckResponseDto } from './dtos/post-check-available.dto';
 import { SeatStatusEnum } from 'src/libs/common/enums';
+import { CreateSeatDto } from './dtos/create-seat.dto';
+import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
 
 @Injectable()
 export class SeatService {
@@ -62,6 +64,63 @@ export class SeatService {
         }
 
         return seat;
+    }
+
+    async createSeat(body: CreateSeatDto) {
+        const existingSeat = await this.prisma.gHE.findFirst({
+            where: {
+                Hang: body.Hang,
+                Cot: body.Cot,
+                DeletedAt: null
+            },
+        });
+
+        if (existingSeat) {
+            return { 'message': `Ghế ở hàng ${body.Hang} cột ${body.Cot} đã tồn tại` };
+        }
+
+        const seat = await this.prisma.gHE.create({
+            data: {
+                Hang: body.Hang,
+                Cot: body.Cot,
+            }
+        });
+
+        return await this.getBaseSeatById(seat.MaGhe);
+    }
+
+    async createSeatSeatType(body: CreateSeatSeatTypeDto) {
+        const seat = await this.prisma.gHE.findFirst({
+            where: {
+                MaGhe: body.MaGhe,
+                DeletedAt: null
+            },
+        });
+
+        if (!seat) {
+            throw new NotFoundException('Ghế không tồn tại');
+        }
+
+        const existingSeatSeatType = await this.prisma.gHE_LOAIGHE.findFirst({
+            where: {
+                MaGhe: body.MaGhe,
+                MaLoaiGhe: body.MaLoaiGhe,
+                DeletedAt: null
+            },
+        });
+
+        if (existingSeatSeatType) {
+            return { 'message': 'Ghế - loại ghế đã tồn tại' };
+        }
+
+        const seatSeatType = await this.prisma.gHE_LOAIGHE.create({
+            data: {
+                MaGhe: body.MaGhe,
+                MaLoaiGhe: body.MaLoaiGhe,
+            }
+        });
+
+        return await this.getSeatById(seatSeatType.MaGheLoaiGhe);
     }
 
     async checkAvailableSeats(id: string): Promise<SeatCheckResponseDto> {
