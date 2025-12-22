@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apiClient";
 import { Showtime, GetShowtimesParams, SeatType } from "@/types/showtime";
 export interface CreateShowtimeDto {

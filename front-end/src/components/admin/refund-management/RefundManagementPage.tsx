@@ -298,7 +298,7 @@ export default function RefundManagementPage() {
       <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 min-h-0 relative">
           {loading && (
-            <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
+            <div className="absolute inset-0 z-20 flex items-center justify-center">
               <Loader2 className="animate-spin text-primary" />
             </div>
           )}

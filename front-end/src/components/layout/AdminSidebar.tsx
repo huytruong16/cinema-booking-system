@@ -65,7 +65,7 @@ const masterDataNavItems: NavItem[] = [
 const systemManagementNavItems: NavItem[] = [
   { id: "combos", label: "Quản lý Combo", href: "/admin/combo-management", icon: ShoppingCart },
   { id: "promotions", label: "Quản lý khuyến mãi", href: "/admin/promotion-management", icon: Percent },
-  { id: "users", label: "Quản lý nhân viên", href: "/admin/user-management", icon: UserCog },
+  { id: "users", label: "Quản lý người dùng", href: "/admin/user-management", icon: UserCog },
   { id: "report", label: "Báo cáo thống kê", href: "/admin/report", icon: Book },
   { id: "roles", label: "Phân quyền (Roles)", href: "/admin/role-management", icon: ShieldCheck },
 ];
