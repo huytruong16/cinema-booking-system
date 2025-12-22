@@ -78,6 +78,7 @@ export class PdfService {
         const fontPathBold = path.join(__dirname, '..', '..', 'fonts', 'Arial-Bold.ttf');
         doc.registerFont('Arial', fontPathRegular);
         doc.registerFont('Arial-Bold', fontPathBold);
+
     }
 
     private drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
