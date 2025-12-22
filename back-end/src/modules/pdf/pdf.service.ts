@@ -74,19 +74,11 @@ export class PdfService {
     }
 
     private registerFonts(doc: PDFKit.PDFDocument) {
-        const prodPath = path.join(process.cwd(), 'dist', 'assets', 'fonts', 'Arial.ttf');
-        const localPath = path.join(process.cwd(), 'assets', 'fonts', 'Arial.ttf');
+        const fontPathRegular = path.join(__dirname, '..', '..', '..', 'assets', 'fonts', 'Arial.ttf');
+        const fontPathBold = path.join(__dirname, '..', '..', '..', 'assets', 'fonts', 'Arial-Bold.ttf');
+        doc.registerFont('Arial', fontPathRegular);
+        doc.registerFont('Arial-Bold', fontPathBold);
 
-        let finalPath = '';
-
-        if (fs.existsSync(prodPath)) {
-            finalPath = prodPath;
-        } else if (fs.existsSync(localPath)) {
-            finalPath = localPath;
-        }
-
-        doc.registerFont('Arial', finalPath);
-        doc.registerFont('Arial-Bold', finalPath.replace('Arial.ttf', 'Arial-Bold.ttf'));
     }
 
     private drawTicket(doc: PDFKit.PDFDocument, ticket: any) {
@@ -94,15 +86,8 @@ export class PdfService {
         doc.rect(0, 0, 600, 250).fill('#ffffff');
         doc.rect(10, 10, 580, 230).strokeColor('#333').lineWidth(2).stroke();
 
-        const prodLogoPath = path.join(process.cwd(), 'dist', 'assets', 'images', 'logo.png');
-        const localLogoPath = path.join(process.cwd(), 'assets', 'images', 'logo.png');
+        const logoPath = path.join(__dirname, '..', '..', '..', 'assets', 'images', 'logo.png');
 
-        let logoPath = '';
-        if (fs.existsSync(prodLogoPath)) {
-            logoPath = prodLogoPath;
-        } else if (fs.existsSync(localLogoPath)) {
-            logoPath = localLogoPath;
-        }
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 });
         }
