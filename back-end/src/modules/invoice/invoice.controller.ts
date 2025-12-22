@@ -35,6 +35,23 @@ export class InvoiceController {
     return this.invoiceService.createInvoice(createInvoiceDto);
   }
 
+
+  @Get(':code/pdf')
+  @SetMetadata('isPublic', true)
+  @ApiOperation({ summary: 'In hóa đơn PDF' })
+  @ApiParam({ name: 'code', description: 'Code hóa đơn', required: true })
+  async printInvoice(@Param('code') code: string, @Res() res: express.Response) {
+    const buffer = await this.invoiceService.printInvoice(code);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=invoice-${code}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
   @Get('/:code/ticket/pdf')
   @SetMetadata('isPublic', true)
   @ApiOperation({ summary: 'Kiểm tra in hóa đơn' })

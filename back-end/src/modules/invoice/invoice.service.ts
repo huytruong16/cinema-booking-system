@@ -11,6 +11,8 @@ import { GetInvoiceDto } from './dtos/get-invoice.dto';
 import GetInvoiceResponseDto from './dtos/get-invoice-response.dto';
 import { TicketsService } from '../tickets/tickets.service';
 
+import { PdfService } from '../pdf/pdf.service';
+
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
   constructor(
@@ -18,6 +20,7 @@ export class InvoiceService {
     private readonly payosService: PayosService,
     private readonly configService: ConfigService,
     private readonly ticketsService: TicketsService,
+    private readonly pdfService: PdfService,
     @Inject(REQUEST) private readonly request: any,
   ) { }
 
@@ -209,6 +212,80 @@ export class InvoiceService {
     }
 
     return this.mapToInvoiceResponse(invoice);
+  }
+
+  async getInvoiceByCode(code: string) {
+    const invoice = await this.prisma.hOADON.findFirst(
+      {
+        where: { Code: code, DeletedAt: null },
+        include: {
+          GiaoDichs: true,
+          HoaDonKhuyenMais: {
+            include: {
+              KhuyenMaiKH: {
+                include: {
+                  KhuyenMai: true
+                }
+              }
+            }
+          },
+          HoaDonCombos: {
+            select: {
+              SoLuong: true,
+              DonGia: true,
+              Combo: {
+                select: {
+                  TenCombo: true,
+                }
+              },
+            }
+          },
+          Ves: {
+            include: {
+              GheSuatChieu: {
+                include: {
+                  SuatChieu: {
+                    include: {
+                      PhienBanPhim: {
+                        include: {
+                          Phim: true
+                        }
+                      },
+                      PhongChieu: true
+                    }
+                  },
+                  GhePhongChieu: {
+                    include: {
+                      GheLoaiGhe: {
+                        select: {
+                          Ghe: {
+                            select: {
+                              Hang: true,
+                              Cot: true,
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+        },
+      }
+    );
+
+    if (!invoice) {
+      throw new NotFoundException('Hóa đơn không tồn tại');
+    }
+
+    return this.mapToInvoiceResponse(invoice);
+  }
+
+  async printInvoice(code: string) {
+    const invoice = await this.getInvoiceByCode(code);
+    return this.pdfService.generateInvoicePdf(invoice);
   }
 
   private mapToInvoiceResponse(invoice: any): GetInvoiceResponseDto {
