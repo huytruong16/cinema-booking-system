@@ -60,6 +60,7 @@ function BookingPageContent() {
   const [timeLeft, setTimeLeft] = useState(300); // 5 phút
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [processingSeatId, setProcessingSeatId] = useState<string | null>(null);
 
   // State Guest
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -111,7 +112,9 @@ function BookingPageContent() {
   const formatCountdown = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   // Xử lý Click Ghế (Chọn/Bỏ chọn)
-  const handleSeatClick = (seat: SelectedSeat) => {
+  const handleSeatClick = async (seat: SelectedSeat) => {
+    if (processingSeatId) return;
+
     const isSelected = selectedSeats.some(s => s.id === seat.id);
 
     if (isSelected) {
@@ -128,8 +131,27 @@ function BookingPageContent() {
         toast.warning("Bạn chỉ được chọn tối đa 8 ghế.");
         return;
       }
-      if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
-      setSelectedSeats([...selectedSeats, seat]);
+
+      if (!seat.uuid) {
+        toast.error("Không tìm thấy thông tin ghế.");
+        return;
+      }
+
+      setProcessingSeatId(seat.id);
+      try {
+        const isAvailable = await showtimeService.checkSeatAvailability(seat.uuid);
+        if (isAvailable) {
+          if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
+          setSelectedSeats(prev => [...prev, seat]);
+        } else {
+          toast.error(`Ghế ${seat.id} đã có người chọn hoặc không còn trống.`);
+        }
+      } catch (error) {
+        console.error("Lỗi kiểm tra ghế:", error);
+        toast.error("Có lỗi xảy ra khi kiểm tra ghế.");
+      } finally {
+        setProcessingSeatId(null);
+      }
     }
   };
 
@@ -186,7 +208,7 @@ function BookingPageContent() {
       format: `${showtime.PhienBanPhim.DinhDang.TenDinhDang} - ${showtime.PhienBanPhim.NgonNgu.TenNgonNgu}`,
       time: new Date(showtime.ThoiGianBatDau).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       date: new Date(showtime.ThoiGianBatDau).toLocaleDateString('vi-VN'),
-      roomName: showtime.PhongChieu.TenPhong,
+      roomName: showtime.PhongChieu.TenPhongChieu,
       seats: selectedSeats,
       combos: selectedCombosList,
       totalPrice,
@@ -220,6 +242,7 @@ function BookingPageContent() {
       const seatId = `${ghe.Hang}${ghe.Cot}`;
       const loai = gs.GhePhongChieu?.GheLoaiGhe?.LoaiGhe;
       const type = normalizeType(loai?.LoaiGhe);
+      const color = loai?.MauSac;
 
       const heSo = Number(loai?.HeSoGiaGhe ?? 1);
       const multiplier = Number.isFinite(heSo) && heSo > 0 ? heSo : 1;
@@ -227,7 +250,7 @@ function BookingPageContent() {
 
       const existing = meta[seatId];
       if (!existing) {
-        meta[seatId] = { type, price, status: gs.TrangThai, uuid: gs.MaGheSuatChieu };
+        meta[seatId] = { type, price, status: gs.TrangThai, uuid: gs.MaGheSuatChieu, color };
         continue;
       }
 
@@ -235,7 +258,8 @@ function BookingPageContent() {
         type: mergeType(existing.type, type),
         price: Math.max(existing.price, price),
         status: existing.status === 'CONTRONG' && gs.TrangThai === 'CONTRONG' ? 'CONTRONG' : (existing.status !== 'CONTRONG' ? existing.status : gs.TrangThai),
-        uuid: gs.MaGheSuatChieu
+        uuid: gs.MaGheSuatChieu,
+        color: color || existing.color
       };
     }
     return meta;
