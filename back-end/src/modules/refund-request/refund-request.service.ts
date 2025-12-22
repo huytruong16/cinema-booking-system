@@ -134,11 +134,34 @@ export class RefundRequestService {
             include: {
                 HoaDon: {
                     include: {
+                        KhachHang: {
+                            include: {
+                                NguoiDungPhanMem: true
+                            },
+                        },
                         Ves: {
                             include: {
                                 GheSuatChieu: {
                                     include: {
-                                        SuatChieu: true
+                                        SuatChieu: {
+                                            include: {
+                                                PhienBanPhim: {
+                                                    include: {
+                                                        Phim: true
+                                                    }
+                                                },
+                                            }
+                                        },
+                                        GhePhongChieu: {
+                                            include: {
+                                                GheLoaiGhe: {
+                                                    include: {
+                                                        Ghe: true,
+                                                        LoaiGhe: true,
+                                                    },
+                                                },
+                                            },
+                                        },
                                     }
                                 }
                             }
