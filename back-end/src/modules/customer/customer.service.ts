@@ -65,4 +65,27 @@ export class CustomerService {
 
         return customer;
     }
+
+    async removeCustomer(id: string) {
+        const customer = await this.prisma.kHACHHANG.findFirst({
+            where: { MaKhachHang: id, DeletedAt: null },
+        });
+
+        if (!customer) {
+            throw new NotFoundException(
+                `Khách hàng với ID ${id} không tồn tại`,
+            );
+        }
+
+        await this.prisma.kHACHHANG.update({
+            where: { MaKhachHang: id },
+            data: {
+                DeletedAt: new Date(),
+            },
+        });
+
+        return {
+            message: 'Xóa khách hàng thành công',
+        };
+    }
 }
