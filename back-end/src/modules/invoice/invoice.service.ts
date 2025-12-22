@@ -638,7 +638,7 @@ export class InvoiceService {
         throw new NotFoundException('Một hoặc vài ghế không tồn tại');
       }
 
-      const notAvailable = gheSuatChieus.find(g => g.TrangThai !== SeatStatusEnum.CONTRONG);
+      const notAvailable = gheSuatChieus.find(g => g.TrangThai !== SeatStatusEnum.DANGGIU);
       if (notAvailable) {
         throw new BadRequestException(`Không thể đặt ghế ${notAvailable.GhePhongChieu.GheLoaiGhe.Ghe.Hang}${notAvailable.GhePhongChieu.GheLoaiGhe.Ghe.Cot}`);
       }
