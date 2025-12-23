@@ -32,6 +32,7 @@ import { RefundRequestModule } from './modules/refund-request/refund-request.mod
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { PdfModule } from './modules/pdf/pdf.module';
 import { ReviewModule } from './modules/review/review.module';
+import { UserGroupModule } from './modules/user-group/user-group.module';
 
 @Module({
   imports: [
@@ -102,8 +103,9 @@ import { ReviewModule } from './modules/review/review.module';
     TransactionModule,
     PdfModule,
     ReviewModule,
+    UserGroupModule
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
