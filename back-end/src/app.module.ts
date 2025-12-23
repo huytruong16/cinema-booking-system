@@ -31,6 +31,7 @@ import { InvoiceModule } from './modules/invoice/invoice.module';
 import { RefundRequestModule } from './modules/refund-request/refund-request.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { PdfModule } from './modules/pdf/pdf.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { PdfModule } from './modules/pdf/pdf.module';
     RefundRequestModule,
     TransactionModule,
     PdfModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],
