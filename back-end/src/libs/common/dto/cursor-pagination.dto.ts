@@ -1,6 +1,6 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CursorPaginationDto {
   @ApiPropertyOptional({
@@ -14,7 +14,7 @@ export class CursorPaginationDto {
     description: 'Số lượng item cần lấy (mặc định là 10)',
     example: 10,
     default: 10,
-    minimum: 1
+    minimum: 1,
   })
   @IsOptional()
   @Type(() => Number)

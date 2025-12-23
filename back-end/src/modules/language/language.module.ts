@@ -3,7 +3,7 @@ import { LanguageController } from './language.controller';
 import { LanguageService } from './language.service';
 
 @Module({
-    controllers: [LanguageController],
-    providers: [LanguageService]
+  controllers: [LanguageController],
+  providers: [LanguageService],
 })
-export class LanguageModule { }
+export class LanguageModule {}

@@ -1,6 +1,22 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards, Query, SetMetadata, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+  Query,
+  SetMetadata,
+  Res,
+} from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateInvoiceDto } from './dtos/create-invoice.dto';
 import { GetInvoiceDto } from './dtos/get-invoice.dto';
@@ -12,7 +28,7 @@ import express from 'express';
 @ApiBearerAuth()
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) { }
+  constructor(private readonly invoiceService: InvoiceService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })
@@ -24,7 +40,8 @@ export class InvoiceController {
   @ApiOperation({ summary: 'Lấy chi tiết hóa đơn theo mã' })
   @ApiParam({ name: 'id', description: 'Mã hóa đơn', required: true })
   async getInvoiceById(@Param('id') id: string) {
-    if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     return this.invoiceService.getInvoiceById(id);
   }
 
@@ -35,11 +52,33 @@ export class InvoiceController {
     return this.invoiceService.createInvoice(createInvoiceDto);
   }
 
+  @Get(':code/pdf')
+  @SetMetadata('isPublic', true)
+  @ApiOperation({ summary: 'In hóa đơn PDF' })
+  @ApiParam({ name: 'code', description: 'Code hóa đơn', required: true })
+  async printInvoice(
+    @Param('code') code: string,
+    @Res() res: express.Response,
+  ) {
+    const buffer = await this.invoiceService.printInvoice(code);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=invoice-${code}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
+  }
+
   @Get('/:code/ticket/pdf')
   @SetMetadata('isPublic', true)
   @ApiOperation({ summary: 'Kiểm tra in hóa đơn' })
   @ApiParam({ name: 'code', description: 'Mã hóa đơn', required: true })
-  async checkInTicket(@Param('code') code: string, @Res() res: express.Response) {
+  async checkInTicket(
+    @Param('code') code: string,
+    @Res() res: express.Response,
+  ) {
     const buffer = await this.invoiceService.checkIn(code);
 
     if (Buffer.isBuffer(buffer)) {
