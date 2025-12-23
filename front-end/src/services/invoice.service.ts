@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import apiClient from '@/lib/apiClient';
-import { TicketResponse } from '@/types/ticket';
 
 export interface CreateInvoiceDto {
   Email: string;
@@ -18,7 +17,7 @@ export interface InvoiceResponse {
   GiaoDichUrl: string;
 }
 
-  export interface InvoiceItem {
+export interface InvoiceItem {
   MaVe?: string;
   Code?: string; 
   TenPhim?: string;
@@ -80,10 +79,7 @@ export const invoiceService = {
       responseType: 'blob'
     });
     return res.data;
-  }
-};
-
-
+  },
   getAll: async (params?: GetInvoicesParams) => {
     const res = await apiClient.get('/invoices', { params: { limit: 20, ...params } });
     return res.data;
