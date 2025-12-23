@@ -37,7 +37,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  if (AUTH_PATHS.includes(pathname) || pathname.startsWith(ADMIN_PREFIX)) {
+  if (AUTH_PATHS.includes(pathname) || pathname.startsWith(ADMIN_PREFIX) || pathname.startsWith('/kiosk')) {
     return null;
   }
   const navItems = [
