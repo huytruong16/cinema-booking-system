@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import apiClient from '@/lib/apiClient';
+import { TicketResponse } from '@/types/ticket';
 
 export interface CreateInvoiceDto {
   Email: string;
@@ -68,6 +69,20 @@ export const invoiceService = {
     const res = await apiClient.post<InvoiceResponse>('/invoices', data);
     return res.data;
   },
+  getInvoiceByCode: async (code: string) => {
+    const res = await apiClient.get<Blob>(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+  getInvoicePdf: async (code: string) => {
+    const res = await apiClient.get<Blob>(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  }
+};
+
 
   getAll: async (params?: GetInvoicesParams) => {
     const res = await apiClient.get('/invoices', { params: { limit: 20, ...params } });
