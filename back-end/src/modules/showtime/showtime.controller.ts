@@ -9,6 +9,7 @@ import {
   Body,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiQuery,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ShowtimeService } from './showtime.service';
 import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
@@ -25,6 +27,10 @@ import { isUUID } from 'class-validator';
 import { GetShowtimeByMovieDto } from './dtos/get-showtime-by-movie.dto';
 import { CreateShowtimeDto } from './dtos/create-showtime.dto';
 import { UpdateShowtimeDto } from './dtos/update-showtime.dto';
+import { RoleEnum } from 'src/libs/common/enums';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
 
 @ApiTags('Suất chiếu')
 @Controller('showtimes')
@@ -107,6 +113,9 @@ export class ShowtimeController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo suất chiếu mới' })
   @ApiBody({ type: CreateShowtimeDto })
   @ApiResponse({
@@ -118,6 +127,9 @@ export class ShowtimeController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật suất chiếu (partial)' })
   @ApiParam({ name: 'id', description: 'Mã suất chiếu' })
   @ApiBody({ type: UpdateShowtimeDto })
@@ -137,6 +149,9 @@ export class ShowtimeController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm suất chiếu' })
   @ApiParam({ name: 'id', description: 'Mã suất chiếu' })
   @ApiResponse({

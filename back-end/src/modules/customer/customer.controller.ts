@@ -28,6 +28,7 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Get()
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Lấy danh sách các khách hàng' })
   @ApiResponse({ status: 200, description: 'Danh sách khách hàng' })
   async getAllCustomers() {
@@ -35,6 +36,7 @@ export class CustomerController {
   }
 
   @Get(':id')
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Lấy chi tiết khách hàng theo mã' })
   @ApiParam({ name: 'id', description: 'Mã khách hàng', required: true })
   @ApiResponse({ status: 200, description: 'Chi tiết khách hàng' })

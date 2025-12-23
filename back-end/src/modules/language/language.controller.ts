@@ -7,6 +7,7 @@ import {
   Post,
   Body,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { LanguageService } from './language.service';
 import {
@@ -15,10 +16,15 @@ import {
   ApiParam,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateLanguageDto } from './dtos/create-language.dto';
 import { UpdateLanguageDto } from './dtos/update-language.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
 
 @ApiTags('Ngôn ngữ')
 @Controller('languages')
@@ -44,6 +50,9 @@ export class LanguageController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Tạo ngôn ngữ mới' })
   @ApiBody({ type: CreateLanguageDto })
   @ApiResponse({
@@ -55,6 +64,9 @@ export class LanguageController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Cập nhật ngôn ngữ' })
   @ApiParam({
     name: 'id',
@@ -78,6 +90,9 @@ export class LanguageController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Xóa mềm ngôn ngữ' })
   @ApiParam({
     name: 'id',

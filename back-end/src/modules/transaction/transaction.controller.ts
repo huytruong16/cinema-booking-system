@@ -6,9 +6,9 @@ import {
   Param,
   Patch,
   Post,
-  SetMetadata,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import {
@@ -24,21 +24,27 @@ import { isUUID } from 'class-validator';
 import { CreateRefundTransactionDto } from './dto/create-refund-transaction.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { UpdateRefundTransactionStatusDto } from './dto/update-refund-transaction-status.dto';
+import { Public } from 'src/libs/common/decorators/public.decorator';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @Controller('transactions')
 @ApiTags('Giao dịch')
 export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) {}
+  constructor(private readonly transactionService: TransactionService) { }
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy danh sách các giao dịch' })
-  async getAllTransaction(@Query() filters: GetTransactionDto) {
-    return await this.transactionService.getAllTransactions(filters);
+  async getAllTransaction(@Req() req, @Query() filters: GetTransactionDto) {
+    return await this.transactionService.getAllTransactions(req.user.id, req.user.vaitro, filters);
   }
 
   @ApiExcludeEndpoint()
   @Post('payos/webhook')
-  @SetMetadata('isPublic', true)
+  @Public()
   @ApiOperation({
     summary: 'Nhận Webhook từ PayOS để cập nhật trạng thái thanh toán',
   })
@@ -47,7 +53,8 @@ export class TransactionController {
   }
 
   @Post('refund')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.NHANVIEN, RoleEnum.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Tạo giao dịch hoàn tiền cho danh sách yêu cầu hoàn vé',
@@ -57,7 +64,8 @@ export class TransactionController {
   }
 
   @Patch('refund/status/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.NHANVIEN, RoleEnum.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cập nhật trạng thái giao dịch hoàn tiền' })
   @ApiParam({ name: 'id', description: 'Mã giao dịch', required: true })
@@ -75,6 +83,9 @@ export class TransactionController {
   }
 
   @Patch('/method/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật phương thức giao dịch' })
   @ApiParam({ name: 'id', description: 'Mã giao dịch', required: true })
   async updateTransactionMethod(
@@ -91,12 +102,14 @@ export class TransactionController {
   }
 
   @Get('/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy thông tin giao dịch theo mã giao dịch' })
   @ApiParam({ name: 'id', description: 'Mã giao dịch', required: true })
-  async getTransactionById(@Param('id') transactionId: string) {
+  async getTransactionById(@Req() req, @Param('id') transactionId: string) {
     if (!isUUID(transactionId, '4')) {
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     }
-    return this.transactionService.getTransactionById(transactionId);
+    return this.transactionService.getTransactionById(req.user.id, req.user.vaitro, transactionId);
   }
 }

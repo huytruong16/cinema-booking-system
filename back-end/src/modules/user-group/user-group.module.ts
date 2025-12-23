@@ -5,9 +5,9 @@ import { UserGroupService } from './user-group.service';
 import { UserGroupController } from './user-group.controller';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [UserGroupController],
-    providers: [UserGroupService],
-    exports: [UserGroupService],
+  imports: [PrismaModule],
+  controllers: [UserGroupController],
+  providers: [UserGroupService],
+  exports: [UserGroupService],
 })
-export class UserGroupModule { }
+export class UserGroupModule {}

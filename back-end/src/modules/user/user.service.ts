@@ -22,7 +22,7 @@ export class UserService {
     readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     @Inject(REQUEST) private readonly request: any,
-  ) { }
+  ) {}
 
   async getAllUsers() {
     const users = await this.prisma.nGUOIDUNGPHANMEM.findMany({
@@ -257,5 +257,4 @@ export class UserService {
       message: 'Gán người dùng vào nhóm thành công',
     };
   }
-
 }
