@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { FormatService } from './format.service';
 import {
@@ -15,9 +16,14 @@ import {
   ApiParam,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateFormatDto } from './dtos/create-format.dto';
+import { RoleEnum } from 'src/libs/common/enums';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
 
 @ApiTags('Định dạng')
 @Controller('formats')
@@ -43,6 +49,9 @@ export class FormatController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Tạo thể loại mới' })
   @ApiBody({ type: CreateFormatDto })
   @ApiResponse({ status: 201, description: 'Tạo thể loại thành công.' })
@@ -51,6 +60,9 @@ export class FormatController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Cập nhật định dạng (partial)' })
   @ApiParam({
     name: 'id',
@@ -67,6 +79,9 @@ export class FormatController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Xóa mềm định dạng' })
   @ApiParam({ name: 'id', description: 'Mã định dạng cần xóa', required: true })
   @ApiResponse({ status: 200, description: 'Xóa định dạng thành công.' })

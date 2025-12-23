@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 import { GetTicketsDto } from './dtos/get-tickets.dto';
 import { PdfService } from '../pdf/pdf.service';
-import { TicketStatusEnum } from 'src/libs/common/enums';
+import { RoleEnum, TicketStatusEnum } from 'src/libs/common/enums';
 
 const ticketIncludes = {
   GheSuatChieu: {
@@ -49,10 +49,17 @@ export class TicketsService {
     private readonly pdfService: PdfService,
   ) {}
 
-  async getTickets(filters?: GetTicketsDto) {
+  async getTickets(userId: string, role: string, filters?: GetTicketsDto) {
     const [data, pagination] = await this.prisma.xprisma.vE
       .paginate({
-        where: { DeletedAt: null },
+        where: {
+          ...(role === RoleEnum.KHACHHANG && {
+            HoaDon: {
+              KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } },
+            },
+          }),
+          DeletedAt: null,
+        },
         orderBy: [{ CreatedAt: 'desc' }, { MaVe: 'desc' }],
         include: ticketIncludes,
       })
@@ -71,9 +78,12 @@ export class TicketsService {
     });
   }
 
-  async getTicketById(id: string) {
+  async getTicketById(userId: string, role: string, id: string) {
     return await this.prisma.vE.findUnique({
       where: {
+        ...(role === RoleEnum.KHACHHANG && {
+          HoaDon: { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } },
+        }),
         MaVe: id,
         DeletedAt: null,
       },

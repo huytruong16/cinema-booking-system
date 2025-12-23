@@ -30,12 +30,14 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   @Get()
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Lấy danh sách các nhân viên' })
   async getAllEmployees() {
     return this.employeeService.getAllEmployees();
   }
 
   @Get(':id')
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Lấy chi tiết nhân viên theo mã' })
   @ApiParam({ name: 'id', description: 'Mã nhân viên', required: true })
   async getEmployeeById(@Param('id') id: string) {

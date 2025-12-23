@@ -1,7 +1,7 @@
 import {
-    ConflictException,
-    Injectable,
-    NotFoundException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { quyen } from '@prisma/client';
@@ -13,217 +13,214 @@ import { GetUsersInGroupDto } from './dtos/get-users-in-group.dto';
 
 @Injectable()
 export class UserGroupService {
-    constructor(private readonly prisma: PrismaService) { }
-    async getAllGroups() {
-        return this.prisma.nHOMNGUOIDUNG.findMany({
-            where: { DeletedAt: null },
-            orderBy: { CreatedAt: 'desc' },
-            include: {
-                QuyenNhomNguoiDungs: true,
-            },
-        });
+  constructor(private readonly prisma: PrismaService) {}
+  async getAllGroups() {
+    return this.prisma.nHOMNGUOIDUNG.findMany({
+      where: { DeletedAt: null },
+      orderBy: { CreatedAt: 'desc' },
+      include: {
+        QuyenNhomNguoiDungs: true,
+      },
+    });
+  }
+
+  async getGroupById(id: string) {
+    const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: {
+        MaNhomNguoiDung: id,
+        DeletedAt: null,
+      },
+      include: {
+        QuyenNhomNguoiDungs: true,
+        NguoiDungPhanMems: true,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Nhóm người dùng không tồn tại');
     }
 
-    async getGroupById(id: string) {
-        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: {
-                MaNhomNguoiDung: id,
-                DeletedAt: null,
-            },
-            include: {
-                QuyenNhomNguoiDungs: true,
-                NguoiDungPhanMems: true,
-            },
-        });
+    return group;
+  }
 
-        if (!group) {
-            throw new NotFoundException('Nhóm người dùng không tồn tại');
-        }
+  async getUsersByGroupId(groupId: string, query: GetUsersInGroupDto) {
+    const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: { MaNhomNguoiDung: groupId, DeletedAt: null },
+    });
 
-        return group;
+    if (!group) {
+      throw new NotFoundException('Nhóm người dùng không tồn tại');
     }
 
-    async getUsersByGroupId(
-        groupId: string,
-        query: GetUsersInGroupDto,
-    ) {
-        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: { MaNhomNguoiDung: groupId, DeletedAt: null },
-        });
+    const whereConditions: any = { MaNhomNguoiDung: groupId, DeletedAt: null };
 
-        if (!group) {
-            throw new NotFoundException('Nhóm người dùng không tồn tại');
-        }
+    const [data, pagination] = await this.prisma.xprisma.nGUOIDUNGPHANMEM
+      .paginate({
+        where: whereConditions,
+        orderBy: [{ CreatedAt: 'desc' }, { MaNguoiDung: 'desc' }],
+        select: {
+          MaNguoiDung: true,
+          HoTen: true,
+          Email: true,
+          TrangThai: true,
+          CreatedAt: true,
+        },
+      })
+      .withCursor(CursorUtils.getPrismaOptions(query, 'MaNguoiDung'));
 
-        const whereConditions: any = { MaNhomNguoiDung: groupId, DeletedAt: null };
+    return { data, pagination };
+  }
 
-        const [data, pagination] = await this.prisma.xprisma.nGUOIDUNGPHANMEM
-            .paginate({
-                where: whereConditions,
-                orderBy: [{ CreatedAt: 'desc' }, { MaNguoiDung: 'desc' }],
-                select: {
-                    MaNguoiDung: true,
-                    HoTen: true,
-                    Email: true,
-                    TrangThai: true,
-                    CreatedAt: true,
-                },
-            })
-            .withCursor(CursorUtils.getPrismaOptions(query, 'MaNguoiDung'));
+  async createGroup(dto: CreateUserGroupDto) {
+    const { TenNhomNguoiDung, permissions = [] } = dto;
 
-        return { data, pagination };
+    const existed = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: {
+        TenNhomNguoiDung,
+        DeletedAt: null,
+      },
+    });
+
+    if (existed) {
+      throw new ConflictException('Tên nhóm người dùng đã tồn tại');
     }
 
-    async createGroup(dto: CreateUserGroupDto) {
-        const { TenNhomNguoiDung, permissions = [] } = dto;
+    return this.prisma.$transaction(async (tx) => {
+      const group = await tx.nHOMNGUOIDUNG.create({
+        data: {
+          TenNhomNguoiDung,
+        },
+      });
 
-        const existed = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: {
-                TenNhomNguoiDung,
-                DeletedAt: null,
-            },
+      if (permissions.length > 0) {
+        await tx.qUYEN_NHOMNGUOIDUNG.createMany({
+          data: permissions.map((p) => ({
+            MaNhomNguoiDung: group.MaNhomNguoiDung,
+            Quyen: p as quyen,
+          })),
         });
+      }
 
-        if (existed) {
-            throw new ConflictException('Tên nhóm người dùng đã tồn tại');
-        }
+      return {
+        message: 'Tạo nhóm người dùng thành công',
+        group,
+      };
+    });
+  }
 
-        return this.prisma.$transaction(async (tx) => {
-            const group = await tx.nHOMNGUOIDUNG.create({
-                data: {
-                    TenNhomNguoiDung,
-                },
-            });
+  async updateGroup(id: string, dto: UpdateUserGroupDto) {
+    const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: {
+        MaNhomNguoiDung: id,
+        DeletedAt: null,
+      },
+    });
 
-            if (permissions.length > 0) {
-                await tx.qUYEN_NHOMNGUOIDUNG.createMany({
-                    data: permissions.map((p) => ({
-                        MaNhomNguoiDung: group.MaNhomNguoiDung,
-                        Quyen: p as quyen,
-                    })),
-                });
-            }
-
-            return {
-                message: 'Tạo nhóm người dùng thành công',
-                group,
-            };
-        });
+    if (!group) {
+      throw new NotFoundException('Nhóm người dùng không tồn tại');
     }
 
-    async updateGroup(id: string, dto: UpdateUserGroupDto) {
-        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: {
-                MaNhomNguoiDung: id,
-                DeletedAt: null,
-            },
-        });
+    if (dto.TenNhomNguoiDung) {
+      const existed = await this.prisma.nHOMNGUOIDUNG.findFirst({
+        where: {
+          TenNhomNguoiDung: dto.TenNhomNguoiDung,
+          DeletedAt: null,
+          NOT: { MaNhomNguoiDung: id },
+        },
+      });
 
-        if (!group) {
-            throw new NotFoundException('Nhóm người dùng không tồn tại');
-        }
-
-        if (dto.TenNhomNguoiDung) {
-            const existed = await this.prisma.nHOMNGUOIDUNG.findFirst({
-                where: {
-                    TenNhomNguoiDung: dto.TenNhomNguoiDung,
-                    DeletedAt: null,
-                    NOT: { MaNhomNguoiDung: id },
-                },
-            });
-
-            if (existed) {
-                throw new ConflictException('Tên nhóm người dùng đã tồn tại');
-            }
-        }
-
-        const updated = await this.prisma.nHOMNGUOIDUNG.update({
-            where: { MaNhomNguoiDung: id },
-            data: {
-                TenNhomNguoiDung: dto.TenNhomNguoiDung,
-                UpdatedAt: new Date(),
-            },
-        });
-
-        return {
-            message: 'Cập nhật tên nhóm người dùng thành công',
-            group: updated,
-        };
+      if (existed) {
+        throw new ConflictException('Tên nhóm người dùng đã tồn tại');
+      }
     }
 
-    async updateGroupPermissions(dto: UpdateGroupPermissionsDto) {
-        const { groupId, permissions } = dto;
+    const updated = await this.prisma.nHOMNGUOIDUNG.update({
+      where: { MaNhomNguoiDung: id },
+      data: {
+        TenNhomNguoiDung: dto.TenNhomNguoiDung,
+        UpdatedAt: new Date(),
+      },
+    });
 
-        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: {
-                MaNhomNguoiDung: groupId,
-                DeletedAt: null,
-            },
-        });
+    return {
+      message: 'Cập nhật tên nhóm người dùng thành công',
+      group: updated,
+    };
+  }
 
-        if (!group) {
-            throw new NotFoundException('Nhóm người dùng không tồn tại');
-        }
+  async updateGroupPermissions(dto: UpdateGroupPermissionsDto) {
+    const { groupId, permissions } = dto;
 
-        const mappedPermissions: quyen[] = permissions.map((p) => p as quyen);
+    const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: {
+        MaNhomNguoiDung: groupId,
+        DeletedAt: null,
+      },
+    });
 
-        return this.prisma.$transaction(async (tx) => {
-            await tx.qUYEN_NHOMNGUOIDUNG.deleteMany({
-                where: { MaNhomNguoiDung: groupId },
-            });
-
-            if (mappedPermissions.length > 0) {
-                await tx.qUYEN_NHOMNGUOIDUNG.createMany({
-                    data: mappedPermissions.map((permission) => ({
-                        MaNhomNguoiDung: groupId,
-                        Quyen: permission,
-                    })),
-                });
-            }
-
-            return {
-                message: 'Cập nhật quyền cho nhóm người dùng thành công',
-            };
-        });
+    if (!group) {
+      throw new NotFoundException('Nhóm người dùng không tồn tại');
     }
 
-    async deleteGroup(id: string) {
-        const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
-            where: {
-                MaNhomNguoiDung: id,
-                DeletedAt: null,
-            },
-            include: {
-                NguoiDungPhanMems: {
-                    where: {
-                        DeletedAt: null,
-                    },
-                    select: {
-                        MaNguoiDung: true,
-                    },
-                },
-            },
+    const mappedPermissions: quyen[] = permissions.map((p) => p as quyen);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.qUYEN_NHOMNGUOIDUNG.deleteMany({
+        where: { MaNhomNguoiDung: groupId },
+      });
+
+      if (mappedPermissions.length > 0) {
+        await tx.qUYEN_NHOMNGUOIDUNG.createMany({
+          data: mappedPermissions.map((permission) => ({
+            MaNhomNguoiDung: groupId,
+            Quyen: permission,
+          })),
         });
+      }
 
-        if (!group) {
-            throw new NotFoundException('Nhóm người dùng không tồn tại');
-        }
+      return {
+        message: 'Cập nhật quyền cho nhóm người dùng thành công',
+      };
+    });
+  }
 
-        if (group.NguoiDungPhanMems.length > 0) {
-            throw new ConflictException(
-                'Không thể xóa nhóm vì vẫn còn người dùng đang được gán vào nhóm này',
-            );
-        }
+  async deleteGroup(id: string) {
+    const group = await this.prisma.nHOMNGUOIDUNG.findFirst({
+      where: {
+        MaNhomNguoiDung: id,
+        DeletedAt: null,
+      },
+      include: {
+        NguoiDungPhanMems: {
+          where: {
+            DeletedAt: null,
+          },
+          select: {
+            MaNguoiDung: true,
+          },
+        },
+      },
+    });
 
-        await this.prisma.nHOMNGUOIDUNG.update({
-            where: { MaNhomNguoiDung: id },
-            data: {
-                DeletedAt: new Date(),
-            },
-        });
-
-        return {
-            message: 'Xóa nhóm người dùng thành công',
-        };
+    if (!group) {
+      throw new NotFoundException('Nhóm người dùng không tồn tại');
     }
+
+    if (group.NguoiDungPhanMems.length > 0) {
+      throw new ConflictException(
+        'Không thể xóa nhóm vì vẫn còn người dùng đang được gán vào nhóm này',
+      );
+    }
+
+    await this.prisma.nHOMNGUOIDUNG.update({
+      where: { MaNhomNguoiDung: id },
+      data: {
+        DeletedAt: new Date(),
+      },
+    });
+
+    return {
+      message: 'Xóa nhóm người dùng thành công',
+    };
+  }
 }

@@ -8,6 +8,7 @@ import {
   UseGuards,
   Query,
   Res,
+  Req,
 } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import {
@@ -22,27 +23,34 @@ import { GetInvoiceDto } from './dtos/get-invoice.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import express from 'express';
 import { Public } from 'src/libs/common/decorators/public.decorator';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Hóa đơn')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) { }
+  constructor(private readonly invoiceService: InvoiceService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })
-  async getAllInvoices(@Query() filters: GetInvoiceDto) {
-    return this.invoiceService.getAllInvoices(filters);
+  async getAllInvoices(@Req() req, @Query() filters: GetInvoiceDto) {
+    return this.invoiceService.getAllInvoices(
+      req.user.id,
+      req.user.vaitro,
+      filters,
+    );
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Lấy chi tiết hóa đơn theo mã' })
   @ApiParam({ name: 'id', description: 'Mã hóa đơn', required: true })
-  async getInvoiceById(@Param('id') id: string) {
+  async getInvoiceById(@Req() req, @Param('id') id: string) {
     if (!isUUID(id, '4'))
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-    return this.invoiceService.getInvoiceById(id);
+    return this.invoiceService.getInvoiceById(req.user.id, req.user.vaitro, id);
   }
 
   @Post()
@@ -53,7 +61,8 @@ export class InvoiceController {
   }
 
   @Get(':code/pdf')
-  @Public()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'In hóa đơn PDF' })
   @ApiParam({ name: 'code', description: 'Code hóa đơn', required: true })
   async printInvoice(
@@ -72,8 +81,9 @@ export class InvoiceController {
   }
 
   @Get('/:code/ticket/pdf')
-  @Public()
-  @ApiOperation({ summary: 'Kiểm tra in hóa đơn' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
+  @ApiOperation({ summary: 'Kiểm tra in các vé trong hóa đơn' })
   @ApiParam({ name: 'code', description: 'Mã hóa đơn', required: true })
   async checkInTicket(
     @Param('code') code: string,

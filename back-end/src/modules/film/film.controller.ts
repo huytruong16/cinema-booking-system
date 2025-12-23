@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   Patch,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -28,8 +29,13 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GetFilmReviewDto } from './dtos/get-film-review.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums/role.enum';
 
 @ApiTags('Phim')
 @Controller('films')
@@ -113,6 +119,9 @@ export class FilmController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo phim mới (kèm poster & backdrop)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -191,6 +200,9 @@ export class FilmController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật thông tin phim (partial)' })
   @ApiParam({ name: 'id', description: 'Mã phim (UUID v4)' })
   @ApiConsumes('multipart/form-data')
@@ -257,6 +269,9 @@ export class FilmController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa phim (soft delete)' })
   @ApiParam({ name: 'id', description: 'Mã phim (UUID v4)' })
   @ApiResponse({ status: 200, description: 'Xóa phim thành công' })
@@ -270,6 +285,9 @@ export class FilmController {
   }
 
   @Post('/version')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo mới phiên bản phim' })
   @ApiBody({ type: CreateFilmVersionDto })
   @ApiResponse({ status: 201, description: 'Tạo phiên bản phim thành công' })
@@ -282,6 +300,9 @@ export class FilmController {
   }
 
   @Patch('/version/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật phiên bản phim (partial)' })
   @ApiParam({ name: 'id', description: 'Mã phiên bản phim (UUID v4)' })
   @ApiBody({ type: UpdateFilmVersionDto })
@@ -297,6 +318,9 @@ export class FilmController {
   }
 
   @Delete('/version/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa phiên bản phim (soft delete)' })
   @ApiParam({ name: 'id', description: 'Mã phiên bản phim (UUID v4)' })
   @ApiResponse({ status: 200, description: 'Xóa phiên bản phim thành công' })

@@ -37,6 +37,9 @@ export class UserController {
   constructor(private readonly userService: UserService) { }
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({
     summary: 'Lấy danh sách tất cả người dùng (NguoiDungPhanMem)',
   })
@@ -53,6 +56,9 @@ export class UserController {
   }
 
   @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Lấy chi tiết người dùng theo mã' })
   @ApiParam({ name: 'id', description: 'Mã người dùng', required: true })
   async getUserById(@Param('id') id: string) {

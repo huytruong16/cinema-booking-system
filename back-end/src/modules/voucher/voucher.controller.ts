@@ -8,6 +8,7 @@ import {
   Patch,
   Delete,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { VoucherService } from './voucher.service';
@@ -17,9 +18,14 @@ import {
   ApiParam,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateVoucherDto } from './dtos/create-voucher.dto';
 import { UpdateVoucherDto } from './dtos/update-voucher.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { RoleEnum } from 'src/libs/common/enums/role.enum';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
 
 @ApiTags('Mã giảm giá')
 @Controller('vouchers')
@@ -44,6 +50,9 @@ export class VoucherController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Tạo voucher mới' })
   @ApiBody({ type: CreateVoucherDto })
   @ApiResponse({ status: 201, description: 'Tạo voucher thành công.' })
@@ -52,6 +61,9 @@ export class VoucherController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Cập nhật voucher (có thể cập nhật một phần)' })
   @ApiParam({
     name: 'id',
@@ -68,6 +80,9 @@ export class VoucherController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Xóa mềm voucher (Cập nhật trạng thái)' })
   @ApiParam({ name: 'id', description: 'Mã voucher cần xóa', required: true })
   @ApiResponse({ status: 200, description: 'Xóa voucher thành công.' })

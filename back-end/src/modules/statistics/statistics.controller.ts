@@ -1,5 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import { SummaryDto } from './dtos/summary.dto';
@@ -9,8 +15,15 @@ import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
 import { TopMovieDto } from './dtos/top-movie.dto';
 import { GetTopStaffQueryDto } from './dtos/get-top-staff-query.dto';
 import { TopStaffDto } from './dtos/top-staff.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Thống kê')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(RoleEnum.ADMIN)
 @Controller('statistics')
 export class StatisticsController {
   constructor(private readonly statisticsService: StatisticsService) {}

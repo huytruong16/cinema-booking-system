@@ -103,9 +103,9 @@ import { UserGroupModule } from './modules/user-group/user-group.module';
     TransactionModule,
     PdfModule,
     ReviewModule,
-    UserGroupModule
+    UserGroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

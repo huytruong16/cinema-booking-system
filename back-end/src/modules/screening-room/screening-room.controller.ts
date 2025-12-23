@@ -8,12 +8,22 @@ import {
   Body,
   Patch,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { ScreeningRoomService } from './screening-room.service';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateScreeningRoomDto } from './dtos/create-screening-room.dto';
 import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Phòng chiếu')
 @Controller('screening-rooms')
@@ -27,6 +37,9 @@ export class ScreeningRoomController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo phòng chiếu mới' })
   async createScreeningRoom(
     @Body() createScreeningRoomDto: CreateScreeningRoomDto,
@@ -48,6 +61,9 @@ export class ScreeningRoomController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật phòng chiếu (partial)' })
   @ApiParam({ name: 'id', description: 'Mã phòng chiếu', required: true })
   async updateScreeningRoom(
@@ -65,6 +81,9 @@ export class ScreeningRoomController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm phòng chiếu' })
   @ApiParam({ name: 'id', description: 'Mã phòng chiếu', required: true })
   async removeScreeningRoom(@Param('id') id: string) {
