@@ -46,7 +46,6 @@ import { Label } from '@/components/ui/label';
 import { statisticsService } from '@/services/statistics.service';
 import { RoomStatus, StatisticsSummary, RevenueChartData, TopMovie, TopStaff } from '@/types/statistics';
 
-// --- Định nghĩa loại báo cáo ---
 type ReportType = 'revenue' | 'movies' | 'staff' | 'room_status';
 
 const reportTypeOptions: { value: ReportType; label: string; icon: React.ElementType }[] = [
@@ -64,7 +63,6 @@ export default function ReportPage() {
   });
   const [activePreset, setActivePreset] = useState<string>("month");
 
-  // State for data
   const [summary, setSummary] = useState<StatisticsSummary | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueChartData[]>([]);
   const [topMovies, setTopMovies] = useState<TopMovie[]>([]);
@@ -72,7 +70,6 @@ export default function ReportPage() {
   const [roomStatus, setRoomStatus] = useState<RoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (!dateRange?.from || !dateRange?.to) return;
@@ -87,26 +84,26 @@ export default function ReportPage() {
 
         // Always fetch summary
         try {
-            const summaryData = await statisticsService.getSummary(range);
+            const summaryData = await statisticsService.getSummary({ range });
             setSummary(summaryData);
         } catch (err) {
             console.error("Failed to fetch summary:", err);
         }
 
-        // Fetch based on report type
         try {
             if (selectedReportType === 'revenue') {
-            const data = await statisticsService.getRevenueChart(range);
-            setRevenueData(data);
+              const revenueRange = (range === 'day') ? 'week' : range;
+              const data = await statisticsService.getRevenueChart({ range: revenueRange });
+              setRevenueData(data);
             } else if (selectedReportType === 'movies') {
-            const data = await statisticsService.getTopMovies(range);
-            setTopMovies(data);
+              const data = await statisticsService.getTopMovies({ range });
+              setTopMovies(data);
             } else if (selectedReportType === 'staff') {
-            const data = await statisticsService.getTopStaff(range);
-            setTopStaff(data);
+              const data = await statisticsService.getTopStaff({ range });
+              setTopStaff(data);
             } else if (selectedReportType === 'room_status') {
-            const data = await statisticsService.getRoomStatus();
-            setRoomStatus(data);
+              const data = await statisticsService.getRoomStatus();
+              setRoomStatus(data);
             }
         } catch (err) {
             console.error(`Failed to fetch ${selectedReportType} report:`, err);
@@ -124,7 +121,6 @@ export default function ReportPage() {
     fetchData();
   }, [selectedReportType, activePreset]);
 
-  // Xử lý logic lọc nhanh
   const setPreset = (preset: string) => {
       setActivePreset(preset);
       const today = new Date();
@@ -136,7 +132,6 @@ export default function ReportPage() {
       }
   };
 
-  // Format chữ trên nút Date Picker
   const formattedDateRange = useMemo(() => {
     if (!dateRange?.from) return "Chọn khoảng thời gian";
     if (dateRange.to) {
@@ -145,14 +140,12 @@ export default function ReportPage() {
     return format(dateRange.from, "dd/MM/yyyy");
   }, [dateRange]);
 
-  // Hàm (giả) để xử lý xuất file
   const handleExport = (type: 'excel' | 'pdf') => {
       alert(`Đang xuất file ${type} cho báo cáo: ${reportTypeOptions.find(r => r.value === selectedReportType)?.label}
 Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
 Đến: ${format(dateRange?.to || new Date(), "dd/MM/yyyy")}`);
   };
 
-  // Hàm render nội dung báo cáo
   const renderReportContent = () => {
       if (loading) {
           return <div className="flex items-center justify-center h-64 text-slate-400">Đang tải dữ liệu...</div>;
