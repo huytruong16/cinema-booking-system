@@ -27,7 +27,7 @@ export class RefundRequestService {
     readonly prisma: PrismaService,
     @Inject(REQUEST) private readonly request: any,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
   async getAllRefundRequests(filters: GetRefundRequestDto) {
     const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE
       .paginate({
@@ -174,6 +174,11 @@ export class RefundRequestService {
             KhachHang: {
               include: {
                 NguoiDungPhanMem: true,
+              },
+            },
+            HoaDonCombos: {
+              include: {
+                Combo: true,
               },
             },
             Ves: {
