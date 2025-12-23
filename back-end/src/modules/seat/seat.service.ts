@@ -66,27 +66,31 @@ export class SeatService {
         return seat;
     }
 
-    async createSeat(body: CreateSeatDto) {
-        const existingSeat = await this.prisma.gHE.findFirst({
-            where: {
-                Hang: body.Hang,
-                Cot: body.Cot,
-                DeletedAt: null
-            },
-        });
+    async createSeats(seats: CreateSeatDto[]): Promise<any[]> {
+        const results: any[] = [];
+        for (const body of seats) {
+            const existingSeat = await this.prisma.gHE.findFirst({
+                where: {
+                    Hang: body.Hang,
+                    Cot: body.Cot,
+                    DeletedAt: null
+                },
+            });
 
-        if (existingSeat) {
-            return { 'message': `Ghế ở hàng ${body.Hang} cột ${body.Cot} đã tồn tại` };
-        }
-
-        const seat = await this.prisma.gHE.create({
-            data: {
-                Hang: body.Hang,
-                Cot: body.Cot,
+            if (existingSeat) {
+                continue;
             }
-        });
 
-        return await this.getBaseSeatById(seat.MaGhe);
+            const seat = await this.prisma.gHE.create({
+                data: {
+                    Hang: body.Hang,
+                    Cot: body.Cot,
+                }
+            });
+
+            results.push(await this.getBaseSeatById(seat.MaGhe));
+        }
+        return results;
     }
 
     async createSeatSeatType(body: CreateSeatSeatTypeDto) {
