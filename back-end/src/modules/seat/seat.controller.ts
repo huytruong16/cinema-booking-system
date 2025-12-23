@@ -1,80 +1,103 @@
-import { Controller, Get, Param, Query, BadRequestException, Post, Body, ParseArrayPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  BadRequestException,
+  Post,
+  Body,
+  ParseArrayPipe,
+} from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { SeatService } from './seat.service';
 import {
-    ApiTags,
-    ApiOperation,
-    ApiParam,
-    ApiResponse,
-    ApiQuery,
-    ApiBody,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { GetSeatsDto } from './dtos/get-seat.dto';
-import { SeatCheckRequestDto } from './dtos/post-check-available.dto';
 import { CreateSeatDto } from './dtos/create-seat.dto';
 import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
 
 @ApiTags('Ghế')
 @Controller('seats')
 export class SeatController {
-    constructor(private readonly seatService: SeatService) { }
+  constructor(private readonly seatService: SeatService) {}
 
-    @Get()
-    @ApiOperation({ summary: 'Lấy danh sách các ghế được chia theo loại ghế' })
-    @ApiQuery({ name: 'MaLoaiGhe', required: false, description: 'Mã loại ghế để lọc (tùy chọn)' })
-    @ApiResponse({ status: 200 })
-    async getAllSeats(@Query() query: GetSeatsDto) {
-        return this.seatService.getAllSeats(query);
-    }
+  @Get()
+  @ApiOperation({ summary: 'Lấy danh sách các ghế được chia theo loại ghế' })
+  @ApiQuery({
+    name: 'MaLoaiGhe',
+    required: false,
+    description: 'Mã loại ghế để lọc (tùy chọn)',
+  })
+  @ApiResponse({ status: 200 })
+  async getAllSeats(@Query() query: GetSeatsDto) {
+    return this.seatService.getAllSeats(query);
+  }
 
-    @Get('/base')
-    @ApiOperation({ summary: 'Lấy danh sách các ghế chưa chia theo loại ghế (gốc)' })
-    @ApiResponse({ status: 200 })
-    async getAllBaseSeats() {
-        return this.seatService.getAllBaseSeats();
-    }
+  @Get('/base')
+  @ApiOperation({
+    summary: 'Lấy danh sách các ghế chưa chia theo loại ghế (gốc)',
+  })
+  @ApiResponse({ status: 200 })
+  async getAllBaseSeats() {
+    return this.seatService.getAllBaseSeats();
+  }
 
-    @Post()
-    @ApiOperation({ summary: 'Tạo danh sách ghế' })
-    @ApiBody({ type: [CreateSeatDto] })
-    @ApiResponse({ status: 201 })
-    async createSeats(@Body(new ParseArrayPipe({ items: CreateSeatDto })) body: CreateSeatDto[]) {
-        return this.seatService.createSeats(body);
-    }
+  @Post()
+  @ApiOperation({ summary: 'Tạo danh sách ghế' })
+  @ApiBody({ type: [CreateSeatDto] })
+  @ApiResponse({ status: 201 })
+  async createSeats(
+    @Body(new ParseArrayPipe({ items: CreateSeatDto })) body: CreateSeatDto[],
+  ) {
+    return this.seatService.createSeats(body);
+  }
 
-    @Post('/seat-type')
-    @ApiOperation({ summary: 'Tạo ghế loại ghế' })
-    @ApiResponse({ status: 201 })
-    async createSeatType(@Body() body: CreateSeatSeatTypeDto) {
-        return this.seatService.createSeatSeatType(body);
-    }
+  @Post('/seat-type')
+  @ApiOperation({ summary: 'Tạo ghế loại ghế' })
+  @ApiResponse({ status: 201 })
+  async createSeatType(@Body() body: CreateSeatSeatTypeDto) {
+    return this.seatService.createSeatSeatType(body);
+  }
 
-    @Get('/base/:id')
-    @ApiOperation({ summary: 'Lấy chi tiết ghế chưa chia theo loại ghế (gốc)' })
-    @ApiParam({ name: 'id', description: 'Mã ghế', required: true })
-    @ApiResponse({ status: 200 })
-    @ApiResponse({ status: 404, description: 'Ghế không tồn tại' })
-    async getBaseSeatById(@Param('id') id: string) {
-        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-        return this.seatService.getBaseSeatById(id);
-    }
+  @Get('/base/:id')
+  @ApiOperation({ summary: 'Lấy chi tiết ghế chưa chia theo loại ghế (gốc)' })
+  @ApiParam({ name: 'id', description: 'Mã ghế', required: true })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 404, description: 'Ghế không tồn tại' })
+  async getBaseSeatById(@Param('id') id: string) {
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    return this.seatService.getBaseSeatById(id);
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Lấy chi tiết ghế đã được chia theo loại ghế' })
-    @ApiParam({ name: 'id', description: 'Mã ghế - loại ghế', required: true })
-    @ApiResponse({ status: 200 })
-    @ApiResponse({ status: 404, description: 'Ghế - loại ghế không tồn tại' })
-    async getById(@Param('id') id: string) {
-        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-        return this.seatService.getSeatById(id);
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Lấy chi tiết ghế đã được chia theo loại ghế' })
+  @ApiParam({ name: 'id', description: 'Mã ghế - loại ghế', required: true })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 404, description: 'Ghế - loại ghế không tồn tại' })
+  async getById(@Param('id') id: string) {
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    return this.seatService.getSeatById(id);
+  }
 
-    @Get(':id/check-available')
-    @ApiOperation({ summary: 'Kiểm tra ghế phòng chiếu có còn trống không, giữ ghế', description: 'Được gọi khi khách hàng nhấn chọn vào 1 ghế trong suất chiếu để đặt vé' })
-    @ApiParam({ name: 'id', description: 'Mã ghế suất chiếu', required: true })
-    @ApiResponse({ status: 200 })
-    async checkAvailableSeats(@Param('id') id: string) {
-        if (!isUUID(id, '4')) throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-        return this.seatService.checkAvailableSeats(id);
-    }
+  @Get(':id/check-available')
+  @ApiOperation({
+    summary: 'Kiểm tra ghế phòng chiếu có còn trống không, giữ ghế',
+    description:
+      'Được gọi khi khách hàng nhấn chọn vào 1 ghế trong suất chiếu để đặt vé',
+  })
+  @ApiParam({ name: 'id', description: 'Mã ghế suất chiếu', required: true })
+  @ApiResponse({ status: 200 })
+  async checkAvailableSeats(@Param('id') id: string) {
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    return this.seatService.checkAvailableSeats(id);
+  }
 }

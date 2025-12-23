@@ -4,8 +4,8 @@ import { SupabaseModule } from 'nestjs-supabase-js';
 
 @Global()
 @Module({
-    imports: [SupabaseModule.injectClient('adminClient')],
-    providers: [StorageService],
-    exports: [StorageService],
+  imports: [SupabaseModule.injectClient('adminClient')],
+  providers: [StorageService],
+  exports: [StorageService],
 })
-export class StorageModule { }
+export class StorageModule {}

@@ -4,8 +4,8 @@ import { RefundRequestService } from './refund-request.service';
 import { MailService } from '../mail/mail.service';
 
 @Module({
-    controllers: [RefundRequestController],
-    providers: [RefundRequestService, MailService],
-    exports: [RefundRequestService],
+  controllers: [RefundRequestController],
+  providers: [RefundRequestService, MailService],
+  exports: [RefundRequestService],
 })
-export class RefundRequestModule { }
+export class RefundRequestModule {}

@@ -12,4 +12,4 @@ import { PdfService } from '../pdf/pdf.service';
   providers: [InvoiceService, PayosService, TicketsService, PdfService],
   exports: [InvoiceService],
 })
-export class InvoiceModule { }
+export class InvoiceModule {}
