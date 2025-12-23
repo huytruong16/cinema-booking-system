@@ -25,7 +25,7 @@ import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
 @ApiTags('Ghế')
 @Controller('seats')
 export class SeatController {
-  constructor(private readonly seatService: SeatService) { }
+  constructor(private readonly seatService: SeatService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các ghế được chia theo loại ghế' })
