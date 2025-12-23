@@ -1,7 +1,7 @@
 export enum FilmStatusEnum {
-    SAPCHIEU = 'SAPCHIEU',
-    DANGCHIEU = 'DANGCHIEU',
-    NGUNGCHIEU = 'NGUNGCHIEU',
+  SAPCHIEU = 'SAPCHIEU',
+  DANGCHIEU = 'DANGCHIEU',
+  NGUNGCHIEU = 'NGUNGCHIEU',
 }
 
 export default FilmStatusEnum;

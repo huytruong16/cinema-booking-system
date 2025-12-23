@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { SupabaseModule } from 'nestjs-supabase-js';
 
 import configuration from './config/configuration';
@@ -45,7 +45,8 @@ import { PdfModule } from './modules/pdf/pdf.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: (configService.get<string>('jwt.accessTokenExpire') || '15m') as `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`,
+          expiresIn: (configService.get<string>('jwt.accessTokenExpire') ||
+            '15m') as `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`,
         },
       }),
     }),
@@ -103,4 +104,4 @@ import { PdfModule } from './modules/pdf/pdf.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

@@ -1,6 +1,6 @@
 export enum DiscountStatusEnum {
-    CONHOATDONG = 'CONHOATDONG',
-    KHONGCONHOATDONG = 'KHONGCONHOATDONG',
+  CONHOATDONG = 'CONHOATDONG',
+  KHONGCONHOATDONG = 'KHONGCONHOATDONG',
 }
 
 export default DiscountStatusEnum;

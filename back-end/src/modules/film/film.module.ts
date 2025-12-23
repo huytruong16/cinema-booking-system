@@ -4,6 +4,6 @@ import { FilmService } from './film.service';
 
 @Module({
   controllers: [FilmController],
-  providers: [FilmService]
+  providers: [FilmService],
 })
 export class FilmModule {}

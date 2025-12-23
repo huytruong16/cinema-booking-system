@@ -1,6 +1,6 @@
 export enum StaffStatusEnum {
-    CONLAM = 'CONLAM',
-    DANGHI = 'DANGHI',
+  CONLAM = 'CONLAM',
+  DANGHI = 'DANGHI',
 }
 
 export default StaffStatusEnum;

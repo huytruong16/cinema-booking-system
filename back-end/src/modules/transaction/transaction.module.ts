@@ -8,9 +8,15 @@ import { TransactionCronService } from './transaction.cron.service';
 import { RefundRequestService } from '../refund-request/refund-request.service';
 
 @Module({
-    imports: [ConfigModule],
-    controllers: [TransactionController],
-    providers: [TransactionService, MailService, PayosService, TransactionCronService, RefundRequestService],
-    exports: [TransactionService],
+  imports: [ConfigModule],
+  controllers: [TransactionController],
+  providers: [
+    TransactionService,
+    MailService,
+    PayosService,
+    TransactionCronService,
+    RefundRequestService,
+  ],
+  exports: [TransactionService],
 })
-export class TransactionModule { }
+export class TransactionModule {}
