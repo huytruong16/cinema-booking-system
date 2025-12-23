@@ -8,7 +8,7 @@ import { SeatCheckResponseDto } from './dtos/post-check-available.dto';
 
 @Injectable()
 export class SeatService {
-  constructor(readonly prisma: PrismaService) {}
+  constructor(readonly prisma: PrismaService) { }
 
   // ghế đã chia theo loại ghế
   async getAllSeats(query?: GetSeatsDto) {
@@ -91,38 +91,43 @@ export class SeatService {
     return results;
   }
 
-  async createSeatSeatType(body: CreateSeatSeatTypeDto) {
-    const seat = await this.prisma.gHE.findFirst({
-      where: {
-        MaGhe: body.MaGhe,
-        DeletedAt: null,
-      },
-    });
+  async createSeatSeatType(bodies: CreateSeatSeatTypeDto[]) {
+    const results: any[] = [];
+    for (const body of bodies) {
+      const seat = await this.prisma.gHE.findFirst({
+        where: {
+          MaGhe: body.MaGhe,
+          DeletedAt: null,
+        },
+      });
 
-    if (!seat) {
-      throw new NotFoundException('Ghế không tồn tại');
+      if (!seat) {
+        continue;
+      }
+
+      const existingSeatSeatType = await this.prisma.gHE_LOAIGHE.findFirst({
+        where: {
+          MaGhe: body.MaGhe,
+          MaLoaiGhe: body.MaLoaiGhe,
+          DeletedAt: null,
+        },
+      });
+
+      if (existingSeatSeatType) {
+        continue;
+      }
+
+      const seatSeatType = await this.prisma.gHE_LOAIGHE.create({
+        data: {
+          MaGhe: body.MaGhe,
+          MaLoaiGhe: body.MaLoaiGhe,
+        },
+      });
+
+      results.push(await this.getSeatById(seatSeatType.MaGheLoaiGhe));
     }
 
-    const existingSeatSeatType = await this.prisma.gHE_LOAIGHE.findFirst({
-      where: {
-        MaGhe: body.MaGhe,
-        MaLoaiGhe: body.MaLoaiGhe,
-        DeletedAt: null,
-      },
-    });
-
-    if (existingSeatSeatType) {
-      return { message: 'Ghế - loại ghế đã tồn tại' };
-    }
-
-    const seatSeatType = await this.prisma.gHE_LOAIGHE.create({
-      data: {
-        MaGhe: body.MaGhe,
-        MaLoaiGhe: body.MaLoaiGhe,
-      },
-    });
-
-    return await this.getSeatById(seatSeatType.MaGheLoaiGhe);
+    return results;
   }
 
   async checkAvailableSeats(id: string): Promise<SeatCheckResponseDto> {
@@ -176,7 +181,7 @@ export class SeatService {
                 },
               });
             }
-          } catch {}
+          } catch { }
         })();
       }, timeoutMs);
     }
