@@ -3,7 +3,7 @@ import { FormatController } from './format.controller';
 import { FormatService } from './format.service';
 
 @Module({
-    controllers: [FormatController],
-    providers: [FormatService]
+  controllers: [FormatController],
+  providers: [FormatService],
 })
-export class FormatModule { }
+export class FormatModule {}

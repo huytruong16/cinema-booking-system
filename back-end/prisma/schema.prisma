@@ -119,6 +119,7 @@ model LOAIGHE {
   CreatedAt  DateTime       @default(now()) @db.Timestamptz(6)
   UpdatedAt  DateTime       @default(now()) @db.Timestamptz(6)
   DeletedAt  DateTime?      @db.Timestamptz(6)
+  MauSac     String        
 }
 
 model GHE {
@@ -370,6 +371,7 @@ model NGUOIDUNGPHANMEM {
   KhachHangs      KHACHHANG[]
   NhomNguoiDung   NHOMNGUOIDUNG?        @relation(fields: [MaNhomNguoiDung], references: [MaNhomNguoiDung])
   NhanViens       NHANVIEN[]
+  DanhGias        DANHGIA[]
   CreatedAt       DateTime              @default(now()) @db.Timestamptz(6)
   UpdatedAt       DateTime              @default(now()) @db.Timestamptz(6)
   DeletedAt       DateTime?             @db.Timestamptz(6)
@@ -401,6 +403,8 @@ model DANHGIA {
   Diem       Float     @db.Real
   MaPhim     String?   @db.Uuid
   Phim       PHIM?     @relation(fields: [MaPhim], references: [MaPhim], onDelete: NoAction, onUpdate: NoAction)
+  MaNguoiDung String   @db.Uuid
+  NguoiDungPhanMem NGUOIDUNGPHANMEM  @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
   CreatedAt  DateTime  @default(now()) @db.Timestamptz(6)
   UpdatedAt  DateTime  @default(now()) @db.Timestamptz(6)
   DeletedAt  DateTime? @db.Timestamptz(6)

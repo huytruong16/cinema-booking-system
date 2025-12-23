@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { SupabaseModule } from 'nestjs-supabase-js';
 
 import configuration from './config/configuration';
@@ -31,6 +31,8 @@ import { InvoiceModule } from './modules/invoice/invoice.module';
 import { RefundRequestModule } from './modules/refund-request/refund-request.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { PdfModule } from './modules/pdf/pdf.module';
+import { ReviewModule } from './modules/review/review.module';
+import { UserGroupModule } from './modules/user-group/user-group.module';
 
 @Module({
   imports: [
@@ -45,7 +47,8 @@ import { PdfModule } from './modules/pdf/pdf.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: (configService.get<string>('jwt.accessTokenExpire') || '15m') as `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`,
+          expiresIn: (configService.get<string>('jwt.accessTokenExpire') ||
+            '15m') as `${number}${'ms' | 's' | 'm' | 'h' | 'd'}`,
         },
       }),
     }),
@@ -99,6 +102,8 @@ import { PdfModule } from './modules/pdf/pdf.module';
     RefundRequestModule,
     TransactionModule,
     PdfModule,
+    ReviewModule,
+    UserGroupModule
   ],
   controllers: [AppController],
   providers: [AppService],

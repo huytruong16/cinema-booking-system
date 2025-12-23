@@ -3,18 +3,21 @@ import { PrismaClient } from '@prisma/client';
 import { pagination } from 'prisma-extension-pagination';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-    async onModuleInit() {
-        await this.$connect();
-        console.log('Prisma connected to database');
-    }
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+  async onModuleInit() {
+    await this.$connect();
+    console.log('Prisma connected to database');
+  }
 
-    async onModuleDestroy() {
-        await this.$disconnect();
-        console.log('Prisma disconnected');
-    }
+  async onModuleDestroy() {
+    await this.$disconnect();
+    console.log('Prisma disconnected');
+  }
 
-    get xprisma() {
-        return this.$extends(pagination());
-    }
+  get xprisma() {
+    return this.$extends(pagination());
+  }
 }

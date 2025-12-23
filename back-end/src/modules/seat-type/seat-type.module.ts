@@ -3,7 +3,7 @@ import { SeatTypeController } from './seat-type.controller';
 import { SeatTypeService } from './seat-type.service';
 
 @Module({
-    controllers: [SeatTypeController],
-    providers: [SeatTypeService]
+  controllers: [SeatTypeController],
+  providers: [SeatTypeService],
 })
-export class SeatTypeModule { }
+export class SeatTypeModule {}

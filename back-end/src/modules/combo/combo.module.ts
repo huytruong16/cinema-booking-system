@@ -3,7 +3,7 @@ import { ComboController } from './combo.controller';
 import { ComboService } from './combo.service';
 
 @Module({
-    controllers: [ComboController],
-    providers: [ComboService],
+  controllers: [ComboController],
+  providers: [ComboService],
 })
-export class ComboModule { }
+export class ComboModule {}

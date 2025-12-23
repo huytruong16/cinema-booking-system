@@ -1,73 +1,72 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class TransactionDto {
-    GiaoDich: {
-        NgayGiaoDich: string;
-        HoaDon: InvoiceDto;
-    };
+  GiaoDich: {
+    NgayGiaoDich: string;
+    HoaDon: InvoiceDto;
+  };
 }
 
 export class InvoiceDto {
-    TongTien: Decimal;
-    Email: string;
-    Code: string;
-    HoaDonCombos: InvoiceComboDto[];
-    Ves: TicketDto[];
+  TongTien: Decimal;
+  Email: string;
+  Code: string;
+  HoaDonCombos: InvoiceComboDto[];
+  Ves: TicketDto[];
 }
 
-
 export class InvoiceComboDto {
-    SoLuong: number;
-    DonGia: Decimal;
-    Combo: {
-        TenCombo: string;
-    };
+  SoLuong: number;
+  DonGia: Decimal;
+  Combo: {
+    TenCombo: string;
+  };
 }
 
 export class TicketDto {
-    GiaVe: Decimal;
-    GheSuatChieu: SeatScreeningDto;
+  GiaVe: Decimal;
+  GheSuatChieu: SeatScreeningDto;
 }
 
 export class SeatScreeningDto {
-    GhePhongChieu: {
-        GheLoaiGhe: {
-            Ghe: SeatDto;
-        };
+  GhePhongChieu: {
+    GheLoaiGhe: {
+      Ghe: SeatDto;
     };
+  };
 }
 
 export class SeatDto {
-    Hang: string;
-    Cot: string;
+  Hang: string;
+  Cot: string;
 }
 
 export class ShowtimeDto {
-    ThoiGianBatDau: string;
-    PhienBanPhim: MovieVersionDto;
-    PhongChieu: {
-        TenPhongChieu: string;
-    };
+  ThoiGianBatDau: string;
+  PhienBanPhim: MovieVersionDto;
+  PhongChieu: {
+    TenPhongChieu: string;
+  };
 }
 
 export class MovieVersionDto {
-    Phim: MovieDto;
+  Phim: MovieDto;
 }
 
 export class MovieDto {
-    TenHienThi: string;
-    DinhDang: {
-        TenDinhDang: string;
-    };
-    NgonNgu: {
-        TenNgonNgu?: string;
-    };
-    NhanPhim: {
-        TenNhanPhim?: string;
-    };
+  TenHienThi: string;
+  DinhDang: {
+    TenDinhDang: string;
+  };
+  NgonNgu: {
+    TenNgonNgu?: string;
+  };
+  NhanPhim: {
+    TenNhanPhim?: string;
+  };
 }
 
 export default class InvoiceMailDto {
-    Transaction: TransactionDto;
-    Showtime: ShowtimeDto;
+  Transaction: TransactionDto;
+  Showtime: ShowtimeDto;
 }

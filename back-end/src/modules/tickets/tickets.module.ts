@@ -5,8 +5,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PdfService } from '../pdf/pdf.service';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [TicketsController],
-    providers: [TicketsService, PdfService],
+  imports: [PrismaModule],
+  controllers: [TicketsController],
+  providers: [TicketsService, PdfService],
 })
-export class TicketsModule { }
+export class TicketsModule {}

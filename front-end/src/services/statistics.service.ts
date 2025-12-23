@@ -1,4 +1,4 @@
-import api from '@/lib/apiClient';
+import apiClient from '@/lib/apiClient';
 import {
   RoomStatus,
   StatisticsSummary,
@@ -7,51 +7,56 @@ import {
   TopStaff,
 } from '@/types/statistics';
 
-export const statisticsService = {
-  getRoomStatus: async (): Promise<RoomStatus[]> => {
-    const response = await api.get<RoomStatus[]>('/statistics/room-status');
-    return response.data;
-  },
+export interface GetSummaryParams {
+  range: 'day' | 'week' | 'month' | 'year' | 'all';
+  date?: string;
+}
 
-  getSummary: async (range: 'day' | 'week' | 'month' | 'year' | 'all' = 'day'): Promise<StatisticsSummary> => {
-    const response = await api.get<StatisticsSummary>('/statistics/summary', {
-      params: { range },
-    });
-    return response.data;
+export interface GetRevenueChartParams {
+  range: 'week' | 'month' | 'year';
+  date?: string;
+}
+
+export interface GetTopMovieParams {
+  range: 'day' | 'week' | 'month' | 'year' | 'all';
+  limit?: number;
+}
+
+export interface GetTopStaffParams {
+  range: 'day' | 'week' | 'month' | 'year' | 'all';
+  limit?: number;
+}
+
+export const statisticsService = {
+
+  getSummary: async (params: GetSummaryParams): Promise<StatisticsSummary> => {
+    const res = await apiClient.get('/statistics/summary', { params });
+    return res.data;
   },
 
   getRevenueChart: async (
-    range: 'day' | 'week' | 'month' | 'year' | 'all' = 'day'
+    params: GetRevenueChartParams
   ): Promise<RevenueChartData[]> => {
-    const response = await api.get<RevenueChartData[]>('/statistics/revenue-chart', {
-      params: { range },
-    });
-    return response.data;
+    const res = await apiClient.get('/statistics/revenue-chart', { params });
+    return res.data;
   },
 
   getTopMovies: async (
-    range: 'day' | 'week' | 'month' | 'year' | 'all' = 'day',
-    limit: number = 5
+    params: GetTopMovieParams
   ): Promise<TopMovie[]> => {
-    const params: any = { range };
-    if (limit !== 5) params.limit = limit;
-    
-    const response = await api.get<TopMovie[]>('/statistics/top-movies', {
-      params,
-    });
-    return response.data;
+    const res = await apiClient.get('/statistics/top-movies', { params });
+    return res.data;
   },
 
   getTopStaff: async (
-    range: 'day' | 'week' | 'month' | 'year' | 'all' = 'day',
-    limit: number = 5
+    params: GetTopStaffParams
   ): Promise<TopStaff[]> => {
-    const params: any = { range };
-    if (limit !== 5) params.limit = limit;
+    const res = await apiClient.get('/statistics/top-staff', { params });
+    return res.data;
+  },
 
-    const response = await api.get<TopStaff[]>('/statistics/top-staff', {
-      params,
-    });
-    return response.data;
+  getRoomStatus: async (): Promise<RoomStatus[]> => {
+    const res = await apiClient.get('/statistics/room-status');
+    return res.data;
   },
 };
