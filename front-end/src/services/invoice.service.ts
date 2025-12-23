@@ -18,32 +18,41 @@ export interface InvoiceResponse {
 }
 
 export interface InvoiceItem {
-  MaVe?: string;
-  Code?: string; 
-  TenPhim?: string;
-  PhongChieu?: string;
-  SoGhe?: string; 
-  GiaVe?: number;
-  TrangThai?: string;
+  SoGhe: string;
+  TrangThai: string;
+  DonGia: number;
 }
 
 export interface InvoiceCombo {
-  TenCombo?: string;
-  SoLuong?: number;
-  DonGia?: number;
+  TenCombo: string;
+  SoLuong: number;
+  DonGia: number;
 }
 
 export interface Invoice {
   MaHoaDon: string;
-  Code: string; 
-  Email?: string; 
-  NgayLap?: string; 
+  Code: string;
+  Email: string;
+  Phim: {
+    TenPhim?: string;
+    PosterUrl?: string;
+  };
+  ThoiGianChieu?: string;
+  PhongChieu?: string;
+  Ves: InvoiceItem[];
+  Combos: InvoiceCombo[];
+  KhuyenMais: any[];
+  NgayLap: string;
+  GiaoDich: {
+    MaGiaoDich: string;
+    Code: string;
+    NgayGiaoDich: string;
+    PhuongThuc: string;
+    TrangThai: string;
+    LoaiGiaoDich: string;
+    NoiDung: string | null;
+  };
   TongTien: number;
-  TrangThai?: string; 
-  
-  Ves?: InvoiceItem[];
-  Combos?: InvoiceCombo[];
-  GiaoDichs?: any[]; 
 }
 
 export interface GetInvoicesParams {

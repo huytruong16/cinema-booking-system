@@ -93,7 +93,7 @@ export default function MyTicketsPage() {
 }
 
 function mapTicketResponseToCardProps(apiTicket: TicketResponse) {
-  const showDateObj = new Date(apiTicket.ThoiGianChieu);
+  const showDateObj = apiTicket.ThoiGianChieu ? new Date(apiTicket.ThoiGianChieu) : null;
   const now = new Date();
   
   let status = 'upcoming';
@@ -101,23 +101,23 @@ function mapTicketResponseToCardProps(apiTicket: TicketResponse) {
   const hasPendingRefund = apiTicket.Ves.some(v => v.TrangThai === 'CHOHOANTIEN');
   const hasRefunded = apiTicket.Ves.some(v => v.TrangThai === 'DAHOAN');
   
-  if (apiTicket.TrangThaiThanhToan === 'THATBAI' || hasRefunded) {
+  if (apiTicket.GiaoDich?.TrangThai === 'THATBAI' || hasRefunded) {
     status = 'cancelled';
   } else if (hasPendingRefund) {
     status = 'pending_refund';
-  } else if (showDateObj < now) {
+  } else if (!showDateObj || (showDateObj && showDateObj < now)) {
     status = 'completed';
   }
 
   return {
     id: apiTicket.MaHoaDon,
-    movieTitle: apiTicket.Phim.TenPhim,
-    posterUrl: apiTicket.Phim.PosterUrl,
-    backdropUrl: apiTicket.Phim.PosterUrl, // Fallback
+    movieTitle: apiTicket.Phim?.TenPhim || 'Không xác định',
+    posterUrl: apiTicket.Phim?.PosterUrl || '',
+    backdropUrl: apiTicket.Phim?.PosterUrl || '', // Fallback
     cinemaName: 'Movix UIT', // Hardcoded
-    roomName: apiTicket.PhongChieu,
-    showDate: showDateObj.toLocaleDateString('vi-VN'),
-    showTime: showDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    roomName: apiTicket.PhongChieu || 'N/A',
+    showDate: showDateObj ? showDateObj.toLocaleDateString('vi-VN') : 'N/A',
+    showTime: showDateObj ? showDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
     seats: apiTicket.Ves.map(v => v.SoGhe),
     combos: apiTicket.Combos.map(c => ({ name: c.TenCombo, quantity: c.SoLuong })),
     price: apiTicket.TongTien,
