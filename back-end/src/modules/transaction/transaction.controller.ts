@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  SetMetadata,
   UseGuards,
   Query,
 } from '@nestjs/common';
@@ -24,11 +23,12 @@ import { isUUID } from 'class-validator';
 import { CreateRefundTransactionDto } from './dto/create-refund-transaction.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { UpdateRefundTransactionStatusDto } from './dto/update-refund-transaction-status.dto';
+import { Public } from 'src/libs/common/decorators/public.decorator';
 
 @Controller('transactions')
 @ApiTags('Giao dịch')
 export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) {}
+  constructor(private readonly transactionService: TransactionService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các giao dịch' })
@@ -38,7 +38,7 @@ export class TransactionController {
 
   @ApiExcludeEndpoint()
   @Post('payos/webhook')
-  @SetMetadata('isPublic', true)
+  @Public()
   @ApiOperation({
     summary: 'Nhận Webhook từ PayOS để cập nhật trạng thái thanh toán',
   })

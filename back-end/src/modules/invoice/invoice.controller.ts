@@ -7,7 +7,6 @@ import {
   Post,
   UseGuards,
   Query,
-  SetMetadata,
   Res,
 } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
@@ -22,13 +21,14 @@ import { CreateInvoiceDto } from './dtos/create-invoice.dto';
 import { GetInvoiceDto } from './dtos/get-invoice.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import express from 'express';
+import { Public } from 'src/libs/common/decorators/public.decorator';
 
 @ApiTags('Hóa đơn')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(private readonly invoiceService: InvoiceService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })
@@ -46,14 +46,14 @@ export class InvoiceController {
   }
 
   @Post()
-  @SetMetadata('isPublic', true)
+  @Public()
   @ApiOperation({ summary: 'Tạo hóa đơn mới' })
   async createInvoice(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoiceService.createInvoice(createInvoiceDto);
   }
 
   @Get(':code/pdf')
-  @SetMetadata('isPublic', true)
+  @Public()
   @ApiOperation({ summary: 'In hóa đơn PDF' })
   @ApiParam({ name: 'code', description: 'Code hóa đơn', required: true })
   async printInvoice(
@@ -72,7 +72,7 @@ export class InvoiceController {
   }
 
   @Get('/:code/ticket/pdf')
-  @SetMetadata('isPublic', true)
+  @Public()
   @ApiOperation({ summary: 'Kiểm tra in hóa đơn' })
   @ApiParam({ name: 'code', description: 'Mã hóa đơn', required: true })
   async checkInTicket(
