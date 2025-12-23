@@ -1,3 +1,3 @@
-import { CursorPaginationDto } from "src/libs/common/dto/cursor-pagination.dto";
+import { CursorPaginationDto } from 'src/libs/common/dto/cursor-pagination.dto';
 
-export class GetFilmReviewDto extends CursorPaginationDto { }
+export class GetFilmReviewDto extends CursorPaginationDto {}
