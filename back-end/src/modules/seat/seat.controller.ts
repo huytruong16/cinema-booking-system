@@ -25,7 +25,7 @@ import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
 @ApiTags('Ghế')
 @Controller('seats')
 export class SeatController {
-  constructor(private readonly seatService: SeatService) {}
+  constructor(private readonly seatService: SeatService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các ghế được chia theo loại ghế' })
@@ -60,8 +60,12 @@ export class SeatController {
 
   @Post('/seat-type')
   @ApiOperation({ summary: 'Tạo ghế loại ghế' })
+  @ApiBody({ type: [CreateSeatSeatTypeDto] })
   @ApiResponse({ status: 201 })
-  async createSeatType(@Body() body: CreateSeatSeatTypeDto) {
+  async createSeatType(
+    @Body(new ParseArrayPipe({ items: CreateSeatSeatTypeDto }))
+    body: CreateSeatSeatTypeDto[],
+  ) {
     return this.seatService.createSeatSeatType(body);
   }
 
