@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, BadRequestException, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query, BadRequestException, Post, Body, ParseArrayPipe } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { SeatService } from './seat.service';
 import {
@@ -7,6 +7,7 @@ import {
     ApiParam,
     ApiResponse,
     ApiQuery,
+    ApiBody,
 } from '@nestjs/swagger';
 import { GetSeatsDto } from './dtos/get-seat.dto';
 import { SeatCheckRequestDto } from './dtos/post-check-available.dto';
@@ -34,10 +35,11 @@ export class SeatController {
     }
 
     @Post()
-    @ApiOperation({ summary: 'Tạo mới ghế' })
+    @ApiOperation({ summary: 'Tạo danh sách ghế' })
+    @ApiBody({ type: [CreateSeatDto] })
     @ApiResponse({ status: 201 })
-    async checkSeatsAvailability(@Body() body: CreateSeatDto) {
-        return this.seatService.createSeat(body);
+    async createSeats(@Body(new ParseArrayPipe({ items: CreateSeatDto })) body: CreateSeatDto[]) {
+        return this.seatService.createSeats(body);
     }
 
     @Post('/seat-type')
