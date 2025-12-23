@@ -32,7 +32,7 @@ export class TransactionService {
     private readonly mailService: MailService,
     private readonly refundRequestService: RefundRequestService,
     @Inject(REQUEST) private readonly request: any,
-  ) {}
+  ) { }
 
   sendInvoiceEmail(transaction: NonNullable<any>) {
     const invoice = transaction.HoaDon;
@@ -316,7 +316,7 @@ export class TransactionService {
   async createRefundTransaction(payload: CreateRefundTransactionDto) {
     const { MaYeuCau, PhuongThuc } = payload;
 
-    if (this.request?.user?.vaitro !== RoleEnum.NHANVIEN) {
+    if (this.request?.user?.vaitro !== RoleEnum.NHANVIEN && this.request?.user?.vaitro !== RoleEnum.ADMIN) {
       throw new BadRequestException(
         'Chỉ nhân viên mới có quyền tạo giao dịch hoàn tiền',
       );
