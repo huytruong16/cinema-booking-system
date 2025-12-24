@@ -4,7 +4,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
 export class ReviewService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async createReview(userId: string, dto: CreateReviewDto) {
     const { MaPhim, NoiDung, Diem } = dto;
@@ -17,8 +17,19 @@ export class ReviewService {
       throw new NotFoundException('Phim không tồn tại');
     }
 
-    const review = await this.prisma.dANHGIA.create({
-      data: {
+    const review = await this.prisma.dANHGIA.upsert({
+      where: {
+        MaPhim_MaNguoiDung: {
+          MaPhim: MaPhim,
+          MaNguoiDung: userId,
+        },
+      },
+      update: {
+        NoiDung,
+        Diem,
+        UpdatedAt: new Date(),
+      },
+      create: {
         MaPhim,
         MaNguoiDung: userId,
         NoiDung,
