@@ -9,6 +9,7 @@ import { useState } from "react"
 import { AuthButton } from "@/components/auth/auth-button"
 import { authService } from "@/lib/api/authService"
 import { OTPVerificationDialog } from "@/components/auth/OTP-verification-dialog"
+import { getErrorMessage } from "@/lib/error-helper"
 
 export default function SignupPage() {
     const [showPassword, setShowPassword] = useState(false)
@@ -68,7 +69,7 @@ export default function SignupPage() {
             setShowOTPDialog(true)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
-            setError(err.message || "Đăng ký thất bại")
+            setError(getErrorMessage(err))
         } finally {
             setLoading(false)
         }

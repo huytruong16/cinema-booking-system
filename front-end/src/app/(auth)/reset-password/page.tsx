@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { authService } from "@/lib/api/authService"
+import { getErrorMessage } from "@/lib/error-helper"
 
 export default function ResetPasswordPage() {
     const searchParams = useSearchParams()
@@ -51,7 +52,7 @@ export default function ResetPasswordPage() {
             setTimeout(() => router.push("/login"), 2000)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
-            setMessage(err.message || "❌ Có lỗi xảy ra khi đặt lại mật khẩu.")
+            setMessage(getErrorMessage(err))
         } finally {
             setLoading(false);
         }

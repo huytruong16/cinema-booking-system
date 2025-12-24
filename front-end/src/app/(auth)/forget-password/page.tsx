@@ -8,6 +8,7 @@ import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { authService } from "@/lib/api/authService"
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp"
+import { getErrorMessage } from "@/lib/error-helper"
 
 export default function ForgotPasswordPage() {
     const router = useRouter(); 
@@ -29,7 +30,7 @@ export default function ForgotPasswordPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setStatus("error");
-            setMessage(err.message || "❌ Có lỗi xảy ra khi gửi OTP, vui lòng thử lại.");
+            setMessage(getErrorMessage(err));
         } finally {
              if (step !== 'enterOtp') {
                 setStatus(prev => prev === 'success' ? 'idle' : prev); 
@@ -58,7 +59,7 @@ export default function ForgotPasswordPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setStatus("error");
-            setMessage(err.message || "❌ Mã OTP không hợp lệ hoặc đã hết hạn.");
+            setMessage(getErrorMessage(err));
         } finally {
             setStatus( prevStatus => prevStatus === 'success' ? 'success' : 'idle');
              if (status !== 'success') setStatus('idle');
