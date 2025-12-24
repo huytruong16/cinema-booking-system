@@ -100,6 +100,13 @@ export const invoiceService = {
   },
 
   printInvoice: async (code: string) => {
+    const res = await apiClient.get(`/invoices/${code}/pdf`, {
+      responseType: 'blob', 
+    });
+    return res.data; 
+  },
+
+  printTicket: async (code: string) => {
     const res = await apiClient.get(`/invoices/${code}/ticket/pdf`, {
       responseType: 'blob', 
     });

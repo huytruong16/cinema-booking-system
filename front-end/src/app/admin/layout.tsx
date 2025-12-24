@@ -53,11 +53,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           sidebarOpen ? "md:ml-64" : "ml-16"
         )}
       >
-        <div className="sticky top-0 z-20 bg-[#141414] flex items-center p-4">
+        <div className="sticky top-0 z-20 bg-[#141414] flex items-center p-4 pl-12">
           <AdminTopbar />
         </div>
 
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        <main className="flex-1 pl-12 p-6 overflow-y-auto">{children}</main>
       </div>
     </div>
   );

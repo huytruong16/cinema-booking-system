@@ -38,7 +38,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   Search,
@@ -53,30 +52,40 @@ import {
   Loader2,
   AlertTriangle,
   Tag,
-  Image as ImageIcon,
+  ImageIcon,
   MapPin,
-  Clock,
   Ticket,
   Popcorn,
-  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
-import { DateRange } from "react-day-picker";import {
+import { DateRange } from "react-day-picker";
+import {
   invoiceService,
   RefundRequestPayload,
 } from "@/services/invoice.service";
 import apiClient from "@/lib/apiClient";
+import { BankCombobox } from "@/components/movies/BankCombobox";
 
+// --- TYPES & INTERFACES ---
 type TrangThaiThanhToan = "DANGCHO" | "THANHCONG" | "THATBAI";
+type TrangThaiVe =
+  | "CHUASUDUNG"
+  | "DASUDUNG"
+  | "DAHETHAN"
+  | "CHUAHOANTIEN"
+  | "CHOHOANTIEN"
+  | "DAHOAN";
+
 type PhuongThucThanhToan =
   | "TRUCTIEP"
   | "TRUCTUYEN"
   | "MOMO"
   | "VNPAY"
   | "PAYOS";
+
 type LoaiGiaoDich = "MUAVE" | "HOANTIEN";
 
 interface GiaoDich {
@@ -98,7 +107,7 @@ interface VeMua {
   PhongChieu: string;
   Ghe: string;
   GiaVe: number;
-  DaHoan: boolean;
+  TrangThai: TrangThaiVe; // Sử dụng enum trạng thái vé chuẩn xác
 }
 
 interface ComboMua {
@@ -155,6 +164,26 @@ const getStatusLabel = (status: string) => {
   }
 };
 
+// Hàm hiển thị trạng thái vé tiếng Việt
+const getTicketStatusLabel = (status: TrangThaiVe) => {
+  switch (status) {
+    case "CHUASUDUNG":
+      return "Chưa sử dụng";
+    case "DASUDUNG":
+      return "Đã sử dụng";
+    case "DAHETHAN":
+      return "Đã hết hạn";
+    case "CHOHOANTIEN":
+      return "Chờ hoàn tiền";
+    case "DAHOAN":
+      return "Đã hoàn";
+    case "CHUAHOANTIEN":
+      return "Chưa hoàn tiền";
+    default:
+      return status;
+  }
+};
+
 const getPaymentMethodLabel = (method: string) => {
   const map: Record<string, string> = {
     TRUCTIEP: "Tiền mặt",
@@ -177,6 +206,7 @@ const formatCurrency = (value: number) =>
     value
   );
 
+// --- MAIN COMPONENT ---
 export default function InvoiceManagementPage() {
   const [invoices, setInvoices] = useState<HoaDon[]>([]);
   const [loading, setLoading] = useState(false);
@@ -219,8 +249,7 @@ export default function InvoiceManagementPage() {
             LoaiGiaoDich: gd.LoaiGiaoDich,
             NoiDung: gd.NoiDung,
           }));
-        }
-        else {
+        } else {
           listGiaoDich.push({
             MaGiaoDich: "temp-" + inv.MaHoaDon,
             Code: "TXN-" + inv.Code,
@@ -240,7 +269,7 @@ export default function InvoiceManagementPage() {
           PhongChieu: inv.PhongChieu || "Không xác định",
           Ghe: v.SoGhe || "N/A",
           GiaVe: Number(v.DonGia || 0),
-          DaHoan: v.TrangThai === "DAHOAN" || v.TrangThai === "CHOHOANTIEN",
+          TrangThai: v.TrangThai || "CHUASUDUNG",
         }));
 
         const listCombo: ComboMua[] = (inv.Combos || []).map(
@@ -249,12 +278,12 @@ export default function InvoiceManagementPage() {
             TenCombo: c.TenCombo || "Combo",
             HinhAnh: c.HinhAnh || "",
             SoLuong: Number(c.SoLuong || 0),
-            DonGia: Number(c.DonGia || 0), 
+            DonGia: Number(c.DonGia || 0),
           })
         );
 
         const listKhuyenMai: KhuyenMai[] = (inv.KhuyenMais || []).map(
-          (k: any, idx: number) => ({
+          (k: any) => ({
             Code: k.TenKhuyenMai || "KM",
             SoTienGiam: Number(k.SoTienGiam || 0),
             MoTa: k.LoaiKhuyenMai,
@@ -332,8 +361,9 @@ export default function InvoiceManagementPage() {
 
     try {
       const blobData = await invoiceService.printInvoice(selectedInvoice.Code);
-
-      const blob = new Blob([blobData as BlobPart], { type: "application/pdf" });
+      const blob = new Blob([blobData as BlobPart], {
+        type: "application/pdf",
+      });
       const url = window.URL.createObjectURL(blob);
       const pdfWindow = window.open(url, "_blank");
 
@@ -367,6 +397,53 @@ export default function InvoiceManagementPage() {
     }
   };
 
+  const handlePrintTicket = async () => {
+    if (!selectedInvoice) return;
+
+    if (!selectedInvoice.Ves || selectedInvoice.Ves.length === 0) {
+      toast.error("Hóa đơn này chỉ có Combo hoặc không có vé để in.");
+      return;
+    }
+
+    const toastId = toast.loading("Đang tải vé PDF...");
+
+    try {
+      const blobData = await invoiceService.printTicket(selectedInvoice.Code);
+      const blob = new Blob([blobData as BlobPart], {
+        type: "application/pdf",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const pdfWindow = window.open(url, "_blank");
+
+      if (!pdfWindow) {
+        toast.error(
+          "Trình duyệt đã chặn cửa sổ bật lên. Vui lòng cho phép để xem hóa đơn.",
+          { id: toastId }
+        );
+      } else {
+        toast.success("Đã mở vé thành công!", { id: toastId });
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error: any) {
+      console.error("Print ticket error:", error);
+
+      if (error.response && error.response.data instanceof Blob) {
+        try {
+          const errorText = await error.response.data.text();
+          const errorJson = JSON.parse(errorText);
+
+          toast.error(errorJson.message || "Không thể in vé này.", {
+            id: toastId,
+          });
+        } catch (e) {
+          toast.error("Lỗi khi tải file vé.", { id: toastId });
+        }
+      } else {
+        toast.error("Lỗi kết nối đến máy chủ.", { id: toastId });
+      }
+    }
+  };
 
   const handleCreateRefundRequest = async (data: RefundRequestPayload) => {
     if (!selectedInvoice) return;
@@ -383,7 +460,7 @@ export default function InvoiceManagementPage() {
       toast.success("Đã gửi yêu cầu hoàn tiền thành công!");
       setIsRefundDialogOpen(false);
       setIsDetailOpen(false);
-      fetchInvoices(); // Tải lại dữ liệu
+      fetchInvoices();
     } catch (error: any) {
       console.error("Refund error:", error);
       toast.error(
@@ -611,7 +688,8 @@ export default function InvoiceManagementPage() {
           onClose={() => setIsDetailOpen(false)}
           invoice={selectedInvoice}
           onRefund={() => setIsRefundDialogOpen(true)}
-          onPrint={handlePrintInvoice}
+          onPrintInvoice={handlePrintInvoice}
+          onPrintTicket={handlePrintTicket}
         />
       )}
 
@@ -631,18 +709,26 @@ function InvoiceDetailDialog({
   isOpen,
   onClose,
   invoice,
-  onPrint,
+  onPrintInvoice,
+  onPrintTicket,
   onRefund,
 }: {
   isOpen: boolean;
   onClose: () => void;
   invoice: HoaDon;
-  onPrint: () => void;
+  onPrintInvoice: () => void;
+  onPrintTicket: () => void;
   onRefund: () => void;
 }) {
-  const canRefund =
-    invoice.GiaoDichs.some((gd) => gd.TrangThai === "THANHCONG") &&
-    invoice.Ves.some((v) => !v.DaHoan);
+  const successfulTx = invoice.GiaoDichs.some(
+    (gd) => gd.TrangThai === "THANHCONG"
+  );
+
+  const areAllTicketsUnused =
+    invoice.Ves.length > 0 &&
+    invoice.Ves.every((v) => v.TrangThai === "CHUASUDUNG");
+
+  const canRefund = successfulTx && areAllTicketsUnused;
 
   const totalVe = invoice.Ves.reduce((sum, v) => sum + v.GiaVe, 0);
   const totalCombo = invoice.Combos.reduce(
@@ -763,14 +849,24 @@ function InvoiceDetailDialog({
                                 <MapPin className="size-3 inline mr-1" />
                                 {ve.PhongChieu}
                               </p>
-                              {ve.DaHoan && (
-                                <Badge
-                                  variant="destructive"
-                                  className="mt-1 text-[10px] px-1.5 py-0 h-4"
-                                >
-                                  Đã hoàn
-                                </Badge>
-                              )}
+                              {/* Hiển thị Badge trạng thái chính xác */}
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "mt-1 text-[10px] px-1.5 py-0 h-4 border",
+                                  ve.TrangThai === "CHUASUDUNG"
+                                    ? "border-green-500 text-green-500"
+                                    : ve.TrangThai === "DASUDUNG"
+                                    ? "border-slate-500 text-slate-500"
+                                    : ve.TrangThai === "CHOHOANTIEN"
+                                    ? "border-yellow-500 text-yellow-500"
+                                    : ve.TrangThai === "DAHOAN"
+                                    ? "border-red-500 text-red-500"
+                                    : ""
+                                )}
+                              >
+                                {getTicketStatusLabel(ve.TrangThai)}
+                              </Badge>
                             </div>
                           </div>
                         </TableCell>
@@ -835,12 +931,14 @@ function InvoiceDetailDialog({
                                   <Receipt className="size-4 text-slate-600" />
                                 )}
                               </div>
-                              <p
-                                className="font-medium text-white text-sm truncate max-w-[250px]"
-                                title={cb.TenCombo}
-                              >
-                                {cb.TenCombo}
-                              </p>
+                              <div className="min-w-0">
+                                <p
+                                  className="font-medium text-white text-sm truncate max-w-[250px]"
+                                  title={cb.TenCombo}
+                                >
+                                  {cb.TenCombo}
+                                </p>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-center text-slate-300">
@@ -993,10 +1091,17 @@ function InvoiceDetailDialog({
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="bg-transparent border-slate-700 hover:bg-slate-800"
-              onClick={onPrint}
+              className="bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white"
+              onClick={onPrintInvoice}
             >
               <Download className="size-4 mr-2" /> Xuất hóa đơn
+            </Button>
+            <Button
+              variant="outline"
+              className="bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white"
+              onClick={onPrintTicket}
+            >
+              <Download className="size-4 mr-2" /> Xuất vé
             </Button>
             {canRefund && (
               <Button
@@ -1031,7 +1136,7 @@ function CreateRefundDialog({
   isOpen: boolean;
   onClose: () => void;
   invoice: HoaDon;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void>;
 }) {
   const [reason, setReason] = useState("");
   const [selectedBank, setSelectedBank] = useState("");
@@ -1040,13 +1145,16 @@ function CreateRefundDialog({
   const [banks, setBanks] = useState<any[]>([]);
   const [isLoadingBanks, setIsLoadingBanks] = useState(false);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
+      setIsSubmitting(false);
       const fetchBanks = async () => {
         setIsLoadingBanks(true);
         try {
           const res = await apiClient.get("/banks");
-          setBanks(res.data as any[] || []);
+          setBanks((res.data as any[]) || []);
         } catch (error) {
           console.error("Failed to fetch banks", error);
           toast.error("Không thể tải danh sách ngân hàng");
@@ -1058,19 +1166,31 @@ function CreateRefundDialog({
     }
   }, [isOpen]);
 
-  const availableRefundAmount = invoice.Ves.filter((v) => !v.DaHoan).reduce(
-    (sum, v) => sum + v.GiaVe,
+  const ticketTotal = invoice.Ves.filter(
+    (v) => v.TrangThai === "CHUASUDUNG"
+  ).reduce((sum, v) => sum + v.GiaVe, 0);
+
+  const comboTotal = invoice.Combos.reduce(
+    (sum, c) => sum + c.DonGia * c.SoLuong,
     0
   );
 
-  const handleSubmit = () => {
-    onSubmit({
-      MaHoaDon: invoice.MaHoaDon,
-      LyDo: reason,
-      MaNganHang: selectedBank,
-      SoTaiKhoan: accountNumber,
-      ChuTaiKhoan: accountHolder,
-    });
+  const availableRefundAmount = ticketTotal + comboTotal;
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        MaHoaDon: invoice.MaHoaDon,
+        LyDo: reason,
+        MaNganHang: selectedBank,
+        SoTaiKhoan: accountNumber,
+        ChuTaiKhoan: accountHolder,
+      });
+    } catch (error) {
+      setIsSubmitting(false);
+    }
   };
 
   const isValid =
@@ -1080,7 +1200,7 @@ function CreateRefundDialog({
     accountHolder.trim();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && onClose()}>
       <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -1094,14 +1214,6 @@ function CreateRefundDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="bg-red-900/10 border border-red-900/30 p-3 rounded-md">
-            <p className="text-sm text-red-400">
-              Lưu ý: Hệ thống hiện tại chỉ hỗ trợ hoàn tiền vé phim. Các sản
-              phẩm Combo đi kèm sẽ không được hoàn tiền.
-            </p>
-          </div>
-
-          {/* Form nhập lý do */}
           <div className="space-y-2">
             <Label>
               Lý do hoàn tiền <span className="text-red-500">*</span>
@@ -1111,6 +1223,7 @@ function CreateRefundDialog({
               className="bg-transparent border-slate-700"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -1121,30 +1234,19 @@ function CreateRefundDialog({
               Thông tin nhận tiền hoàn
             </h4>
 
-            {/* Chọn Ngân hàng */}
             <div className="space-y-2">
               <Label>
                 Ngân hàng <span className="text-red-500">*</span>
               </Label>
-              <Select value={selectedBank} onValueChange={setSelectedBank}>
-                <SelectTrigger className="bg-transparent border-slate-700">
-                  <SelectValue
-                    placeholder={
-                      isLoadingBanks ? "Đang tải..." : "Chọn ngân hàng"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white max-h-[200px]">
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.MaNganHang} value={bank.MaNganHang}>
-                      {bank.TenNganHang} ({bank.Code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BankCombobox
+                value={selectedBank}
+                onChange={setSelectedBank}
+                banks={banks}
+                isLoading={isLoadingBanks}
+                disabled={isSubmitting}
+              />
             </div>
 
-            {/* Số tài khoản */}
             <div className="space-y-2">
               <Label>
                 Số tài khoản <span className="text-red-500">*</span>
@@ -1154,10 +1256,10 @@ function CreateRefundDialog({
                 className="bg-transparent border-slate-700"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
+                disabled={isSubmitting}
               />
             </div>
 
-            {/* Chủ tài khoản */}
             <div className="space-y-2">
               <Label>
                 Tên chủ tài khoản <span className="text-red-500">*</span>
@@ -1167,15 +1269,21 @@ function CreateRefundDialog({
                 className="bg-transparent border-slate-700 uppercase"
                 value={accountHolder}
                 onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
+                disabled={isSubmitting}
               />
             </div>
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-            <span className="text-sm text-slate-400">
-              Tổng tiền hoàn dự kiến:
-            </span>
-            <span className="text-xl font-bold text-white">
+            <div className="flex flex-col">
+              <span className="text-sm text-slate-400">
+                Tổng tiền hoàn dự kiến:
+              </span>
+              <span className="text-xs text-slate-500 italic">
+                (Bao gồm vé và combo)
+              </span>
+            </div>
+            <span className="text-xl font-bold text-green-400">
               {formatCurrency(availableRefundAmount)}
             </span>
           </div>
@@ -1186,15 +1294,22 @@ function CreateRefundDialog({
             variant="ghost"
             onClick={onClose}
             className="text-slate-400 hover:text-white"
+            disabled={isSubmitting}
           >
             Hủy
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={!isValid}
+            className="bg-red-600 hover:bg-red-700 text-white min-w-[140px]"
+            disabled={!isValid || isSubmitting}
           >
-            Gửi yêu cầu hoàn
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin size-4 mr-2" /> Đang gửi...
+              </>
+            ) : (
+              "Gửi yêu cầu hoàn"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

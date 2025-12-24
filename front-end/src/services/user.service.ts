@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import apiClient from '@/lib/apiClient';
+import apiClient from '@/lib/apiClient'; // Đảm bảo import đúng
 import { TicketResponse } from '@/types/ticket';
 
 export interface UserProfile {
@@ -53,4 +53,11 @@ export const getMyTickets = async (): Promise<TicketResponse[]> => {
   const response = await apiClient.get<any>('/invoices');
   const data = response.data;
   return Array.isArray(data) ? data : data.data || [];
+};
+
+export const userService = {
+  assignEmployee: async (data: any) => {
+    const response = await apiClient.post('/users/assign-employee', data);
+    return response.data;
+  }
 };

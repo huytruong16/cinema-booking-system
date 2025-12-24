@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -24,9 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -39,834 +37,787 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Search,
   Plus,
   Edit,
-  Trash2,
+  Loader2,
+  User,
+  Users,
   CalendarIcon,
-  XCircle,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { toast } from "sonner";
+import { employeeService } from "@/services/employee.service";
+import { customerService } from "@/services/customer.service";
+import { userService } from "@/services/user.service";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
-type TrangThaiNhanVien = "CONLAM" | "DANGHI";
-type TrangThaiNguoiDung = "CHUAKICHHOAT" | "CONHOATDONG" | "KHONGHOATDONG";
-
-interface NhomNguoiDung {
-  MaNhomNguoiDung: number;
-  TenNhomNguoiDung: string;
-}
-
-interface NhanVienView {
-  MaNhanVien: number;
-  TenNhanVien: string;
-  NgayVaoLam: Date;
-  TrangThai: TrangThaiNhanVien;
-
-  MaNguoiDung: number;
-  TenTaiKhoan: string;
-  Email: string;
-  SoDienThoai: string | null;
-  TrangThaiTaiKhoan: TrangThaiNguoiDung;
-
-  MaNhomNguoiDung: number;
-  TenNhomNguoiDung: string;
-
-  AvatarUrl: string | null;
-}
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-const mockNhomNguoiDung: NhomNguoiDung[] = [
-  { MaNhomNguoiDung: 1, TenNhomNguoiDung: "Ban Quản lý (Admin)" },
-  { MaNhomNguoiDung: 2, TenNhomNguoiDung: "NV Quản lý Phim & Lịch chiếu" },
-  { MaNhomNguoiDung: 3, TenNhomNguoiDung: "NV Bán vé" },
-  { MaNhomNguoiDung: 4, TenNhomNguoiDung: "NV Soát vé" },
+const ROLES = [
+  { value: 2, label: "QL Phim & Lịch chiếu" },
+  { value: 3, label: "Nhân viên Bán vé" },
+  { value: 4, label: "Nhân viên Soát vé" },
 ];
-
-const mockUsers: NhanVienView[] = [
-  {
-    MaNhanVien: 1,
-    TenNhanVien: "Nguyễn Văn Admin",
-    NgayVaoLam: new Date("2023-01-15"),
-    TrangThai: "CONLAM",
-    MaNguoiDung: 101,
-    TenTaiKhoan: "admin",
-    Email: "admin@movix.com",
-    SoDienThoai: "0901234567",
-    TrangThaiTaiKhoan: "CONHOATDONG",
-    MaNhomNguoiDung: 1,
-    TenNhomNguoiDung: "Ban Quản lý (Admin)",
-    AvatarUrl: "https://i.pravatar.cc/150?img=1",
-  },
-  {
-    MaNhanVien: 2,
-    TenNhanVien: "Trần Thị Bán Vé",
-    NgayVaoLam: new Date("2024-03-01"),
-    TrangThai: "CONLAM",
-    MaNguoiDung: 102,
-    TenTaiKhoan: "banve_tran",
-    Email: "tran.thi@movix.com",
-    SoDienThoai: "0901112223",
-    TrangThaiTaiKhoan: "CONHOATDONG",
-    MaNhomNguoiDung: 3,
-    TenNhomNguoiDung: "NV Bán vé",
-    AvatarUrl: "https://i.pravatar.cc/150?img=2",
-  },
-  {
-    MaNhanVien: 3,
-    TenNhanVien: "Lê Văn Soát Vé",
-    NgayVaoLam: new Date("2024-03-01"),
-    TrangThai: "CONLAM",
-    MaNguoiDung: 103,
-    TenTaiKhoan: "soatve_le",
-    Email: "le.van@movix.com",
-    SoDienThoai: "0903334445",
-    TrangThaiTaiKhoan: "CONHOATDONG",
-    MaNhomNguoiDung: 4,
-    TenNhomNguoiDung: "NV Soát vé",
-    AvatarUrl: "https://i.pravatar.cc/150?img=3",
-  },
-  {
-    MaNhanVien: 4,
-    TenNhanVien: "Phạm Thị Quản Lý Phim",
-    NgayVaoLam: new Date("2023-06-10"),
-    TrangThai: "CONLAM",
-    MaNguoiDung: 104,
-    TenTaiKhoan: "manager_pham",
-    Email: "pham.thi@movix.com",
-    SoDienThoai: "0905556667",
-    TrangThaiTaiKhoan: "CONHOATDONG",
-    MaNhomNguoiDung: 2,
-    TenNhomNguoiDung: "NV Quản lý Phim & Lịch chiếu",
-    AvatarUrl: "https://i.pravatar.cc/150?img=4",
-  },
-  {
-    MaNhanVien: 5,
-    TenNhanVien: "Hoàng Văn Cũ",
-    NgayVaoLam: new Date("2023-02-01"),
-    TrangThai: "DANGHI",
-    MaNguoiDung: 105,
-    TenTaiKhoan: "cu_hoang",
-    Email: "hoang.van@movix.com",
-    SoDienThoai: "0907778889",
-    TrangThaiTaiKhoan: "KHONGHOATDONG",
-    MaNhomNguoiDung: 3,
-    TenNhomNguoiDung: "NV Bán vé",
-    AvatarUrl: "https://i.pravatar.cc/150?img=5",
-  },
-];
-
-const trangThaiOptions: { value: TrangThaiNhanVien; label: string }[] = [
-  { value: "CONLAM", label: "Còn làm" },
-  { value: "DANGHI", label: "Đã nghỉ" },
-];
-// --- HẾT DỮ LIỆU GIẢ ---
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<NhanVienView[]>(mockUsers);
+  const [activeTab, setActiveTab] = useState("employees");
+
+  return (
+    <div className="space-y-6 text-white h-[calc(100vh-100px)] flex flex-col">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Users className="size-6 text-primary" />
+            Quản lý Người dùng
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Quản lý tài khoản nhân viên và thông tin khách hàng.
+          </p>
+        </div>
+      </div>
+
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 flex flex-col"
+      >
+        <TabsList className="bg-[#1C1C1C] border border-slate-800 w-fit">
+          <TabsTrigger
+            value="employees"
+            className="data-[state=active]:bg-primary data-[state=active]:text-white"
+          >
+            Danh sách Nhân viên
+          </TabsTrigger>
+          <TabsTrigger
+            value="customers"
+            className="data-[state=active]:bg-primary data-[state=active]:text-white"
+          >
+            Danh sách Khách hàng
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 mt-4 min-h-0 relative">
+          <TabsContent
+            value="employees"
+            className="h-full mt-0 absolute inset-0"
+          >
+            <EmployeeManager />
+          </TabsContent>
+          <TabsContent
+            value="customers"
+            className="h-full mt-0 absolute inset-0"
+          >
+            <CustomerManager />
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}
+
+function EmployeeManager() {
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState("all");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<NhanVienView | null>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
-  const [selectedUserForDetail, setSelectedUserForDetail] =
-    useState<NhanVienView | null>(null);
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      const res: any = await employeeService.getAll();
+      const rawData = Array.isArray(res) ? res : res.data || [];
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchesSearch =
-        user.TenNhanVien.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.Email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" || user.TrangThai === statusFilter;
-      const matchesRole =
-        roleFilter === "all" || user.MaNhomNguoiDung === Number(roleFilter);
-      return matchesSearch && matchesStatus && matchesRole;
-    });
-  }, [users, searchTerm, statusFilter, roleFilter]);
+      const mappedData = rawData.map((item: any) => {
+        const user = item.NguoiDungPhanMem || {};
+        return {
+          ...item,
+          HoTen: user.HoTen || "Không tên",
+          Email: user.Email || "",
+          SoDienThoai: user.SoDienThoai,
+          MaNhomNguoiDung: user.MaNhomNguoiDung,
+          NguoiDung: {
+            ...user,
+            AvatarUrl: user.AvatarUrl,
+          },
+        };
+      });
 
-  const handleAddNew = () => {
-    setEditingUser(null);
-    setIsModalOpen(true);
+      setEmployees(mappedData);
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi tải danh sách nhân viên");
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleEdit = (user: NhanVienView) => {
-    setEditingUser(user);
-    setIsModalOpen(true);
-  };
 
-  const handleFormSubmit = (formData: NhanVienView) => {
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.MaNhanVien === formData.MaNhanVien ? formData : u))
-      );
-      if (selectedUserForDetail?.MaNhanVien === formData.MaNhanVien) {
-        setSelectedUserForDetail(formData);
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const filtered = employees.filter((emp) => {
+    const term = searchTerm.toLowerCase();
+    const nameMatch = emp.HoTen?.toLowerCase().includes(term) || false;
+    const emailMatch = emp.Email?.toLowerCase().includes(term) || false;
+    return nameMatch || emailMatch;
+  });
+
+  const handleFormSubmit = async (data: any) => {
+    try {
+      if (editingUser) {
+        const updatePayload = {
+          TrangThai: data.TrangThai,
+          NgayVaoLam: format(data.NgayVaoLam, "yyyy-MM-dd"),
+        };
+        await employeeService.update(editingUser.MaNhanVien, updatePayload);
+        toast.success("Cập nhật trạng thái nhân viên thành công!");
+      } else {
+
+
+        const createPayload = {
+          Email: data.Email,
+          MatKhau: data.MatKhau,
+          HoTen: data.HoTen,
+          NgayVaoLam: data.NgayVaoLam
+            ? format(data.NgayVaoLam, "yyyy-MM-dd")
+            : format(new Date(), "yyyy-MM-dd"),
+        };
+
+        await userService.assignEmployee(createPayload);
+        toast.success("Tạo tài khoản nhân viên thành công!");
       }
-    } else {
-      const newId = Math.max(...users.map((u) => u.MaNhanVien)) + 1;
-      const newUser = {
-        ...formData,
-        MaNhanVien: newId,
-        MaNguoiDung: newId + 100,
-      };
-      setUsers((prev) => [newUser, ...prev]);
-    }
-    setIsModalOpen(false);
-  };
 
-  const handleDelete = (maNhanVien: number) => {
-    setUsers((prev) => prev.filter((u) => u.MaNhanVien !== maNhanVien));
-    if (selectedUserForDetail?.MaNhanVien === maNhanVien) {
-      setSelectedUserForDetail(null);
+      setIsModalOpen(false);
+      fetchEmployees();
+    } catch (error: any) {
+      console.error("Submit Error:", error);
+      toast.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi lưu dữ liệu"
+      );
     }
   };
 
-  const getBadgeVariant = (trangThai: TrangThaiNhanVien) => {
-    switch (trangThai) {
-      case "CONLAM":
-        return "bg-green-600 text-white";
-      case "DANGHI":
-        return "bg-slate-500 text-slate-200 border-slate-400";
-      default:
-        return "outline";
+  const handleDeleteEmployee = async (id: string) => {
+    try {
+      await employeeService.delete(id);
+      toast.success("Đã xóa nhân viên thành công");
+      fetchEmployees();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Không thể xóa nhân viên");
     }
-  };
-  const getBadgeLabel = (trangThai: TrangThaiNhanVien) => {
-    return (
-      trangThaiOptions.find((o) => o.value === trangThai)?.label || trangThai
-    );
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-white">
-      <div className="lg:col-span-2 space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Quản lý Nhân viên</h1>
-          <Button
-            onClick={handleAddNew}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="size-4 mr-2" />
-            Thêm nhân viên
-          </Button>
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex justify-between items-center gap-4">
+        <div className="relative w-full max-w-sm">
+          <Input
+            placeholder="Tìm nhân viên (Tên, Email)..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-[#1C1C1C] border-slate-700 focus:border-primary"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
         </div>
+        <Button
+          onClick={() => {
+            setEditingUser(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus className="size-4 mr-2" /> Thêm nhân viên
+        </Button>
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative w-full md:flex-1">
-            <Input
-              placeholder="Tìm theo Tên hoặc Email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-transparent border-slate-700"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          </div>
-          {/* Filter Chức vụ */}
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full md:w-[200px] bg-transparent border-slate-700">
-              <SelectValue placeholder="Lọc theo chức vụ" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-              <SelectItem
-                value="all"
-                className="cursor-pointer focus:bg-slate-700"
-              >
-                Tất cả chức vụ
-              </SelectItem>
-              {mockNhomNguoiDung.map((role) => (
-                <SelectItem
-                  key={role.MaNhomNguoiDung}
-                  value={role.MaNhomNguoiDung.toString()}
-                  className="cursor-pointer focus:bg-slate-700"
-                >
-                  {role.TenNhomNguoiDung}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {/* Filter Trạng thái */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px] bg-transparent border-slate-700">
-              <SelectValue placeholder="Lọc theo trạng thái" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-              <SelectItem
-                value="all"
-                className="cursor-pointer focus:bg-slate-700"
-              >
-                Tất cả trạng thái
-              </SelectItem>
-              {trangThaiOptions.map((opt) => (
-                <SelectItem
-                  key={opt.value}
-                  value={opt.value}
-                  className="cursor-pointer focus:bg-slate-700"
-                >
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Bảng dữ liệu */}
-        <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-700 hover:bg-transparent">
-                  <TableHead className="text-slate-100">Nhân viên</TableHead>
-                  <TableHead className="text-slate-100">Chức vụ</TableHead>
-                  <TableHead className="text-slate-100">Trạng thái</TableHead>
-                  <TableHead className="text-right text-slate-100">
-                    Hành động
-                  </TableHead>
+      <Card className="bg-[#1C1C1C] border-slate-800 flex-1 overflow-hidden">
+        <CardContent className="p-0 h-full overflow-auto">
+          <Table>
+            <TableHeader className="sticky top-0 bg-[#1C1C1C] z-10 shadow-sm">
+              <TableRow className="border-slate-700 hover:bg-transparent">
+                <TableHead className="text-slate-100">Nhân viên</TableHead>
+                <TableHead className="text-slate-100">Chức vụ</TableHead>
+                <TableHead className="text-slate-100">Liên hệ</TableHead>
+                <TableHead className="text-slate-100">Ngày vào làm</TableHead>
+                <TableHead className="text-slate-100 text-center">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="text-right text-slate-100">
+                  Hành động
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="animate-spin size-6 mx-auto text-primary" />
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow
-                    key={user.MaNhanVien}
-                    className={cn(
-                      "border-slate-800 cursor-pointer",
-                      selectedUserForDetail?.MaNhanVien === user.MaNhanVien &&
-                        "bg-slate-800/50"
-                    )}
-                    onClick={() => setSelectedUserForDetail(user)}
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-8 text-slate-500"
                   >
-                    <TableCell className="font-medium">
+                    Không tìm thấy nhân viên nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((emp) => (
+                  <TableRow
+                    key={emp.MaNhanVien}
+                    className="border-slate-800 hover:bg-slate-800/50"
+                  >
+                    <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="size-9">
-                          <AvatarImage
-                            src={user.AvatarUrl || ""}
-                            alt={user.TenNhanVien}
-                          />
-                          <AvatarFallback>
-                            {user.TenNhanVien.split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase()}
+                        <Avatar className="size-9 border border-slate-700">
+                          <AvatarImage src={emp.NguoiDung?.AvatarUrl} />
+                          <AvatarFallback className="bg-slate-700">
+                            <User className="size-4" />
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">{user.TenNhanVien}</div>
-                          <div className="text-xs text-slate-400">
-                            {user.Email}
+                          <div className="font-medium text-slate-200">
+                            {emp.HoTen}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Mã: {emp.MaNhanVien.substring(0, 8)}...
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{user.TenNhomNguoiDung}</TableCell>
                     <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-800 hover:bg-slate-700"
+                      >
+                        {ROLES.find((r) => r.value === emp.MaNhomNguoiDung)
+                          ?.label || "Nhân viên"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-slate-300">{emp.Email}</div>
+                      <div className="text-xs text-slate-500">
+                        {emp.SoDienThoai || "---"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-slate-400">
+                      {emp.NgayVaoLam
+                        ? format(new Date(emp.NgayVaoLam), "dd/MM/yyyy", {
+                            locale: vi,
+                          })
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-xs",
-                          getBadgeVariant(user.TrangThai)
+                          emp.TrangThai === "CONLAM"
+                            ? "text-green-500 border-green-500/30 bg-green-500/10"
+                            : "text-slate-500 border-slate-500 bg-slate-500/10"
                         )}
                       >
-                        {getBadgeLabel(user.TrangThai)}
+                        {emp.TrangThai === "CONLAM"
+                          ? "Đang làm việc"
+                          : "Đã nghỉ"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(user);
-                        }}
-                      >
-                        <Edit className="size-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-slate-800 text-blue-400 hover:text-blue-300"
+                          onClick={() => {
+                            setEditingUser(emp);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          <Edit className="size-4" />
+                        </Button>
 
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-slate-800 text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Xóa nhân viên?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription className="text-slate-400">
+                                Hành động này sẽ xóa nhân viên{" "}
+                                <b>{emp.HoTen}</b> khỏi hệ thống.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white">
+                                Hủy
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  handleDeleteEmployee(emp.MaNhanVien)
+                                }
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Xóa
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <EmployeeFormDialog
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleFormSubmit}
+        user={editingUser}
+      />
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPONENT QUẢN LÝ KHÁCH HÀNG (GIỮ NGUYÊN)
+// ============================================================================
+function CustomerManager() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const res: any = await customerService.getAll();
+      const rawData = Array.isArray(res) ? res : res.data || [];
+
+      const mappedData = rawData.map((item: any) => {
+        const user = item.NguoiDungPhanMem || {};
+        return {
+          ...item,
+          HoTen: user.HoTen || "Khách hàng",
+          Email: user.Email || "",
+          SoDienThoai: user.SoDienThoai,
+          NguoiDung: {
+            ...user,
+            AvatarUrl: user.AvatarUrl,
+            TrangThai: user.TrangThai || "CONHOATDONG",
+          },
+        };
+      });
+
+      setCustomers(mappedData);
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi tải danh sách khách hàng");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const handleDeleteCustomer = async (id: string) => {
+    try {
+      await customerService.delete(id);
+      toast.success("Xóa khách hàng thành công");
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi khi xóa khách hàng");
+    }
+  };
+
+  const filtered = customers.filter((cus) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      cus.HoTen?.toLowerCase().includes(term) ||
+      cus.Email?.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div className="flex flex-col h-full gap-4">
+      <div className="relative w-full max-w-sm">
+        <Input
+          placeholder="Tìm khách hàng (Tên, Email)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 bg-[#1C1C1C] border-slate-700 focus:border-primary"
+        />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+      </div>
+
+      <Card className="bg-[#1C1C1C] border-slate-800 flex-1 overflow-hidden">
+        <CardContent className="p-0 h-full overflow-auto">
+          <Table>
+            <TableHeader className="sticky top-0 bg-[#1C1C1C] z-10 shadow-sm">
+              <TableRow className="border-slate-700 hover:bg-transparent">
+                <TableHead className="text-slate-100">Khách hàng</TableHead>
+                <TableHead className="text-slate-100">Liên hệ</TableHead>
+                <TableHead className="text-slate-100">Ngày đăng ký</TableHead>
+                <TableHead className="text-slate-100 text-center">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="text-right text-slate-100">
+                  Hành động
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="animate-spin size-6 mx-auto text-primary" />
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-8 text-slate-500"
+                  >
+                    Không tìm thấy khách hàng nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((cus) => (
+                  <TableRow
+                    key={cus.MaKhachHang}
+                    className="border-slate-800 hover:bg-slate-800/50"
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9 border border-slate-700">
+                          <AvatarImage src={cus.NguoiDung?.AvatarUrl} />
+                          <AvatarFallback className="bg-slate-700">
+                            <User className="size-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-slate-200">
+                            {cus.HoTen}
+                          </div>
+                          <div
+                            className="text-xs text-slate-500"
+                            title={cus.MaKhachHang}
+                          >
+                            Code: {cus.MaKhachHang.substring(0, 8)}...
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-slate-300">{cus.Email}</div>
+                      <div className="text-xs text-slate-500">
+                        {cus.SoDienThoai || "---"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-slate-400">
+                      {cus.CreatedAt
+                        ? format(new Date(cus.CreatedAt), "dd/MM/yyyy", {
+                            locale: vi,
+                          })
+                        : "-"}
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          cus.NguoiDung?.TrangThai === "CONHOATDONG"
+                            ? "text-green-500 border-green-500/30 bg-green-500/10"
+                            : "text-red-500 border-red-500/30 bg-red-500/10"
+                        )}
+                      >
+                        {cus.NguoiDung?.TrangThai === "CONHOATDONG"
+                          ? "Active"
+                          : "Locked"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-red-500 hover:text-red-500 hover:bg-red-500/10"
-                            onClick={(e) => e.stopPropagation()}
+                            className="hover:bg-slate-800 text-red-400 hover:text-red-300"
                           >
                             <Trash2 className="size-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Bạn có chắc chắn muốn xóa?
-                            </AlertDialogTitle>
+                            <AlertDialogTitle>Xóa khách hàng?</AlertDialogTitle>
                             <AlertDialogDescription className="text-slate-400">
-                              Hành động này không thể hoàn tác. Nhân viên &quot;
-                              {user.TenNhanVien}&quot; sẽ bị xóa vĩnh viễn.
+                              Hành động này sẽ xóa khách hàng <b>{cus.HoTen}</b>
+                              .
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800">
+                            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white">
                               Hủy
                             </AlertDialogCancel>
                             <AlertDialogAction
-                              className="bg-destructive hover:bg-destructive/90"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(user.MaNhanVien);
-                              }}
+                              onClick={() =>
+                                handleDeleteCustomer(cus.MaKhachHang)
+                              }
+                              className="bg-red-600 hover:bg-red-700 text-white"
                             >
-                              Xác nhận Xóa
+                              Xóa
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Cột phải: Panel chi tiết */}
-      <div className="lg:col-span-1">
-        {selectedUserForDetail ? (
-          <UserDetailPanel
-            user={selectedUserForDetail}
-            onClose={() => setSelectedUserForDetail(null)}
-            onEdit={() => handleEdit(selectedUserForDetail)}
-            getBadgeVariant={getBadgeVariant}
-            getBadgeLabel={getBadgeLabel}
-          />
-        ) : (
-          <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-24 flex items-center justify-center h-96">
-            <p className="text-slate-500">
-              Chọn một nhân viên để xem thông tin
-            </p>
-          </Card>
-        )}
-      </div>
-
-      {/* Modal Form */}
-      {isModalOpen && (
-        <UserFormDialog
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleFormSubmit}
-          user={editingUser}
-        />
-      )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-// --- COMPONENT CON: PANEL CHI TIẾT ---
-interface DetailPanelProps {
-  user: NhanVienView;
-  onClose: () => void;
-  onEdit: () => void;
-  getBadgeVariant: (trangThai: TrangThaiNhanVien) => string;
-  getBadgeLabel: (trangThai: TrangThaiNhanVien) => string;
-}
-
-function UserDetailPanel({
-  user,
-  onClose,
-  onEdit,
-  getBadgeVariant,
-  getBadgeLabel,
-}: DetailPanelProps) {
-  return (
-    <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-24">
-      <CardHeader className="relative items-center text-center">
-        <Avatar className="size-24 mx-auto border-4 border-slate-700">
-          <AvatarImage src={user.AvatarUrl || ""} alt={user.TenNhanVien} />
-          <AvatarFallback className="text-3xl">
-            {user.TenNhanVien.split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <CardTitle className="text-xl font-semibold text-slate-100 pt-2">
-          {user.TenNhanVien}
-        </CardTitle>
-        <CardDescription className="text-base text-primary">
-          {user.TenNhomNguoiDung}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[55vh]">
-          <div className="space-y-4 pr-6">
-            <div className="flex justify-between items-center">
-              <Badge
-                variant="outline"
-                className={cn("text-xs", getBadgeVariant(user.TrangThai))}
-              >
-                {getBadgeLabel(user.TrangThai)}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEdit}
-                className="bg-transparent border-slate-700 hover:bg-slate-800"
-              >
-                <Edit className="size-3 mr-1.5" />
-                Chỉnh sửa
-              </Button>
-            </div>
-
-            <InfoRow label="Email" value={user.Email} />
-            <InfoRow label="Số điện thoại" value={user.SoDienThoai} />
-            <InfoRow label="Tên tài khoản" value={user.TenTaiKhoan} />
-            <InfoRow
-              label="Ngày vào làm"
-              value={format(user.NgayVaoLam, "dd/MM/yyyy", { locale: vi })}
-            />
-            <InfoRow
-              label="Trạng thái tài khoản"
-              value={user.TrangThaiTaiKhoan}
-            />
-            <InfoRow label="Mã nhân viên" value={user.MaNhanVien.toString()} />
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-}
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
-  if (!value) return null;
-  return (
-    <div className="space-y-1 border-t border-slate-800 pt-3 first:border-t-0 first:pt-0">
-      <Label className="text-slate-400 text-xs uppercase tracking-wider">
-        {label}
-      </Label>
-      <p className="text-sm text-slate-100">{value}</p>
-    </div>
-  );
-}
-
-interface UserFormDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: NhanVienView) => void;
-  user: NhanVienView | null;
-}
-
-function UserFormDialog({
-  isOpen,
-  onClose,
-  onSubmit,
-  user,
-}: UserFormDialogProps) {
+function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
   const [formData, setFormData] = useState({
-    TenNhanVien: "",
+    HoTen: "",
     Email: "",
     SoDienThoai: "",
-    TenTaiKhoan: "",
     MatKhau: "",
+    MaNhomNguoiDung: "2",
     NgayVaoLam: new Date(),
-    MaNhomNguoiDung: mockNhomNguoiDung[1]?.MaNhomNguoiDung || 0,
-    TrangThai: "CONLAM" as TrangThaiNhanVien,
-    TrangThaiTaiKhoan: "CONHOATDONG" as TrangThaiNguoiDung,
-    AvatarUrl: "",
+    TrangThai: "CONLAM",
   });
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        TenNhanVien: user.TenNhanVien,
-        Email: user.Email,
-        SoDienThoai: user.SoDienThoai || "",
-        TenTaiKhoan: user.TenTaiKhoan,
-        MatKhau: "", 
-        NgayVaoLam: user.NgayVaoLam,
-        MaNhomNguoiDung: user.MaNhomNguoiDung,
-        TrangThai: user.TrangThai,
-        TrangThaiTaiKhoan: user.TrangThaiTaiKhoan,
-        AvatarUrl: user.AvatarUrl || "",
-      });
-    } else {
-      // Reset về state mặc định khi thêm mới
-      setFormData({
-        TenNhanVien: "",
-        Email: "",
-        SoDienThoai: "",
-        TenTaiKhoan: "",
-        MatKhau: "",
-        NgayVaoLam: new Date(),
-        MaNhomNguoiDung: mockNhomNguoiDung[1]?.MaNhomNguoiDung || 0,
-        TrangThai: "CONLAM",
-        TrangThaiTaiKhoan: "CHUAKICHHOAT", // Mặc định khi tạo mới
-        AvatarUrl: "",
-      });
+    if (isOpen) {
+      if (user) {
+        setFormData({
+          HoTen: user.HoTen || "",
+          Email: user.Email || "",
+          SoDienThoai: user.SoDienThoai || "",
+          MatKhau: "",
+          MaNhomNguoiDung: user.MaNhomNguoiDung?.toString() || "2",
+          NgayVaoLam: user.NgayVaoLam ? new Date(user.NgayVaoLam) : new Date(),
+          TrangThai: user.TrangThai || "CONLAM",
+        });
+      } else {
+        setFormData({
+          HoTen: "",
+          Email: "",
+          SoDienThoai: "",
+          MatKhau: "",
+          MaNhomNguoiDung: "2",
+          NgayVaoLam: new Date(),
+          TrangThai: "CONLAM",
+        });
+      }
     }
-  }, [user, isOpen]);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleDateChange = (name: string, date: Date | undefined) => {
-    if (date) {
-      setFormData((prev) => ({ ...prev, [name]: date }));
-    }
-  };
+  }, [isOpen, user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Lấy TenNhomNguoiDung dựa trên MaNhomNguoiDung đã chọn
-    const selectedRole = mockNhomNguoiDung.find(
-      (r) => r.MaNhomNguoiDung === Number(formData.MaNhomNguoiDung)
-    );
-
-    const dataToSubmit: NhanVienView = {
-      MaNhanVien: user?.MaNhanVien || 0,
-      MaNguoiDung: user?.MaNguoiDung || 0,
-      TenNhanVien: formData.TenNhanVien,
-      Email: formData.Email,
-      SoDienThoai: formData.SoDienThoai || null,
-      TenTaiKhoan: formData.TenTaiKhoan,
-      NgayVaoLam: formData.NgayVaoLam,
+    onSubmit({
+      ...formData,
       MaNhomNguoiDung: Number(formData.MaNhomNguoiDung),
-      TenNhomNguoiDung: selectedRole?.TenNhomNguoiDung || "Không rõ",
-      TrangThai: formData.TrangThai,
-      TrangThaiTaiKhoan: formData.TrangThaiTaiKhoan,
-      AvatarUrl: formData.AvatarUrl || null,
-      // MatKhau không được truyền trong View
-    };
-    // TODO: Gửi formData.MatKhau đến API nếu là thêm mới
-
-    onSubmit(dataToSubmit);
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-3xl">
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {user ? "Cập nhật nhân viên" : "Thêm nhân viên mới"}
+            {user ? "Cập nhật nhân viên" : "Tạo tài khoản nhân viên mới"}
           </DialogTitle>
         </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>
+              Họ tên <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              required
+              disabled={!!user} 
+              value={formData.HoTen}
+              onChange={(e) =>
+                setFormData({ ...formData, HoTen: e.target.value })
+              }
+              className="bg-transparent border-slate-700 focus:border-primary disabled:opacity-50"
+              placeholder="VD: Nguyễn Văn A"
+            />
+          </div>
 
-        <form onSubmit={handleSubmit}>
-          <ScrollArea className="max-h-[70vh] pr-6">
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="TenNhanVien">Họ và tên</Label>
-                  <Input
-                    id="TenNhanVien"
-                    name="TenNhanVien"
-                    value={formData.TenNhanVien}
-                    onChange={handleChange}
-                    className="bg-transparent border-slate-700"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="NgayVaoLam">Ngày vào làm</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white",
-                          !formData.NgayVaoLam && "text-slate-400"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.NgayVaoLam ? (
-                          format(formData.NgayVaoLam, "PPP", { locale: vi })
-                        ) : (
-                          <span>Chọn ngày</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white">
-                      <Calendar
-                        mode="single"
-                        selected={formData.NgayVaoLam}
-                        onSelect={(date) =>
-                          handleDateChange("NgayVaoLam", date)
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="AvatarUrl">URL Ảnh đại diện</Label>
-                <Input
-                  id="AvatarUrl"
-                  name="AvatarUrl"
-                  value={formData.AvatarUrl}
-                  onChange={handleChange}
-                  className="bg-transparent border-slate-700"
-                />
-              </div>
-
-              <div className="my-4 h-px bg-slate-700" />
-
-              <h4 className="text-md font-semibold text-primary">
-                Thông tin tài khoản
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="Email">Email</Label>
-                  <Input
-                    id="Email"
-                    name="Email"
-                    type="email"
-                    value={formData.Email}
-                    onChange={handleChange}
-                    className="bg-transparent border-slate-700"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="SoDienThoai">Số điện thoại</Label>
-                  <Input
-                    id="SoDienThoai"
-                    name="SoDienThoai"
-                    value={formData.SoDienThoai}
-                    onChange={handleChange}
-                    className="bg-transparent border-slate-700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="TenTaiKhoan">Tên tài khoản</Label>
-                  <Input
-                    id="TenTaiKhoan"
-                    name="TenTaiKhoan"
-                    value={formData.TenTaiKhoan}
-                    onChange={handleChange}
-                    className="bg-transparent border-slate-700"
-                    required
-                  />
-                </div>
-
-                {!user && ( // Chỉ hiển thị khi thêm mới
-                  <div className="space-y-2">
-                    <Label htmlFor="MatKhau">Mật khẩu</Label>
-                    <Input
-                      id="MatKhau"
-                      name="MatKhau"
-                      type="password"
-                      value={formData.MatKhau}
-                      onChange={handleChange}
-                      className="bg-transparent border-slate-700"
-                      required={!user}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="MaNhomNguoiDung">Chức vụ (Nhóm)</Label>
-                  <Select
-                    name="MaNhomNguoiDung"
-                    value={formData.MaNhomNguoiDung.toString()}
-                    onValueChange={(v) =>
-                      handleSelectChange("MaNhomNguoiDung", Number(v))
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-transparent border-slate-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-                      {mockNhomNguoiDung.map((role) => (
-                        <SelectItem
-                          key={role.MaNhomNguoiDung}
-                          value={role.MaNhomNguoiDung.toString()}
-                          className="cursor-pointer focus:bg-slate-700"
-                        >
-                          {role.TenNhomNguoiDung}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="TrangThai">Trạng thái Nhân viên</Label>
-                  <Select
-                    name="TrangThai"
-                    value={formData.TrangThai}
-                    onValueChange={(v: TrangThaiNhanVien) =>
-                      handleSelectChange("TrangThai", v)
-                    }
-                  >
-                    <SelectTrigger className="w-full bg-transparent border-slate-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
-                      {trangThaiOptions.map((opt) => (
-                        <SelectItem
-                          key={opt.value}
-                          value={opt.value}
-                          className="cursor-pointer focus:bg-slate-700"
-                        >
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label>
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                required
+                type="email"
+                disabled={!!user}
+                value={formData.Email}
+                onChange={(e) =>
+                  setFormData({ ...formData, Email: e.target.value })
+                }
+                className="bg-transparent border-slate-700 focus:border-primary disabled:opacity-50"
+                placeholder="staff@example.com"
+              />
             </div>
-          </ScrollArea>
-          <DialogFooter className="!mt-6 pt-6 border-t border-slate-700">
-            <DialogClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="bg-transparent border-slate-700 hover:bg-slate-800"
+          
+          
+
+          {!user && (
+            <div className="space-y-2">
+              <Label>
+                Mật khẩu khởi tạo <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                required
+                type="password"
+                minLength={6}
+                value={formData.MatKhau}
+                onChange={(e) =>
+                  setFormData({ ...formData, MatKhau: e.target.value })
+                }
+                className="bg-transparent border-slate-700 focus:border-primary"
+                placeholder="Tối thiểu 6 ký tự"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Chức vụ</Label>
+              <Select
+                disabled={true}
+                value={formData.MaNhomNguoiDung}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, MaNhomNguoiDung: v })
+                }
               >
-                Hủy
-              </Button>
-            </DialogClose>
-            <Button type="submit">{user ? "Cập nhật" : "Tạo nhân viên"}</Button>
+                <SelectTrigger className="bg-transparent border-slate-700 focus:ring-offset-0 disabled:opacity-50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white">
+                  {ROLES.map((r) => (
+                    <SelectItem
+                      key={r.value}
+                      value={r.value.toString()}
+                      className="cursor-pointer hover:bg-slate-800"
+                    >
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ngày vào làm</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white",
+                      !formData.NgayVaoLam && "text-slate-400"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.NgayVaoLam ? (
+                      format(formData.NgayVaoLam, "dd/MM/yyyy", {
+                        locale: vi,
+                      })
+                    ) : (
+                      <span>Chọn ngày</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white">
+                  <Calendar
+                    mode="single"
+                    selected={formData.NgayVaoLam}
+                    onSelect={(date) =>
+                      date && setFormData({ ...formData, NgayVaoLam: date })
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {user && (
+            <div className="space-y-2">
+              <Label>Trạng thái</Label>
+              <Select
+                value={formData.TrangThai}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, TrangThai: v })
+                }
+              >
+                <SelectTrigger className="bg-transparent border-slate-700 focus:ring-offset-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white">
+                  <SelectItem value="CONLAM">Đang làm việc</SelectItem>
+                  <SelectItem value="DANGHI">Đã nghỉ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4 border-t border-slate-800 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="hover:text-white hover:bg-slate-800"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
+              {user ? "Lưu thay đổi" : "Tạo mới"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

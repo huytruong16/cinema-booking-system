@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { roomService } from "@/services/room.service";
 import { seatTypeService } from "@/services/seat-type.service";
 import { SeatType } from "@/types/seat-management";
+import { seatService } from "@/services/seat.service";
 
 type TrangThaiPhongChieu = "TRONG" | "SAPCHIEU" | "DANGCHIEU";
 
@@ -68,14 +69,14 @@ interface PhongChieu {
   TenPhongChieu: string;
   TrangThai: TrangThaiPhongChieu;
   SoLuongGhe: number;
-  SoDoGhe: any; 
-  GhePhongChieus?: any[]; 
+  SoDoGhe: any;
+  GhePhongChieus?: any[];
 }
 
 interface SeatMapData {
   rows: string[];
   cols: number;
-  seats: Record<string, string>; 
+  seats: Record<string, string>;
 }
 
 const TRANG_THAI_CONFIG: Record<
@@ -106,7 +107,6 @@ const getSeatColorClass = (typeName: string = ""): string => {
     return "bg-pink-500/20 border-pink-500 text-pink-500 hover:bg-pink-500/30";
   return "bg-slate-700 border-slate-500 text-slate-300 hover:bg-slate-600";
 };
-
 
 const parseBackendToMap = (room: PhongChieu): SeatMapData => {
   const defaultMap = { rows: ["A", "B", "C", "D", "E"], cols: 10, seats: {} };
@@ -176,7 +176,7 @@ export default function RoomManagementPage() {
         roomService.getAll(),
         seatTypeService.getAll(),
       ]);
-      setRooms(roomsData || []);
+      setRooms((roomsData as any) || []);
       setSeatTypes(typesData || []);
     } catch (error) {
       toast.error("Không thể tải dữ liệu.");
@@ -253,19 +253,83 @@ export default function RoomManagementPage() {
     soDoPhongChieu: any,
     danhSachGhe: any[]
   ) => {
+    const toastId = toast.loading("Đang xử lý dữ liệu...");
+
     try {
+      const uniqueSeatsMap = new Map();
+      danhSachGhe.forEach((s) => {
+        uniqueSeatsMap.set(`${s.Hang}-${s.Cot}`, { Hang: s.Hang, Cot: s.Cot });
+      });
+      const physicalSeatsPayload = Array.from(uniqueSeatsMap.values());
+
+      if (physicalSeatsPayload.length > 0) {
+        await seatService.createBatch(physicalSeatsPayload);
+      }
+
+      const allBaseSeatsResponse = await seatService.getAllBase();
+      let allBaseSeats: any[] = [];
+      if (Array.isArray(allBaseSeatsResponse)) {
+        allBaseSeats = allBaseSeatsResponse;
+      } else if ((allBaseSeatsResponse as any)?.data) {
+        allBaseSeats = (allBaseSeatsResponse as any).data;
+      }
+
+      const seatTypePayload: any[] = [];
+      danhSachGhe.forEach((frontendSeat) => {
+        const matchedSeat = allBaseSeats.find(
+          (s: any) =>
+            String(s.Hang) === String(frontendSeat.Hang) &&
+            String(s.Cot) === String(frontendSeat.Cot)
+        );
+        if (matchedSeat && matchedSeat.MaGhe && frontendSeat.MaLoaiGhe) {
+          seatTypePayload.push({
+            MaGhe: matchedSeat.MaGhe,
+            MaLoaiGhe: frontendSeat.MaLoaiGhe,
+          });
+        }
+      });
+
+      if (seatTypePayload.length > 0) {
+        await seatService.createSeatTypeBatch(seatTypePayload);
+      }
+
+      const cleanDanhSachGhe = danhSachGhe.map(({ Hang, Cot, MaLoaiGhe }) => ({
+        Hang,
+        Cot,
+        MaLoaiGhe,
+      }));
+
+      const cleanSoDoPhongChieu: Record<string, string[]> = {};
+      Object.keys(soDoPhongChieu).forEach((key) => {
+        if (Array.isArray(soDoPhongChieu[key])) {
+          cleanSoDoPhongChieu[key] = soDoPhongChieu[key].map((val: any) =>
+            val === null || val === undefined ? "" : String(val)
+          );
+        }
+      });
+
       const payload = {
-        TenPhongChieu: room.TenPhongChieu, 
-        SoDoPhongChieu: soDoPhongChieu,
-        DanhSachGhe: danhSachGhe,
+        TenPhongChieu: room.TenPhongChieu,
+        SoDoPhongChieu: cleanSoDoPhongChieu,
+        DanhSachGhe: cleanDanhSachGhe,
       };
+
+      console.log("Payload Final:", payload);
+
       await roomService.update(room.MaPhongChieu, payload);
+
+      toast.dismiss(toastId);
       toast.success("Cập nhật sơ đồ ghế thành công!");
       setIsMapModalOpen(false);
       fetchData();
     } catch (error: any) {
-      const msg = error.response?.data?.message || "Lỗi khi lưu sơ đồ.";
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+      toast.dismiss(toastId);
+      console.error("Lỗi lưu sơ đồ:", error);
+      const msg = error.response?.data?.message;
+      const displayMsg = Array.isArray(msg)
+        ? msg.join(", ")
+        : msg || "Lỗi khi lưu sơ đồ.";
+      toast.error(displayMsg);
     }
   };
 
@@ -589,7 +653,7 @@ function SeatMapEditorDialog({
         const key = `${r}-${i}`;
         const typeId = seatMapData.seats[key];
 
-        if (typeId) {
+        if (typeId && typeId !== "disabled") {
           const label = seatLabelCounter.toString().padStart(2, "0");
           colArr.push(label);
           danhSachGheArr.push({

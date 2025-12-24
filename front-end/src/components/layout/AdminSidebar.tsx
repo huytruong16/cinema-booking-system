@@ -65,7 +65,7 @@ const masterDataNavItems: NavItem[] = [
 const systemManagementNavItems: NavItem[] = [
   { id: "combos", label: "Quản lý Combo", href: "/admin/combo-management", icon: ShoppingCart },
   { id: "promotions", label: "Quản lý khuyến mãi", href: "/admin/promotion-management", icon: Percent },
-  { id: "users", label: "Quản lý nhân viên", href: "/admin/user-management", icon: UserCog },
+  { id: "users", label: "Quản lý người dùng", href: "/admin/user-management", icon: UserCog },
   { id: "report", label: "Báo cáo thống kê", href: "/admin/report", icon: Book },
   { id: "roles", label: "Phân quyền (Roles)", href: "/admin/role-management", icon: ShieldCheck },
 ];
@@ -255,7 +255,7 @@ export default function AdminSidebar({
     <aside
       className={clsx(
         "fixed top-0 left-0 h-screen bg-[#262626] text-white flex flex-col p-4 border-r border-slate-800 z-40 transition-all duration-300 ease-in-out",
-        open ? "w-64" : "w-18",
+        open ? "w-64" : "w-20",
         className
       )}
     >

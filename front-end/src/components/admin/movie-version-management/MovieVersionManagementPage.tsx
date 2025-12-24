@@ -104,17 +104,20 @@ export default function MovieVersionManagementPage() {
       const languages_array = unwrapData(languagesData);
 
       setFilms(
-        films_array.map((f: any) => ({ id: f.MaPhim, name: f.TenHienThi }))
+        films_array.map((f: any) => ({
+          id: String(f.MaPhim),
+          name: f.TenHienThi,
+        }))
       );
       setFormats(
         formats_array.map((f: any) => ({
-          id: f.MaDinhDang || f.id,
+          id: String(f.MaDinhDang || f.id),
           name: f.TenDinhDang,
         }))
       );
       setLanguages(
         languages_array.map((l: any) => ({
-          id: l.MaNgonNgu || l.id,
+          id: String(l.MaNgonNgu || l.id),
           name: l.TenNgonNgu,
         }))
       );
@@ -128,11 +131,21 @@ export default function MovieVersionManagementPage() {
             if (realId) {
               flatVersions.push({
                 id: realId,
-                MaPhim: film.MaPhim,
+                MaPhim: String(film.MaPhim),
                 TenPhim: film.TenHienThi,
-                MaDinhDang: pv.MaDinhDang,
+                MaDinhDang: String(
+                  pv.MaDinhDang ??
+                    pv.DinhDang?.MaDinhDang ??
+                    pv.DinhDang?.id ??
+                    ""
+                ),
                 TenDinhDang: pv.DinhDang?.TenDinhDang || "N/A",
-                MaNgonNgu: pv.MaNgonNgu,
+                MaNgonNgu: String(
+                  pv.MaNgonNgu ??
+                    pv.NgonNgu?.MaNgonNgu ??
+                    pv.NgonNgu?.id ??
+                    ""
+                ),
                 TenNgonNgu: pv.NgonNgu?.TenNgonNgu || "N/A",
                 GiaVe: Number(pv.GiaVe),
               });
