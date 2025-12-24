@@ -136,6 +136,10 @@ function EmployeeManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
 
+  // Deletion state
+  const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchEmployees = async () => {
     setLoading(true);
     try {
@@ -212,13 +216,19 @@ function EmployeeManager() {
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
-      await employeeService.delete(id);
+      await employeeService.delete(employeeToDelete.MaNhanVien);
       toast.success("Đã xóa nhân viên thành công");
+      setEmployeeToDelete(null);
       fetchEmployees();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Không thể xóa nhân viên");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -352,41 +362,14 @@ function EmployeeManager() {
                           <Edit className="size-4" />
                         </Button>
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="hover:bg-slate-800 text-red-400 hover:text-red-300"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Xóa nhân viên?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription className="text-slate-400">
-                                Hành động này sẽ xóa nhân viên{" "}
-                                <b>{emp.HoTen}</b> khỏi hệ thống.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white">
-                                Hủy
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() =>
-                                  handleDeleteEmployee(emp.MaNhanVien)
-                                }
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                Xóa
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-slate-800 text-red-400 hover:text-red-300"
+                          onClick={() => setEmployeeToDelete(emp)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -403,6 +386,35 @@ function EmployeeManager() {
         onSubmit={handleFormSubmit}
         user={editingUser}
       />
+
+      <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Xóa nhân viên?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Hành động này sẽ xóa nhân viên{" "}
+              <b>{employeeToDelete?.HoTen}</b> khỏi hệ thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white" disabled={isDeleting}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteEmployee();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="animate-spin size-4" /> : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -414,6 +426,10 @@ function CustomerManager() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Deletion state
+  const [customerToDelete, setCustomerToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -449,13 +465,19 @@ function CustomerManager() {
     fetchCustomers();
   }, []);
 
-  const handleDeleteCustomer = async (id: string) => {
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
-      await customerService.delete(id);
+      await customerService.delete(customerToDelete.MaKhachHang);
       toast.success("Xóa khách hàng thành công");
+      setCustomerToDelete(null);
       fetchCustomers();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Lỗi khi xóa khách hàng");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -567,39 +589,14 @@ function CustomerManager() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-slate-800 text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Xóa khách hàng?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-slate-400">
-                              Hành động này sẽ xóa khách hàng <b>{cus.HoTen}</b>
-                              .
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white">
-                              Hủy
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() =>
-                                handleDeleteCustomer(cus.MaKhachHang)
-                              }
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                            >
-                              Xóa
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-slate-800 text-red-400 hover:text-red-300"
+                        onClick={() => setCustomerToDelete(cus)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -608,6 +605,33 @@ function CustomerManager() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa khách hàng?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Hành động này sẽ xóa khách hàng <b>{customerToDelete?.HoTen}</b>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white" disabled={isDeleting}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteCustomer();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="animate-spin size-4" /> : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -622,6 +646,7 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
     NgayVaoLam: new Date(),
     TrangThai: "CONLAM",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -649,12 +674,18 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
     }
   }, [isOpen, user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
-      MaNhomNguoiDung: Number(formData.MaNhomNguoiDung),
-    });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        ...formData,
+        MaNhomNguoiDung: Number(formData.MaNhomNguoiDung),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -809,13 +840,16 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
               variant="ghost"
               onClick={onClose}
               className="hover:text-white hover:bg-slate-800"
+              disabled={isSubmitting}
             >
               Hủy
             </Button>
             <Button
               type="submit"
               className="bg-primary hover:bg-primary/90 text-white"
+              disabled={isSubmitting}
             >
+              {isSubmitting && <Loader2 className="animate-spin size-4 mr-2" />}
               {user ? "Lưu thay đổi" : "Tạo mới"}
             </Button>
           </DialogFooter>

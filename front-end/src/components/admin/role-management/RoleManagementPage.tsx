@@ -1,14 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,16 +17,29 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search,
   Edit,
   Shield,
   ShieldCheck,
-  Lock,
   Save,
   RotateCcw,
+  Loader2,
+  Plus,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
-import { roleService } from "@/services/role.service";
+import { roleService, Role } from "@/services/role.service";
 import { cn } from "@/lib/utils";
 
 type Quyen =
@@ -109,69 +114,37 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
   },
 ];
 
-interface NhomNguoiDung {
-  MaNhom: string;
-  TenNhom: string;
-  DanhSachQuyen: Quyen[];
-  IsAdmin?: boolean; 
-}
-
-const FIXED_ROLES: NhomNguoiDung[] = [
-  {
-    MaNhom: "915cb8af-9554-423e-aab7-4315b6434deb",
-    TenNhom: "Nhân viên bán vé",
-    DanhSachQuyen: [], 
-  },
-  {
-    MaNhom: "a477df32-d679-42dc-88ca-9522089aa388",
-    TenNhom: "Nhân viên soát vé",
-    DanhSachQuyen: [],
-  },
-  {
-    MaNhom: "e3641c6c-284b-4cfa-a22b-4c74ebe6bea8",
-    TenNhom: "Nhân viên quản lý phim và lịch chiếu",
-    DanhSachQuyen: [],
-  },
-];
-
 export default function RoleManagementPage() {
-  const [roles, setRoles] = useState<NhomNguoiDung[]>(FIXED_ROLES);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<NhomNguoiDung | null>(null);
+  // Modal states
+  const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [roleFormData, setRoleFormData] = useState({ TenNhom: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchRoles = async () => {
+    setLoading(true);
+    try {
+      const data = await roleService.getAll();
+      if (Array.isArray(data)) {
+        setRoles(data);
+      }
+    } catch (error) {
+      console.error("Lỗi tải danh sách nhóm:", error);
+      toast.error("Không thể tải danh sách nhóm người dùng");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCurrentPermissions = async () => {
-      setLoading(true);
-      try {
-        const data: any[] = await roleService.getAll();
-
-        if (Array.isArray(data) && data.length > 0) {
-          const updatedRoles = FIXED_ROLES.map((fixed) => {
-            const found = data.find((d) => d.MaNhomNguoiDung === fixed.MaNhom);
-            if (found) {
-              return {
-                ...fixed,
-                TenNhom: found.TenNhom, 
-                DanhSachQuyen: found.QuyenNhomNguoiDungs.map(
-                  (p: any) => p.Quyen
-                ),
-              };
-            }
-            return fixed;
-          });
-          setRoles(updatedRoles);
-        }
-      } catch (error) {
-        console.error("Lỗi tải phân quyền:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCurrentPermissions();
+    fetchRoles();
   }, []);
 
   const filteredRoles = useMemo(() => {
@@ -180,26 +153,87 @@ export default function RoleManagementPage() {
     );
   }, [roles, searchTerm]);
 
-  const handleEdit = (role: NhomNguoiDung) => {
-    setEditingRole(role);
-    setIsModalOpen(true);
+  // Handlers
+  const handleOpenCreate = () => {
+    setSelectedRole(null);
+    setRoleFormData({ TenNhom: "" });
+    setIsRoleModalOpen(true);
   };
 
-  const handleSave = async (updatedRole: NhomNguoiDung) => {
+  const handleOpenEditName = (role: Role) => {
+    setSelectedRole(role);
+    setRoleFormData({ TenNhom: role.TenNhom });
+    setIsRoleModalOpen(true);
+  };
+
+  const handleOpenPermissions = (role: Role) => {
+    setSelectedRole(role);
+    setIsPermissionModalOpen(true);
+  };
+
+  const handleOpenDelete = (role: Role) => {
+    setSelectedRole(role);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    if (!roleFormData.TenNhom.trim()) {
+      toast.warning("Tên nhóm không được để trống");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (selectedRole) {
+        // Update name
+        await roleService.update(selectedRole.MaNhomNguoiDung, {
+          TenNhom: roleFormData.TenNhom,
+        });
+        toast.success("Cập nhật tên nhóm thành công");
+      } else {
+        // Create new
+        await roleService.create({ TenNhom: roleFormData.TenNhom });
+        toast.success("Tạo nhóm mới thành công");
+      }
+      setIsRoleModalOpen(false);
+      fetchRoles();
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((error as any).response?.data?.message || "Có lỗi xảy ra");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!selectedRole) return;
+    setIsSubmitting(true);
+    try {
+      await roleService.delete(selectedRole.MaNhomNguoiDung);
+      toast.success("Xóa nhóm thành công");
+      setIsDeleteAlertOpen(false);
+      fetchRoles();
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((error as any).response?.data?.message || "Xóa thất bại");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSavePermissions = async (permissions: string[]) => {
+    if (!selectedRole) return;
     try {
       await roleService.updatePermissions(
-        updatedRole.MaNhom,
-        updatedRole.DanhSachQuyen
+        selectedRole.MaNhomNguoiDung,
+        permissions
       );
-
-      setRoles((prev) =>
-        prev.map((r) => (r.MaNhom === updatedRole.MaNhom ? updatedRole : r))
-      );
-
-      toast.success(`Đã cập nhật quyền cho nhóm "${updatedRole.TenNhom}"`);
-      setIsModalOpen(false);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi khi lưu phân quyền.");
+      toast.success("Cập nhật quyền thành công");
+      setIsPermissionModalOpen(false);
+      fetchRoles();
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((error as any).response?.data?.message || "Lỗi cập nhật quyền");
     }
   };
 
@@ -212,80 +246,193 @@ export default function RoleManagementPage() {
             Phân Quyền Hệ Thống
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Quản lý quyền hạn truy cập cho các nhóm nhân viên mặc định.
+            Quản lý nhóm người dùng và phân quyền truy cập.
           </p>
         </div>
-        <div className="relative w-full md:w-72">
-          <Input
-            placeholder="Tìm nhóm quyền..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-[#1C1C1C] border-slate-700 focus:border-primary"
-          />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Input
+              placeholder="Tìm nhóm quyền..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-[#1C1C1C] border-slate-700 focus:border-primary"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          </div>
+          <Button onClick={handleOpenCreate}>
+            <Plus className="mr-2 h-4 w-4" /> Thêm Nhóm
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredRoles.map((role) => (
-          <RoleCard
-            key={role.MaNhom}
-            role={role}
-            onEdit={() => handleEdit(role)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="animate-spin text-primary size-8" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto pb-10">
+          {filteredRoles.map((role) => (
+            <RoleCard
+              key={role.MaNhomNguoiDung}
+              role={role}
+              onEditName={() => handleOpenEditName(role)}
+              onConfigPermissions={() => handleOpenPermissions(role)}
+              onDelete={() => handleOpenDelete(role)}
+            />
+          ))}
+          {filteredRoles.length === 0 && (
+            <div className="col-span-full text-center text-slate-500 py-10">
+              Không tìm thấy nhóm người dùng nào.
+            </div>
+          )}
+        </div>
+      )}
 
-      {isModalOpen && editingRole && (
+      {/* Dialog Create/Edit Role Name */}
+      <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+        <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedRole ? "Đổi Tên Nhóm" : "Tạo Nhóm Mới"}
+            </DialogTitle>
+            <DialogDescription>
+              Nhập tên cho nhóm người dùng này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Tên nhóm</Label>
+            <Input
+              value={roleFormData.TenNhom}
+              onChange={(e) =>
+                setRoleFormData({ ...roleFormData, TenNhom: e.target.value })
+              }
+              className="mt-2 bg-[#2a2a2a] border-slate-700"
+              placeholder="Ví dụ: Quản lý kho"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsRoleModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleSaveRole} disabled={isSubmitting}>
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Permissions */}
+      {selectedRole && (
         <RolePermissionDialog
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          role={editingRole}
-          onSubmit={handleSave}
+          isOpen={isPermissionModalOpen}
+          onClose={() => setIsPermissionModalOpen(false)}
+          role={selectedRole}
+          onSubmit={handleSavePermissions}
         />
       )}
+
+      {/* Alert Delete */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Hành động này sẽ xóa nhóm &quot;
+              <span className="text-white font-bold">
+                {selectedRole?.TenNhom}
+              </span>
+              &quot;. Các tài khoản thuộc nhóm này có thể bị mất quyền truy cập.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-slate-700 text-white hover:bg-slate-800">
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRole}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Xóa"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function RoleCard({
   role,
-  onEdit,
+  onEditName,
+  onConfigPermissions,
+  onDelete,
 }: {
-  role: NhomNguoiDung;
-  onEdit: () => void;
+  role: Role;
+  onEditName: () => void;
+  onConfigPermissions: () => void;
+  onDelete: () => void;
 }) {
+  const permissions = role.QuyenNhomNguoiDungs?.map((q) => q.Quyen) || [];
+
   return (
-    <Card className="bg-[#1C1C1C] border-slate-800 flex flex-col hover:border-slate-600 transition-colors">
+    <Card className="bg-[#1C1C1C] border-slate-800 flex flex-col hover:border-slate-600 transition-colors group relative">
       <div className="p-5 flex-1">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
               {role.TenNhom}
-              <Lock className="size-3 text-slate-500" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={onEditName}
+              >
+                <Pencil className="size-3 text-slate-400 hover:text-white" />
+              </Button>
             </h3>
             <p className="text-xs text-slate-500 font-mono mt-1">
-              ID: {role.MaNhom.substring(0, 8)}...
+              ID: {role.MaNhomNguoiDung.substring(0, 8)}...
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            className="bg-slate-800 border-slate-700 hover:bg-primary hover:text-white hover:border-primary"
-          >
-            <Edit className="size-3.5 mr-2" /> Cấu hình
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onConfigPermissions}
+              className="bg-slate-800 border-slate-700 hover:bg-primary hover:text-white hover:border-primary"
+            >
+              <Edit className="size-3.5 mr-2" /> Phân quyền
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="text-slate-500 hover:text-red-500 hover:bg-red-500/10"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3">
           <Label className="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-            Quyền hạn ({role.DanhSachQuyen.length})
+            Quyền hạn ({permissions.length})
           </Label>
           <div className="flex flex-wrap gap-1.5 min-h-[60px]">
-            {role.DanhSachQuyen.length > 0 ? (
+            {permissions.length > 0 ? (
               <>
-                {role.DanhSachQuyen.slice(0, 5).map((q) => (
+                {permissions.slice(0, 5).map((q) => (
                   <Badge
                     key={q}
                     variant="secondary"
@@ -294,12 +441,12 @@ function RoleCard({
                     {q}
                   </Badge>
                 ))}
-                {role.DanhSachQuyen.length > 5 && (
+                {permissions.length > 5 && (
                   <Badge
                     variant="outline"
                     className="text-slate-500 border-slate-700 border-dashed"
                   >
-                    +{role.DanhSachQuyen.length - 5}
+                    +{permissions.length - 5}
                   </Badge>
                 )}
               </>
@@ -324,8 +471,8 @@ function RoleCard({
 interface RolePermissionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  role: NhomNguoiDung;
-  onSubmit: (data: NhomNguoiDung) => void;
+  role: Role;
+  onSubmit: (permissions: string[]) => Promise<void>;
 }
 
 function RolePermissionDialog({
@@ -334,26 +481,26 @@ function RolePermissionDialog({
   role,
   onSubmit,
 }: RolePermissionDialogProps) {
-  const [permissions, setPermissions] = useState<Quyen[]>(
-    role.DanhSachQuyen || []
-  );
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setPermissions(role.DanhSachQuyen || []);
+    const currentPerms = role.QuyenNhomNguoiDungs?.map((q) => q.Quyen) || [];
+    setPermissions(currentPerms);
     setHasChanges(false);
   }, [role, isOpen]);
 
-  const handleToggle = (code: Quyen) => {
+  const handleToggle = (code: string) => {
     setPermissions((prev) => {
       const exists = prev.includes(code);
       const next = exists ? prev.filter((p) => p !== code) : [...prev, code];
-      setHasChanges(true); 
+      setHasChanges(true);
       return next;
     });
   };
 
-  const handleGroupToggle = (groupPerms: { code: Quyen }[]) => {
+  const handleGroupToggle = (groupPerms: { code: string }[]) => {
     setPermissions((prev) => {
       const codes = groupPerms.map((p) => p.code);
       const allSelected = codes.every((c) => prev.includes(c));
@@ -368,8 +515,19 @@ function RolePermissionDialog({
   };
 
   const handleReset = () => {
-    setPermissions(role.DanhSachQuyen || []);
+    const currentPerms = role.QuyenNhomNguoiDungs?.map((q) => q.Quyen) || [];
+    setPermissions(currentPerms);
     setHasChanges(false);
+  };
+
+  const handleSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(permissions);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -400,9 +558,6 @@ function RolePermissionDialog({
               const isAllSelected = groupCodes.every((c) =>
                 permissions.includes(c)
               );
-              const isSomeSelected =
-                groupCodes.some((c) => permissions.includes(c)) &&
-                !isAllSelected;
 
               return (
                 <div
@@ -487,7 +642,7 @@ function RolePermissionDialog({
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              disabled={!hasChanges}
+              disabled={!hasChanges || isSubmitting}
               className="text-slate-500 hover:text-white"
             >
               <RotateCcw className="size-3.5 mr-1.5" /> Khôi phục
@@ -499,16 +654,26 @@ function RolePermissionDialog({
               <Button
                 variant="outline"
                 className="bg-transparent border-slate-700 hover:bg-slate-800 text-white"
+                disabled={isSubmitting}
               >
                 Đóng
               </Button>
             </DialogClose>
             <Button
-              onClick={() => onSubmit({ ...role, DanhSachQuyen: permissions })}
+              onClick={handleSave}
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
-              disabled={!hasChanges} 
+              disabled={!hasChanges || isSubmitting}
             >
-              <Save className="size-4 mr-2" /> Lưu thay đổi
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Save className="size-4 mr-2" /> Lưu thay đổi
+                </>
+              )}
             </Button>
           </div>
         </DialogFooter>
