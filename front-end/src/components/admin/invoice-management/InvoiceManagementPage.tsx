@@ -107,7 +107,7 @@ interface VeMua {
   PhongChieu: string;
   Ghe: string;
   GiaVe: number;
-  TrangThai: TrangThaiVe; // Sử dụng enum trạng thái vé chuẩn xác
+  TrangThai: TrangThaiVe; 
 }
 
 interface ComboMua {

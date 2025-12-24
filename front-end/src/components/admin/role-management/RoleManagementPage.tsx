@@ -65,7 +65,6 @@ interface PermissionGroup {
   permissions: { code: Quyen; label: string }[];
 }
 
-// Cấu hình nhóm quyền để hiển thị trên UI
 const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     label: "Bán hàng & Soát vé",
@@ -119,7 +118,6 @@ export default function RoleManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Modal states
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -149,7 +147,7 @@ export default function RoleManagementPage() {
 
   const filteredRoles = useMemo(() => {
     return roles.filter((role) =>
-      role.TenNhom.toLowerCase().includes(searchTerm.toLowerCase())
+      (role.TenNhom || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [roles, searchTerm]);
 
@@ -185,13 +183,11 @@ export default function RoleManagementPage() {
     setIsSubmitting(true);
     try {
       if (selectedRole) {
-        // Update name
         await roleService.update(selectedRole.MaNhomNguoiDung, {
           TenNhom: roleFormData.TenNhom,
         });
         toast.success("Cập nhật tên nhóm thành công");
       } else {
-        // Create new
         await roleService.create({ TenNhom: roleFormData.TenNhom });
         toast.success("Tạo nhóm mới thành công");
       }
@@ -288,7 +284,6 @@ export default function RoleManagementPage() {
         </div>
       )}
 
-      {/* Dialog Create/Edit Role Name */}
       <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
         <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
           <DialogHeader>
@@ -328,7 +323,6 @@ export default function RoleManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Permissions */}
       {selectedRole && (
         <RolePermissionDialog
           isOpen={isPermissionModalOpen}
@@ -338,7 +332,6 @@ export default function RoleManagementPage() {
         />
       )}
 
-      {/* Alert Delete */}
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
           <AlertDialogHeader>
@@ -550,7 +543,6 @@ function RolePermissionDialog({
           </div>
         </DialogHeader>
 
-        {/* Body: Danh sách quyền */}
         <div className="flex-1 overflow-y-auto bg-[#1C1C1C] custom-scrollbar">
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             {PERMISSION_GROUPS.map((group, idx) => {
@@ -630,7 +622,6 @@ function RolePermissionDialog({
           </div>
         </div>
 
-        {/* Footer */}
         <DialogFooter className="px-6 py-4 border-t border-slate-800 bg-[#151515] shrink-0 flex justify-between sm:justify-between items-center">
           <div className="flex items-center gap-4 text-sm text-slate-400">
             {hasChanges && (

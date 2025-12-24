@@ -2,11 +2,9 @@
 export const getErrorMessage = (error: any): string => {
   if (!error) return "Đã xảy ra lỗi không xác định.";
 
-  // Ưu tiên lấy message từ response của backend
   const backendMessage = error.response?.data?.message || error.response?.data?.error;
 
   if (backendMessage) {
-    // Dịch các lỗi phổ biến từ backend
     if (backendMessage === "Bad credentials") return "Email hoặc mật khẩu không đúng.";
     if (backendMessage === "User not found") return "Người dùng không tồn tại.";
     if (backendMessage === "Email already exists") return "Email đã được đăng ký.";
@@ -15,7 +13,6 @@ export const getErrorMessage = (error: any): string => {
     if (backendMessage.includes("OTP has expired")) return "Mã OTP đã hết hạn.";
     if (backendMessage.includes("Password must contain")) return "Mật khẩu phải chứa ít nhất 1 số, 1 ký tự đặc biệt và 1 chữ hoa.";
     
-    // Nếu là mảng lỗi (ví dụ từ class-validator)
     if (Array.isArray(backendMessage)) {
         return backendMessage.join(", ");
     }
@@ -23,7 +20,6 @@ export const getErrorMessage = (error: any): string => {
     return backendMessage;
   }
 
-  // Xử lý theo status code nếu không có message cụ thể
   if (error.response) {
       switch (error.response.status) {
           case 400:
@@ -43,11 +39,10 @@ export const getErrorMessage = (error: any): string => {
       }
   }
 
-  // Xử lý lỗi từ Axios hoặc mạng
   if (error.message) {
     if (error.message === "Network Error") return "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền.";
     if (error.message.includes("timeout")) return "Hết thời gian chờ kết nối.";
-    if (error.message === "Bad credentials") return "Email hoặc mật khẩu không đúng."; // Fallback nếu message nằm ở top level
+    if (error.message === "Bad credentials") return "Email hoặc mật khẩu không đúng.";
     if (error.message.includes("Password must contain")) return "Mật khẩu phải chứa ít nhất 1 số, 1 ký tự đặc biệt và 1 chữ hoa.";
   }
 

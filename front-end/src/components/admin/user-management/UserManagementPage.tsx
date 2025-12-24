@@ -136,7 +136,6 @@ function EmployeeManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
 
-  // Deletion state
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -419,15 +418,11 @@ function EmployeeManager() {
   );
 }
 
-// ============================================================================
-// COMPONENT QUẢN LÝ KHÁCH HÀNG (GIỮ NGUYÊN)
-// ============================================================================
 function CustomerManager() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Deletion state
   const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 

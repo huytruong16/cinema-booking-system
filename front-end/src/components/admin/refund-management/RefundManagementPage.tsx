@@ -432,8 +432,6 @@ export default function RefundManagementPage() {
     </div>
   );
 }
-
-// --- COMPONENT MODAL CHI TIẾT ---
 interface RefundDetailDialogProps {
   isOpen: boolean;
   isLoading: boolean;
@@ -475,8 +473,6 @@ function RefundDetailDialog({
     request.HoaDon?.Ves?.[0]?.GheSuatChieu?.SuatChieu?.PhienBanPhim?.Phim;
   const showtimeInfo =
     request.HoaDon?.Ves?.[0]?.GheSuatChieu?.SuatChieu?.ThoiGianBatDau;
-
-  // Lấy danh sách Combo
   const comboList = request.HoaDon?.HoaDonCombos || [];
 
   return (
@@ -561,7 +557,6 @@ function RefundDetailDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 2. CỘT TRÁI: CHI TIẾT HÓA ĐƠN (VÉ + COMBO) */}
                 <div className="space-y-6">
-                  {/* A. Danh sách Vé */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-slate-300 uppercase flex items-center gap-2">
                       <MapPin className="size-4" /> Danh sách ghế hoàn
@@ -613,7 +608,6 @@ function RefundDetailDialog({
                     </div>
                   </div>
 
-                  {/* B. Danh sách Combo (MỚI) */}
                   {comboList.length > 0 && (
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-slate-300 uppercase flex items-center gap-2">

@@ -350,9 +350,6 @@ export default function ShowtimeManagementPage() {
       }
 
       setIsModalOpen(false);
-      // If we created a showtime on a different date, we might want to switch to that date?
-      // Or just refresh current date. The user requirement says "ensure it is displayed".
-      // If it's on a different date, it won't be displayed unless we switch date.
       if (targetDateStr !== currentDateStr) {
         setSelectedDate(startOfDay(formData.ThoiGianBatDau));
       } else {
