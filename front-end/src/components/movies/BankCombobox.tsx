@@ -46,7 +46,7 @@ export function BankCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-transparent border-slate-700 hover:bg-slate-800 text-slate-200 font-normal"
+          className="w-full justify-between bg-transparent border-slate-700 hover:bg-slate-800 text-slate-200 font-normal hover:text-white"
         >
           {value
             ? `${selectedBank?.TenNganHang} (${selectedBank?.Code})`

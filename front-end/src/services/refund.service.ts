@@ -24,23 +24,35 @@ export const refundService = {
     const res = await apiClient.post('/refund-requests', data);
     return res.data;
   },
+  
   getAll: async () => {
     const response = await apiClient.get('/refund-requests');
     return response.data;
   },
-  updateStatus: async (id: string, status: string, note?: string) => {
-    return await apiClient.patch(`/refund-requests/${id}/status`, {
-      TrangThai: status,
-      GhiChu: note
-    });
+
+  getDetail: async (id: string) => {
+    return await apiClient.get(`/refund-requests/${id}`);
   },
-  approveRefund: async (payload: {
+
+  approveRefund: async (data: {
     MaYeuCauHoanTien: string;
-    SoTien: number;
     PhuongThuc: string; 
+    SoTien?: number;
     GhiChu?: string;
     MaGiaoDichNganHang?: string;
   }) => {
-    return await apiClient.post('/transactions/refund', payload);
-  }
+    const payload = {
+      MaYeuCau: data.MaYeuCauHoanTien, 
+      PhuongThuc: data.PhuongThuc,   
+    };
+    
+    return await apiClient.post("/transactions/refund", payload);
+  },
+
+  updateStatus: async (id: string, status: string, note?: string) => {
+    const payload = {
+      TrangThai: status, 
+    };
+    return await apiClient.patch(`/refund-requests/status/${id}`, payload);
+  },
 };

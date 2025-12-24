@@ -1,7 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apiClient";
 import { Seat, UpdateSeatDto } from "@/types/seat-management";
 
 export const seatService = {
+  create: async (data: { Hang: string; Cot: string }) => {
+    return await api.post('/seats', [data]); 
+  },
+  
   // GET /seats 
   getAll: async () => {
     const res = await api.get<Seat[]>('/seats');
@@ -14,9 +19,21 @@ export const seatService = {
     return res.data;
   },
   
-  // API tạo ghế vật lý 
-  createBatch: async (seats: { Hang: string; Cot: string }[]) => {
-    const res = await api.post('/seats/batch', { seats });
+  getAllBase: async () => {
+    const res = await api.get<any[]>('/seats/base');
     return res.data;
-  }
+  },
+
+  createSeatType: async (data: { MaGhe: string; MaLoaiGhe: string }) => {
+    return await api.post('/seats/seat-type', data);
+  },
+
+  createBatch: async (seats: { Hang: string; Cot: string }[]) => {
+    const res = await api.post('/seats', seats);
+    return res.data;
+  },
+
+  createSeatTypeBatch: async (data: { MaGhe: string; MaLoaiGhe: string }[]) => {
+    return await api.post('/seats/seat-type', data);
+  },
 };
