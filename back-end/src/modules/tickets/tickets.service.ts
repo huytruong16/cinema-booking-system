@@ -47,7 +47,7 @@ export class TicketsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pdfService: PdfService,
-  ) {}
+  ) { }
 
   async getTickets(userId: string, role: string, filters?: GetTicketsDto) {
     const [data, pagination] = await this.prisma.xprisma.vE
@@ -104,7 +104,6 @@ export class TicketsService {
       const ticket = await this.getTicketByCode(code);
 
       if (ticket && ticket.TrangThaiVe === TicketStatusEnum.CHUASUDUNG) {
-        await this.updateTicketStatus(ticket.MaVe, TicketStatusEnum.DASUDUNG);
         codes.push(code);
       }
     }
