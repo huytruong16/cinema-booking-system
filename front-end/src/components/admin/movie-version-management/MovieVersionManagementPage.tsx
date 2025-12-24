@@ -87,11 +87,13 @@ export default function MovieVersionManagementPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [filmsData, formatsData, languagesData] = await Promise.all([
-        movieVersionService.getFilms(),
-        movieVersionService.getFormats(),
-        movieVersionService.getLanguages(),
-      ]);
+      const [filmsData, formatsData, languagesData, versionsData] =
+        await Promise.all([
+          movieVersionService.getFilms(),
+          movieVersionService.getFormats(),
+          movieVersionService.getLanguages(),
+          movieVersionService.getAll(),
+        ]);
 
       const unwrapData = (data: any) => {
         if (Array.isArray(data)) return data;
@@ -102,6 +104,7 @@ export default function MovieVersionManagementPage() {
       const films_array = unwrapData(filmsData);
       const formats_array = unwrapData(formatsData);
       const languages_array = unwrapData(languagesData);
+      const versions_array = unwrapData(versionsData);
 
       setFilms(
         films_array.map((f: any) => ({
@@ -122,40 +125,22 @@ export default function MovieVersionManagementPage() {
         }))
       );
 
-      const flatVersions: MovieVersion[] = [];
-      films_array.forEach((film: any) => {
-        if (film.PhienBanPhims && Array.isArray(film.PhienBanPhims)) {
-          film.PhienBanPhims.forEach((pv: any) => {
-            const realId = pv.MaPhienBanPhim;
+      const mappedVersions: MovieVersion[] = versions_array.map((v: any) => ({
+        id: v.MaPhienBanPhim,
+        MaPhim: v.Phim?.MaPhim,
+        TenPhim: v.Phim?.TenHienThi,
+        MaDinhDang: v.DinhDang?.MaDinhDang,
+        TenDinhDang: v.DinhDang?.TenDinhDang,
+        MaNgonNgu: v.NgonNgu?.MaNgonNgu,
+        TenNgonNgu: v.NgonNgu?.TenNgonNgu,
+        GiaVe: Number(v.GiaVe),
+        deletedAt: v.DeletedAt,
+      }));
 
-            if (realId) {
-              flatVersions.push({
-                id: realId,
-                MaPhim: String(film.MaPhim),
-                TenPhim: film.TenHienThi,
-                MaDinhDang: String(
-                  pv.MaDinhDang ??
-                    pv.DinhDang?.MaDinhDang ??
-                    pv.DinhDang?.id ??
-                    ""
-                ),
-                TenDinhDang: pv.DinhDang?.TenDinhDang || "N/A",
-                MaNgonNgu: String(
-                  pv.MaNgonNgu ??
-                    pv.NgonNgu?.MaNgonNgu ??
-                    pv.NgonNgu?.id ??
-                    ""
-                ),
-                TenNgonNgu: pv.NgonNgu?.TenNgonNgu || "N/A",
-                GiaVe: Number(pv.GiaVe),
-              });
-            }
-          });
-        }
-      });
+      const activeVersions = mappedVersions.filter((v) => !v.deletedAt);
 
-      setVersions(flatVersions);
-      setFilteredVersions(flatVersions);
+      setVersions(activeVersions);
+      setFilteredVersions(activeVersions);
     } catch (error) {
       console.error(error);
       toast.error("Lỗi khi tải dữ liệu");
@@ -229,7 +214,8 @@ export default function MovieVersionManagementPage() {
   };
 
   const handleDelete = async () => {
-    if (!currentVersion) return;
+    if (!currentVersion || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await movieVersionService.delete(currentVersion.id);
       toast.success("Xóa thành công");
@@ -238,6 +224,8 @@ export default function MovieVersionManagementPage() {
     } catch (error) {
       console.error(error);
       toast.error("Xóa thất bại");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -439,12 +427,20 @@ export default function MovieVersionManagementPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSubmitting}>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               className="bg-red-600 hover:bg-red-700"
+              disabled={isSubmitting}
             >
-              Xóa
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Xóa"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

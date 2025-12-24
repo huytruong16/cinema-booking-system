@@ -168,6 +168,7 @@ export default function RoomManagementPage() {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<PhongChieu | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -209,18 +210,20 @@ export default function RoomManagementPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || isDeleting) return;
+    setIsDeleting(true);
     try {
       await roomService.delete(deleteId);
       toast.success("Đã xóa phòng chiếu.");
       fetchData();
+      setDeleteId(null);
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
         "Xóa thất bại. Có thể phòng đang có dữ liệu liên quan.";
       toast.error(msg);
     } finally {
-      setDeleteId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -439,9 +442,16 @@ export default function RoomManagementPage() {
               Hủy
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isDeleting}
             >
+              {isDeleting ? (
+                <Loader2 className="animate-spin size-4 mr-2" />
+              ) : null}
               Xóa ngay
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -543,9 +553,21 @@ function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
 
 function RoomFormDialog({ isOpen, onClose, onSubmit, room }: any) {
   const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     setName(room?.TenPhongChieu || "");
   }, [room, isOpen]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ TenPhongChieu: name });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -567,13 +589,15 @@ function RoomFormDialog({ isOpen, onClose, onSubmit, room }: any) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Hủy
           </Button>
           <Button
-            onClick={() => onSubmit({ TenPhongChieu: name })}
+            onClick={handleSubmit}
             className="bg-primary"
+            disabled={isSubmitting}
           >
+            {isSubmitting && <Loader2 className="animate-spin size-4 mr-2" />}
             Lưu
           </Button>
         </DialogFooter>
@@ -603,6 +627,7 @@ function SeatMapEditorDialog({
   const [colInput, setColInput] = useState(() =>
     initialMapData.cols > 0 ? initialMapData.cols.toString() : "10"
   );
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (seatTypes.length > 0 && selectedTool === "disabled")
@@ -641,35 +666,41 @@ function SeatMapEditorDialog({
     });
   };
 
-  const handleApplySave = () => {
-    const soDoObj: Record<string, string[]> = {};
-    const danhSachGheArr: any[] = [];
+  const handleApplySave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const soDoObj: Record<string, string[]> = {};
+      const danhSachGheArr: any[] = [];
 
-    seatMapData.rows.forEach((r) => {
-      const colArr: string[] = [];
-      let seatLabelCounter = 1;
+      seatMapData.rows.forEach((r) => {
+        const colArr: string[] = [];
+        let seatLabelCounter = 1;
 
-      for (let i = 1; i <= seatMapData.cols; i++) {
-        const key = `${r}-${i}`;
-        const typeId = seatMapData.seats[key];
+        for (let i = 1; i <= seatMapData.cols; i++) {
+          const key = `${r}-${i}`;
+          const typeId = seatMapData.seats[key];
 
-        if (typeId && typeId !== "disabled") {
-          const label = seatLabelCounter.toString().padStart(2, "0");
-          colArr.push(label);
-          danhSachGheArr.push({
-            Hang: r,
-            Cot: label,
-            MaLoaiGhe: typeId,
-          });
-          seatLabelCounter++;
-        } else {
-          colArr.push("");
+          if (typeId && typeId !== "disabled") {
+            const label = seatLabelCounter.toString().padStart(2, "0");
+            colArr.push(label);
+            danhSachGheArr.push({
+              Hang: r,
+              Cot: label,
+              MaLoaiGhe: typeId,
+            });
+            seatLabelCounter++;
+          } else {
+            colArr.push("");
+          }
         }
-      }
-      soDoObj[r] = colArr;
-    });
+        soDoObj[r] = colArr;
+      });
 
-    onSave(room, soDoObj, danhSachGheArr);
+      await onSave(room, soDoObj, danhSachGheArr);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const activeSeatCount = Object.keys(seatMapData.seats).length;
@@ -904,14 +935,21 @@ function SeatMapEditorDialog({
             variant="outline"
             onClick={onClose}
             className="border-slate-700"
+            disabled={isSaving}
           >
             Đóng
           </Button>
           <Button
             onClick={handleApplySave}
             className="bg-primary hover:bg-primary/90 px-8"
+            disabled={isSaving}
           >
-            <Save className="size-4 mr-2" /> Lưu Sơ Đồ
+            {isSaving ? (
+              <Loader2 className="animate-spin size-4 mr-2" />
+            ) : (
+              <Save className="size-4 mr-2" />
+            )}{" "}
+            Lưu Sơ Đồ
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -931,6 +969,8 @@ function SeatTypeManagerDialog({
     HeSoGiaGhe: 1.0,
     MauSac: "#3b82f6",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const resetForm = () => {
     setEditingId(null);
@@ -947,6 +987,8 @@ function SeatTypeManagerDialog({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (editingId) {
         await seatTypeService.update(editingId, formData);
@@ -959,17 +1001,23 @@ function SeatTypeManagerDialog({
       refreshData();
     } catch {
       toast.error("Lỗi khi lưu loại ghế.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (deletingId) return;
     if (!confirm("Xóa loại ghế này?")) return;
+    setDeletingId(id);
     try {
       await seatTypeService.delete(id);
       refreshData();
       toast.success("Đã xóa.");
     } catch {
       toast.error("Không thể xóa (đang được sử dụng).");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -1032,8 +1080,13 @@ function SeatTypeManagerDialog({
                           variant="ghost"
                           className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
                           onClick={() => handleDelete(t.MaLoaiGhe)}
+                          disabled={!!deletingId}
                         >
-                          <Trash2 className="size-4" />
+                          {deletingId === t.MaLoaiGhe ? (
+                            <Loader2 className="animate-spin size-4" />
+                          ) : (
+                            <Trash2 className="size-4" />
+                          )}
                         </Button>
                       </div>
                     </TableCell>
@@ -1106,11 +1159,19 @@ function SeatTypeManagerDialog({
                   variant="ghost"
                   onClick={resetForm}
                   className="h-9 px-3 text-slate-400"
+                  disabled={isSubmitting}
                 >
                   Hủy
                 </Button>
               )}
-              <Button onClick={handleSubmit} className="h-9 bg-primary flex-1">
+              <Button
+                onClick={handleSubmit}
+                className="h-9 bg-primary flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting && (
+                  <Loader2 className="animate-spin size-4 mr-2" />
+                )}
                 {editingId ? "Lưu thay đổi" : "Thêm mới"}
               </Button>
             </div>

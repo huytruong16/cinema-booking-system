@@ -9,6 +9,28 @@ export interface MovieVersion {
   MaNgonNgu: string;
   TenNgonNgu: string;  
   GiaVe: number;
+  TrangThai?: string;
+  deletedAt?: string;
+}
+
+export interface MovieVersionResponse {
+  MaPhienBanPhim: string;
+  Phim: {
+    MaPhim: string;
+    TenHienThi: string;
+    PosterUrl: string;
+    ThoiLuong: number;
+  };
+  DinhDang: {
+    MaDinhDang: string;
+    TenDinhDang: string;
+  };
+  NgonNgu: {
+    MaNgonNgu: string;
+    TenNgonNgu: string;
+  };
+  GiaVe: string;
+  DeletedAt?: string | null;
 }
 
 export interface CreateVersionDto {
@@ -24,6 +46,11 @@ export interface UpdateVersionDto {
 }
 
 export const movieVersionService = {
+  getAll: async () => {
+    const res = await api.get("/films/format");
+    return res.data;
+  },
+
   // 1. Create
   create: async (data: CreateVersionDto) => {
     return await api.post("/films/version", data);

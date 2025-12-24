@@ -74,6 +74,8 @@ export default function MasterDataPage({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -125,6 +127,8 @@ export default function MasterDataPage({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     for (const col of columns) {
       if (
         col.required &&
@@ -136,6 +140,7 @@ export default function MasterDataPage({
       }
     }
 
+    setIsSubmitting(true);
     try {
       const payload: any = {};
 
@@ -148,29 +153,27 @@ export default function MasterDataPage({
         }
       });
 
+      if (currentItem) {
+        await updateItem(currentItem[idField], payload);
+        toast.success("Cập nhật thành công!");
+      } else {
+        await createItem(payload);
+        toast.success("Tạo mới thành công!");
+      }
+
       setIsDialogOpen(false);
-
-      const promise = currentItem
-        ? updateItem(currentItem[idField], payload)
-        : createItem(payload);
-
-      toast.promise(promise, {
-        loading: "Đang xử lý...",
-        success: () => {
-          loadData();
-          return currentItem ? "Cập nhật thành công!" : "Tạo mới thành công!";
-        },
-        error: (err: any) => {
-          return err?.response?.data?.message || "Có lỗi xảy ra";
-        },
-      });
-    } catch (error) {
+      loadData();
+    } catch (error: any) {
       console.error(error);
+      toast.error(error?.response?.data?.message || "Có lỗi xảy ra");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!currentItem) return;
+    if (!currentItem || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteItem(currentItem[idField]);
       toast.success("Xóa thành công");
@@ -179,6 +182,8 @@ export default function MasterDataPage({
     } catch (error) {
       console.error(error);
       toast.error("Xóa thất bại (Dữ liệu đang được sử dụng)");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,10 +327,17 @@ export default function MasterDataPage({
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isSubmitting}
+            >
               Hủy
             </Button>
-            <Button onClick={handleSubmit}>Lưu</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="animate-spin size-4 mr-2" />}
+              Lưu
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -339,11 +351,16 @@ export default function MasterDataPage({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
             >
+              {isDeleting && <Loader2 className="animate-spin size-4 mr-2" />}
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

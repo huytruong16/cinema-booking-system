@@ -58,7 +58,7 @@ import { toast } from "sonner";
 
 import { showtimeService } from "@/services/showtime.service";
 import { roomService } from "@/services/room.service";
-import { filmService } from "@/services/film.service";
+import { movieVersionService } from "@/services/movie-version.service";
 
 type TrangThaiSuatChieu =
   | "CHUACHIEU"
@@ -102,8 +102,8 @@ const trangThaiOptions: { value: TrangThaiSuatChieu; label: string }[] = [
   { value: "DAHUY", label: "Đã hủy" },
 ];
 
-const DAY_START_MINUTES = 8 * 60;
-const DAY_TOTAL_MINUTES = (26 - 8) * 60;
+const DAY_START_MINUTES = 0;
+const DAY_TOTAL_MINUTES = 24 * 60;
 
 function calculateTimelineStyle(showtime: SuatChieuView, selectedDate: Date) {
   const dayStart =
@@ -171,12 +171,13 @@ export default function ShowtimeManagementPage() {
   const [editingShowtime, setEditingShowtime] = useState<SuatChieuView | null>(
     null
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchMasterData = async () => {
     try {
-      const [roomsRes, filmsRes] = await Promise.all([
+      const [roomsRes, versionsRes] = await Promise.all([
         roomService.getAll(),
-        filmService.getAll(),
+        movieVersionService.getAll(),
       ]);
 
       const unwrapData = (data: any) => {
@@ -186,7 +187,7 @@ export default function ShowtimeManagementPage() {
       };
 
       const roomsArray = unwrapData(roomsRes);
-      const filmsArray = unwrapData(filmsRes);
+      const versionsArray = unwrapData(versionsRes);
 
       setPhongChieuList(
         roomsArray.map((r: any) => ({
@@ -196,20 +197,16 @@ export default function ShowtimeManagementPage() {
       );
 
       const flatList: PhimDinhDang[] = [];
-      (filmsArray as any[]).forEach((film: any) => {
-        if (film.PhienBanPhims) {
-          film.PhienBanPhims.forEach((pv: any) => {
-            if (pv.MaPhienBanPhim) {
-              flatList.push({
-                MaPhimDinhDang: pv.MaPhienBanPhim,
-                TenPhim: film.TenHienThi,
-                TenDinhDang: `${pv.DinhDang?.TenDinhDang || "2D"} ${
-                  pv.NgonNgu?.TenNgonNgu || ""
-                }`.trim(),
-                PosterUrl: film.PosterUrl,
-                ThoiLuong: film.ThoiLuong,
-              });
-            }
+      versionsArray.forEach((pv: any) => {
+        if (pv.MaPhienBanPhim && !pv.DeletedAt) {
+          flatList.push({
+            MaPhimDinhDang: pv.MaPhienBanPhim,
+            TenPhim: pv.Phim?.TenHienThi || "Unknown",
+            TenDinhDang: `${pv.DinhDang?.TenDinhDang || "2D"} ${
+              pv.NgonNgu?.TenNgonNgu || ""
+            }`.trim(),
+            PosterUrl: pv.Phim?.PosterUrl,
+            ThoiLuong: pv.Phim?.ThoiLuong,
           });
         }
       });
@@ -236,11 +233,10 @@ export default function ShowtimeManagementPage() {
     }
   };
 
-  const allShowtimes = useMemo(() => {
-    if (!Array.isArray(rawShowtimes)) return [];
-
-    return rawShowtimes.map((st: any) => {
-      const matchedRoom = phongChieuList.find(
+  const mapShowtimes = (raw: any[], rooms: PhongChieu[]): SuatChieuView[] => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((st: any) => {
+      const matchedRoom = rooms.find(
         (r) => r.MaPhongChieu === st.MaPhongChieu
       );
       const tenPhong = matchedRoom
@@ -261,6 +257,10 @@ export default function ShowtimeManagementPage() {
         TrangThai: st.TrangThai as TrangThaiSuatChieu,
       };
     });
+  };
+
+  const allShowtimes = useMemo(() => {
+    return mapShowtimes(rawShowtimes, phongChieuList);
   }, [rawShowtimes, phongChieuList]);
 
   const selectedShowtime = useMemo(
@@ -289,11 +289,29 @@ export default function ShowtimeManagementPage() {
   };
 
   const handleFormSubmit = async (formData: SuatChieuView) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const newStart = formData.ThoiGianBatDau.getTime();
       const newEnd = formData.ThoiGianKetThuc.getTime();
+      const now = new Date().getTime();
 
-      const hasConflict = allShowtimes.some((existing) => {
+      if (newStart < now) {
+        toast.error("Không thể tạo suất chiếu trong quá khứ");
+        return;
+      }
+
+      let showtimesToCheck = allShowtimes;
+      const targetDateStr = format(formData.ThoiGianBatDau, "yyyy-MM-dd");
+      const currentDateStr = format(selectedDate, "yyyy-MM-dd");
+
+      if (targetDateStr !== currentDateStr) {
+        const res = await showtimeService.getAll({ NgayChieu: targetDateStr });
+        const data = Array.isArray(res) ? res : (res as any).data || [];
+        showtimesToCheck = mapShowtimes(data, phongChieuList);
+      }
+
+      const hasConflict = showtimesToCheck.some((existing) => {
         if (existing.MaPhongChieu !== formData.MaPhongChieu) return false;
 
         if (
@@ -332,17 +350,28 @@ export default function ShowtimeManagementPage() {
       }
 
       setIsModalOpen(false);
-      fetchShowtimes();
+      // If we created a showtime on a different date, we might want to switch to that date?
+      // Or just refresh current date. The user requirement says "ensure it is displayed".
+      // If it's on a different date, it won't be displayed unless we switch date.
+      if (targetDateStr !== currentDateStr) {
+        setSelectedDate(startOfDay(formData.ThoiGianBatDau));
+      } else {
+        fetchShowtimes();
+      }
     } catch (error: any) {
       console.error(error);
       const msg =
         error.response?.data?.message ||
         "Lỗi khi lưu (Kiểm tra trùng lịch/kết nối)";
       toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (maSuatChieu: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await showtimeService.delete(maSuatChieu);
       toast.success("Xóa thành công");
@@ -351,7 +380,10 @@ export default function ShowtimeManagementPage() {
       }
       fetchShowtimes();
     } catch (error) {
+      console.error("Lỗi xóa suất chiếu:", error);
       toast.error("Xóa thất bại");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -458,6 +490,7 @@ export default function ShowtimeManagementPage() {
             onClose={() => setSelectedShowtimeId(null)}
             onEdit={() => handleEdit(selectedShowtime)}
             onDelete={handleDelete}
+            isSubmitting={isSubmitting}
           />
         ) : (
           <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-4 flex items-center justify-center h-96">
@@ -477,6 +510,7 @@ export default function ShowtimeManagementPage() {
           selectedDate={selectedDate}
           phimList={phimDinhDangList}
           phongList={phongChieuList}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
@@ -547,7 +581,7 @@ function RoomTimeline({
 }
 
 function TimelineGrid({ isBackground = false }) {
-  const hours = Array.from({ length: 18 }, (_, i) => i + 8);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
   return (
     <div
@@ -565,11 +599,11 @@ function TimelineGrid({ isBackground = false }) {
               ? "border-r border-slate-700/50"
               : "border-r border-slate-600"
           )}
-          style={{ width: `${(1 / 18) * 100}%` }}
+          style={{ width: `${(1 / 24) * 100}%` }}
         >
           {!isBackground && (
             <span className="text-xs text-slate-200 relative left-1 top-1.5">
-              {hour > 23 ? hour - 24 : hour}h
+              {hour}h
             </span>
           )}
         </div>
@@ -583,9 +617,15 @@ interface DetailPanelProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: (maSuatChieu: string) => void;
+  isSubmitting: boolean;
 }
 
-function ShowtimeDetailPanel({ showtime, onEdit, onDelete }: DetailPanelProps) {
+function ShowtimeDetailPanel({
+  showtime,
+  onEdit,
+  onDelete,
+  isSubmitting,
+}: DetailPanelProps) {
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-4">
       <CardHeader className="relative">
@@ -669,9 +709,17 @@ function ShowtimeDetailPanel({ showtime, onEdit, onDelete }: DetailPanelProps) {
                   </AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive hover:bg-destructive/90"
-                    onClick={() => onDelete(showtime.MaSuatChieu)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onDelete(showtime.MaSuatChieu);
+                    }}
+                    disabled={isSubmitting}
                   >
-                    Xác nhận Xóa
+                    {isSubmitting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      "Xác nhận Xóa"
+                    )}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -707,6 +755,7 @@ interface ShowtimeFormDialogProps {
   selectedDate: Date;
   phimList: PhimDinhDang[];
   phongList: PhongChieu[];
+  isSubmitting: boolean;
 }
 
 const splitDateTime = (date: Date) => {
@@ -731,6 +780,7 @@ function ShowtimeFormDialog({
   selectedDate,
   phimList,
   phongList,
+  isSubmitting,
 }: ShowtimeFormDialogProps) {
   const [maPhimDinhDang, setMaPhimDinhDang] = useState<string | undefined>(
     showtime?.MaPhimDinhDang
@@ -972,11 +1022,17 @@ function ShowtimeFormDialog({
                 type="button"
                 variant="outline"
                 className="bg-transparent border-slate-700 hover:bg-slate-800"
+                disabled={isSubmitting}
               >
                 Hủy
               </Button>
             </DialogClose>
-            <Button type="submit">{showtime ? "Cập nhật" : "Lưu"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {showtime ? "Cập nhật" : "Lưu"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
