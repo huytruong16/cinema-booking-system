@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { GenreService } from './genre.service';
 import {
@@ -15,9 +16,14 @@ import {
   ApiParam,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateGenreDto } from './dtos/create-genre.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Thể loại')
 @Controller('genres')
@@ -43,6 +49,9 @@ export class GenreController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo thể loại mới' })
   @ApiBody({ type: CreateGenreDto })
   @ApiResponse({ status: 201, description: 'Tạo thể loại thành công.' })
@@ -51,6 +60,9 @@ export class GenreController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật thể loại' })
   @ApiParam({
     name: 'id',
@@ -67,6 +79,9 @@ export class GenreController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm thể loại' })
   @ApiParam({ name: 'id', description: 'Mã thể loại cần xóa', required: true })
   @ApiResponse({ status: 200, description: 'Xóa thể loại thành công.' })

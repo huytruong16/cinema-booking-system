@@ -17,33 +17,42 @@ export interface InvoiceResponse {
   GiaoDichUrl: string;
 }
 
-  export interface InvoiceItem {
-  MaVe?: string;
-  Code?: string; 
-  TenPhim?: string;
-  PhongChieu?: string;
-  SoGhe?: string; 
-  GiaVe?: number;
-  TrangThai?: string;
+export interface InvoiceItem {
+  SoGhe: string;
+  TrangThai: string;
+  DonGia: number;
 }
 
 export interface InvoiceCombo {
-  TenCombo?: string;
-  SoLuong?: number;
-  DonGia?: number;
+  TenCombo: string;
+  SoLuong: number;
+  DonGia: number;
 }
 
 export interface Invoice {
   MaHoaDon: string;
-  Code: string; 
-  Email?: string; 
-  NgayLap?: string; 
+  Code: string;
+  Email: string;
+  Phim: {
+    TenPhim?: string;
+    PosterUrl?: string;
+  };
+  ThoiGianChieu?: string;
+  PhongChieu?: string;
+  Ves: InvoiceItem[];
+  Combos: InvoiceCombo[];
+  KhuyenMais: any[];
+  NgayLap: string;
+  GiaoDich: {
+    MaGiaoDich: string;
+    Code: string;
+    NgayGiaoDich: string;
+    PhuongThuc: string;
+    TrangThai: string;
+    LoaiGiaoDich: string;
+    NoiDung: string | null;
+  };
   TongTien: number;
-  TrangThai?: string; 
-  
-  Ves?: InvoiceItem[];
-  Combos?: InvoiceCombo[];
-  GiaoDichs?: any[]; 
 }
 
 export interface GetInvoicesParams {
@@ -68,7 +77,18 @@ export const invoiceService = {
     const res = await apiClient.post<InvoiceResponse>('/invoices', data);
     return res.data;
   },
-
+  getInvoiceByCode: async (code: string) => {
+    const res = await apiClient.get<Blob>(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
+  getInvoicePdf: async (code: string) => {
+    const res = await apiClient.get<Blob>(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob'
+    });
+    return res.data;
+  },
   getAll: async (params?: GetInvoicesParams) => {
     const res = await apiClient.get('/invoices', { params: { limit: 20, ...params } });
     return res.data;

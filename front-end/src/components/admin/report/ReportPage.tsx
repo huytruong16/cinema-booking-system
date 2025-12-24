@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardHeader,
@@ -28,8 +28,10 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarIcon, DollarSign, Ticket, ShoppingCart, Users, ArrowDown, ArrowUp, FileDown, AreaChart, PieChartIcon, LineChartIcon, UserCheck } from 'lucide-react';
+import { CalendarIcon, DollarSign, Ticket, ShoppingCart, Users, ArrowDown, ArrowUp, FileDown, AreaChart, PieChartIcon, LineChartIcon, UserCheck, MonitorPlay } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -41,72 +43,17 @@ import {
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Label } from '@/components/ui/label';
+import { statisticsService } from '@/services/statistics.service';
+import { RoomStatus, StatisticsSummary, RevenueChartData, TopMovie, TopStaff } from '@/types/statistics';
 
-// --- Định nghĩa loại báo cáo ---
-type ReportType = 'revenue' | 'movies' | 'staff' | 'peak_hours';
+type ReportType = 'revenue' | 'movies' | 'staff' | 'room_status';
 
 const reportTypeOptions: { value: ReportType; label: string; icon: React.ElementType }[] = [
     { value: 'revenue', label: 'Báo cáo Doanh thu', icon: AreaChart },
     { value: 'movies', label: 'Báo cáo Phim (Top ăn khách)', icon: PieChartIcon },
     { value: 'staff', label: 'Báo cáo Hiệu suất Nhân viên', icon: UserCheck },
-    { value: 'peak_hours', label: 'Báo cáo Khung giờ cao điểm', icon: LineChartIcon },
+    { value: 'room_status', label: 'Trạng thái phòng chiếu', icon: MonitorPlay },
 ];
-
-// --- DỮ LIỆU GIẢ (MOCK DATA) ---
-
-// Mock cho Báo cáo Doanh thu
-const revenueReportData = {
-  byDay: [
-    { date: "10/11", tickets: 450, ticketRevenue: 35000000, combos: 200, comboRevenue: 20000000, total: 55000000 },
-    { date: "11/11", tickets: 400, ticketRevenue: 30000000, combos: 180, comboRevenue: 18000000, total: 48000000 },
-    { date: "12/11", tickets: 600, ticketRevenue: 50000000, combos: 220, comboRevenue: 22000000, total: 72000000 },
-    { date: "13/11", tickets: 580, ticketRevenue: 48000000, combos: 200, comboRevenue: 20000000, total: 68000000 },
-    { date: "14/11", tickets: 750, ticketRevenue: 65000000, combos: 300, comboRevenue: 30000000, total: 95000000 },
-    { date: "15/11", tickets: 850, ticketRevenue: 75000000, combos: 350, comboRevenue: 35000000, total: 110000000 },
-    { date: "16/11", tickets: 1000, ticketRevenue: 90000000, combos: 400, comboRevenue: 40000000, total: 130000000 },
-  ],
-  summary: {
-    totalRevenue: 578000000,
-    totalTickets: 4630,
-    totalCombos: 1850,
-  }
-};
-const chartConfig_Revenue = {
-  ticketRevenue: { label: "Doanh thu Vé", color: "var(--chart-2)" },
-  comboRevenue: { label: "Doanh thu Combo", color: "var(--chart-4)" },
-};
-
-// Mock cho Báo cáo Phim
-const movieReportData = [
-  { rank: 1, name: "Deadpool & Wolverine", revenue: 400000000, tickets: 4500, fill: "var(--chart-1)" },
-  { rank: 2, name: "Inside Out 2", revenue: 300000000, tickets: 3800, fill: "var(--chart-2)" },
-  { rank: 3, name: "Kẻ Trộm Mặt Trăng 4", revenue: 200000000, tickets: 2500, fill: "var(--chart-3)" },
-  { rank: 4, name: "Phim Khác", revenue: 150000000, tickets: 1800, fill: "var(--chart-5)" },
-];
-const chartConfig_Movies = {
-  revenue: { label: "Doanh thu" },
-  ...Object.fromEntries(movieReportData.map(m => [m.name, { label: m.name, color: m.fill }]))
-};
-
-// Mock cho Báo cáo Nhân viên
-const staffReportData = [
-    { rank: 1, id: 2, name: "Trần Thị Bán Vé", avatar: "https://i.pravatar.cc/150?img=2", revenue: 52300000, tickets: 450, shift: "Ca Tối" },
-    { rank: 2, id: 1, name: "Nguyễn Văn Admin", avatar: "https://i.pravatar.cc/150?img=1", revenue: 48100000, tickets: 410, shift: "Ca Sáng" },
-    { rank: 3, id: 3, name: "Lê Văn Soát Vé", avatar: "https://i.pravatar.cc/150?img=3", revenue: 35000000, tickets: 300, shift: "Ca Tối" },
-];
-
-// Mock cho Báo cáo Khung giờ
-const peakHourData = [
-    { hour: "09:00", transactions: 15 }, { hour: "10:00", transactions: 20 },
-    { hour: "11:00", transactions: 18 }, { hour: "12:00", transactions: 25 },
-    { hour: "13:00", transactions: 30 }, { hour: "14:00", transactions: 45 },
-    { hour: "15:00", transactions: 50 }, { hour: "16:00", transactions: 60 },
-    { hour: "17:00", transactions: 75 }, { hour: "18:00", transactions: 90 },
-    { hour: "19:00", transactions: 120 }, { hour: "20:00", transactions: 110 },
-    { hour: "21:00", transactions: 80 }, { hour: "22:00", transactions: 70 },
-];
-// --- HẾT MOCK DATA ---
-
 
 export default function ReportPage() {
   const [selectedReportType, setSelectedReportType] = useState<ReportType>('revenue');
@@ -116,7 +63,64 @@ export default function ReportPage() {
   });
   const [activePreset, setActivePreset] = useState<string>("month");
 
-  // Xử lý logic lọc nhanh
+  const [summary, setSummary] = useState<StatisticsSummary | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueChartData[]>([]);
+  const [topMovies, setTopMovies] = useState<TopMovie[]>([]);
+  const [topStaff, setTopStaff] = useState<TopStaff[]>([]);
+  const [roomStatus, setRoomStatus] = useState<RoomStatus[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!dateRange?.from || !dateRange?.to) return;
+
+      setLoading(true);
+      try {
+        let range: 'day' | 'week' | 'month' | 'year' | 'all' = 'month';
+        if (activePreset === 'today') range = 'day';
+        else if (activePreset === 'week') range = 'week';
+        else if (activePreset === 'month') range = 'month';
+        else if (activePreset === 'year') range = 'year';
+
+        // Always fetch summary
+        try {
+            const summaryData = await statisticsService.getSummary({ range });
+            setSummary(summaryData);
+        } catch (err) {
+            console.error("Failed to fetch summary:", err);
+        }
+
+        try {
+            if (selectedReportType === 'revenue') {
+              const revenueRange = (range === 'day') ? 'week' : range;
+              const data = await statisticsService.getRevenueChart({ range: revenueRange });
+              setRevenueData(data);
+            } else if (selectedReportType === 'movies') {
+              const data = await statisticsService.getTopMovies({ range });
+              setTopMovies(data);
+            } else if (selectedReportType === 'staff') {
+              const data = await statisticsService.getTopStaff({ range });
+              setTopStaff(data);
+            } else if (selectedReportType === 'room_status') {
+              const data = await statisticsService.getRoomStatus();
+              setRoomStatus(data);
+            }
+        } catch (err) {
+            console.error(`Failed to fetch ${selectedReportType} report:`, err);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch statistics:", error);
+        if (error.response) {
+            console.error("Error response data:", error.response.data);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedReportType, activePreset]);
+
   const setPreset = (preset: string) => {
       setActivePreset(preset);
       const today = new Date();
@@ -128,7 +132,6 @@ export default function ReportPage() {
       }
   };
 
-  // Format chữ trên nút Date Picker
   const formattedDateRange = useMemo(() => {
     if (!dateRange?.from) return "Chọn khoảng thời gian";
     if (dateRange.to) {
@@ -137,24 +140,26 @@ export default function ReportPage() {
     return format(dateRange.from, "dd/MM/yyyy");
   }, [dateRange]);
 
-  // Hàm (giả) để xử lý xuất file
   const handleExport = (type: 'excel' | 'pdf') => {
       alert(`Đang xuất file ${type} cho báo cáo: ${reportTypeOptions.find(r => r.value === selectedReportType)?.label}
 Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
 Đến: ${format(dateRange?.to || new Date(), "dd/MM/yyyy")}`);
   };
 
-  // Hàm render nội dung báo cáo
   const renderReportContent = () => {
+      if (loading) {
+          return <div className="flex items-center justify-center h-64 text-slate-400">Đang tải dữ liệu...</div>;
+      }
+
       switch (selectedReportType) {
           case 'revenue':
-              return <RevenueReport data={revenueReportData} />;
+              return <RevenueReport data={revenueData} summary={summary} />;
           case 'movies':
-              return <MovieReport data={movieReportData} />;
+              return <MovieReport data={topMovies} />;
           case 'staff':
-              return <StaffReport data={staffReportData} />;
-          case 'peak_hours':
-              return <PeakHourReport data={peakHourData} />;
+              return <StaffReport data={topStaff} />;
+          case 'room_status':
+              return <RoomStatusReport data={roomStatus} />;
           default:
               return (
                   <div className="flex items-center justify-center h-64">
@@ -259,21 +264,41 @@ Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
   );
 }
 
+// Helper to safely format date
+const formatDateSafe = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        return format(date, 'dd/MM/yyyy');
+    } catch {
+        return dateStr;
+    }
+};
+
 // 1. Báo cáo Doanh thu
-function RevenueReport({ data }: { data: typeof revenueReportData }) {
+function RevenueReport({ data, summary }: { data: RevenueChartData[], summary: StatisticsSummary | null }) {
+    // Sanitize data to ensure revenue is a number
+    const safeData = data.map(item => ({
+        ...item,
+        revenue: item.revenue || 0
+    }));
+
+    const chartConfig = {
+        revenue: { label: "Doanh thu", color: "var(--chart-2)" },
+    };
+
     return (
         <div className="space-y-6">
             {/* Biểu đồ */}
             <div className="h-[300px] w-full">
-                <ChartContainer config={chartConfig_Revenue} className="h-full w-full">
-                    <BarChart data={data.byDay} margin={{ top: 10, right: 0, left: 20, bottom: 0 }}>
+                <ChartContainer config={chartConfig} className="h-full w-full">
+                    <BarChart data={safeData} margin={{ top: 10, right: 0, left: 20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="#888888" />
-                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatDateSafe(value).substring(0, 5)} />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}tr`} />
-                        <ChartTooltip cursor={true} content={<ChartTooltipContent className="bg-[#0A0A0A] border-slate-800" indicator="dot" formatter={(value) => value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} />} />
+                        <ChartTooltip cursor={true} content={<ChartTooltipContent className="bg-[#0A0A0A] border-slate-800" indicator="dot" formatter={(value) => Number(value).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} />} />
                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                        <Bar dataKey="ticketRevenue" fill="var(--color-ticketRevenue)" radius={[4, 4, 0, 0]} stackId="a" />
-                        <Bar dataKey="comboRevenue" fill="var(--color-comboRevenue)" radius={[4, 4, 0, 0]} stackId="a" />
+                        <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ChartContainer>
             </div>
@@ -285,40 +310,51 @@ function RevenueReport({ data }: { data: typeof revenueReportData }) {
                     <Table>
                         <TableHeader><TableRow className="border-slate-700 hover:bg-transparent">
                             <TableHead className="text-slate-100">Ngày</TableHead>
-                            <TableHead className="text-slate-100 text-right">Tổng vé</TableHead>
-                            <TableHead className="text-slate-100 text-right">Tiền vé</TableHead>
-                            <TableHead className="text-slate-100 text-right">Tổng combo</TableHead>
-                            <TableHead className="text-slate-100 text-right">Tiền combo</TableHead>
-                            <TableHead className="text-slate-100 text-right">Tổng cộng</TableHead>
+                            <TableHead className="text-slate-100 text-right">Doanh thu</TableHead>
                         </TableRow></TableHeader>
                         <TableBody>
-                            {data.byDay.map((day) => (
-                                <TableRow key={day.date} className="border-slate-800 font-medium">
-                                    <TableCell>{day.date}</TableCell>
-                                    <TableCell className="text-right">{day.tickets.toLocaleString('vi-VN')}</TableCell>
-                                    <TableCell className="text-right text-blue-400">{day.ticketRevenue.toLocaleString('vi-VN')} ₫</TableCell>
-                                    <TableCell className="text-right">{day.combos.toLocaleString('vi-VN')}</TableCell>
-                                    <TableCell className="text-right text-orange-400">{day.comboRevenue.toLocaleString('vi-VN')} ₫</TableCell>
-                                    <TableCell className="text-right text-primary">{day.total.toLocaleString('vi-VN')} ₫</TableCell>
+                            {safeData.map((day, index) => (
+                                <TableRow key={day.date || index} className="border-slate-800 font-medium">
+                                    <TableCell>{formatDateSafe(day.date)}</TableCell>
+                                    <TableCell className="text-right text-primary">{day.revenue.toLocaleString('vi-VN')} ₫</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 </CardContent>
-                <CardFooter className="!pt-4 border-t border-slate-700 font-bold text-lg text-primary justify-end">
-                    Tổng doanh thu: {data.summary.totalRevenue.toLocaleString('vi-VN')} ₫
-                </CardFooter>
+                {summary && (
+                    <CardFooter className="!pt-4 border-t border-slate-700 font-bold text-lg text-primary justify-between">
+                        <div className="text-sm text-slate-400 font-normal">
+                            Tổng vé: {(summary.totalTickets || 0).toLocaleString('vi-VN')} | Tăng trưởng: {summary.growth || 0}%
+                        </div>
+                        <div>
+                            Tổng doanh thu: {(summary.totalRevenue || 0).toLocaleString('vi-VN')} ₫
+                        </div>
+                    </CardFooter>
+                )}
             </Card>
         </div>
     );
 }
 
 // 2. Báo cáo Phim
-function MovieReport({ data }: { data: typeof movieReportData }) {
+function MovieReport({ data }: { data: TopMovie[] }) {
+    // Transform data for chart to handle nested properties
+    const chartData = data.map(m => ({
+        ...m,
+        name: m.Phim?.TenHienThi || 'Unknown',
+        value: m.DoanhThu
+    }));
+
+    const chartConfig = {
+        revenue: { label: "Doanh thu" },
+        ...Object.fromEntries(chartData.map((m, i) => [m.name, { label: m.name, color: `hsl(var(--chart-${(i % 5) + 1}))` }]))
+    };
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
              <div className="h-[300px] w-full">
-                <ChartContainer config={chartConfig_Movies} className="h-full w-full">
+                <ChartContainer config={chartConfig} className="h-full w-full">
                     <PieChart>
                         <ChartTooltip 
                             cursor={false} 
@@ -330,18 +366,18 @@ function MovieReport({ data }: { data: typeof movieReportData }) {
                             />} 
                         />
                         <Pie 
-                            data={data} 
-                            dataKey="revenue" 
+                            data={chartData} 
+                            dataKey="value" 
                             nameKey="name"   
                             outerRadius={100} 
                             innerRadius={60}
                             labelLine={false} 
                             label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                         >
-                            {data.map((entry) => (
+                            {chartData.map((entry, index) => (
                                 <Cell 
-                                    key={`cell-${entry.name}`} 
-                                    fill={entry.fill} 
+                                    key={`cell-${index}`} 
+                                    fill={`hsl(var(--chart-${(index % 5) + 1}))`} 
                                 />
                             ))}
                         </Pie>
@@ -364,12 +400,12 @@ function MovieReport({ data }: { data: typeof movieReportData }) {
                         <TableHead className="text-slate-100 text-right">Vé bán</TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                        {data.map((movie) => (
-                            <TableRow key={movie.rank} className="border-slate-800 font-medium">
-                                <TableCell>{movie.rank}</TableCell>
-                                <TableCell>{movie.name}</TableCell>
-                                <TableCell className="text-right text-primary">{movie.revenue.toLocaleString('vi-VN')} ₫</TableCell>
-                                <TableCell className="text-right">{movie.tickets.toLocaleString('vi-VN')}</TableCell>
+                        {data.map((movie, index) => (
+                            <TableRow key={movie.Phim?.MaPhim || index} className="border-slate-800 font-medium">
+                                <TableCell>{index + 1}</TableCell>
+                                <TableCell>{movie.Phim?.TenHienThi || 'Unknown'}</TableCell>
+                                <TableCell className="text-right text-primary">{(movie.DoanhThu || 0).toLocaleString('vi-VN')} ₫</TableCell>
+                                <TableCell className="text-right">{(movie.SoVeDaBan || 0).toLocaleString('vi-VN')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -380,30 +416,28 @@ function MovieReport({ data }: { data: typeof movieReportData }) {
 }
 
 // 3. Báo cáo Nhân viên
-function StaffReport({ data }: { data: typeof staffReportData }) {
+function StaffReport({ data }: { data: TopStaff[] }) {
     return (
         <ScrollArea className="h-[300px]">
             <Table>
                 <TableHeader><TableRow className="border-slate-700 hover:bg-transparent">
                     <TableHead className="text-slate-100">Hạng</TableHead>
                     <TableHead className="text-slate-100">Nhân viên</TableHead>
-                    <TableHead className="text-slate-100">Ca làm việc</TableHead>
                     <TableHead className="text-slate-100 text-right">Doanh thu bán</TableHead>
                     <TableHead className="text-slate-100 text-right">Vé bán</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
-                    {data.map((staff) => (
-                        <TableRow key={staff.id} className="border-slate-800 font-medium">
-                            <TableCell>{staff.rank}</TableCell>
+                    {data.map((staff, index) => (
+                        <TableRow key={staff.staffId} className="border-slate-800 font-medium">
+                            <TableCell>{index + 1}</TableCell>
                             <TableCell>
                                 <div className="flex items-center gap-2">
-                                    <Avatar className="size-8"><AvatarImage src={staff.avatar} /><AvatarFallback>{staff.name.charAt(0)}</AvatarFallback></Avatar>
-                                    <span className="font-medium">{staff.name}</span>
+                                    <Avatar className="size-8"><AvatarFallback>{(staff.name || '?').charAt(0)}</AvatarFallback></Avatar>
+                                    <span className="font-medium">{staff.name || 'Unknown'}</span>
                                 </div>
                             </TableCell>
-                            <TableCell>{staff.shift}</TableCell>
-                            <TableCell className="text-right text-primary">{staff.revenue.toLocaleString('vi-VN')} ₫</TableCell>
-                            <TableCell className="text-right">{staff.tickets.toLocaleString('vi-VN')}</TableCell>
+                            <TableCell className="text-right text-primary">{(staff.totalRevenue || 0).toLocaleString('vi-VN')} ₫</TableCell>
+                            <TableCell className="text-right">{(staff.totalTickets || 0).toLocaleString('vi-VN')}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -412,49 +446,71 @@ function StaffReport({ data }: { data: typeof staffReportData }) {
     );
 }
 
-// 4. Báo cáo Khung giờ
-function PeakHourReport({ data }: { data: typeof peakHourData }) {
+// 4. Báo cáo Trạng thái phòng
+function RoomStatusReport({ data }: { data: RoomStatus[] }) {
     return (
-        <div className="h-[300px] w-full pr-6 pb-4">
-            <ChartContainer config={{ transactions: { label: "Lượt giao dịch", color: "var(--chart-1)" } }} className="h-full w-full">
-                <LineChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="#888888" />
-                    <XAxis dataKey="hour" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                    <ChartTooltip cursor={true} content={<ChartTooltipContent className="bg-[#0A0A0A] border-slate-800" indicator="dot" />} />
-                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                    <Line type="monotone" dataKey="transactions" stroke="var(--color-transactions)" strokeWidth={2} dot={{ r: 4, fill: "var(--color-transactions)" }} activeDot={{ r: 6 }} />
-                </LineChart>
-            </ChartContainer>
-        </div>
-    );
-}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.map((room, index) => {
+                const isShowing = room.TrangThai === 'DANG_CHIEU';
+                const isUpcoming = room.TrangThai === 'SAP_CHIEU';
+                
+                const occupancyRate = (isShowing && room.GheDaDat && room.TongGhe) 
+                    ? (room.GheDaDat / room.TongGhe) * 100 
+                    : 0;
 
-// --- COMPONENT CON: KPI CARD ---
-interface KpiCardProps {
-    title: string;
-    value: string;
-    change: number; // %
-    icon: React.ReactNode;
-}
-function KpiCard({ title, value, change, icon }: KpiCardProps) {
-    const isPositive = change >= 0;
-    return (
-        <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">{title}</CardTitle>
-                {icon}
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold text-slate-100">{value}</div> 
-                <p className={cn(
-                    "text-xs mt-1 flex items-center gap-1",
-                    isPositive ? "text-green-500" : "text-red-500"
-                )}>
-                    {isPositive ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
-                    {Math.abs(change)}% so với kỳ trước
-                </p>
-            </CardContent>
-        </Card>
+                return (
+                    <Card key={room.PhongChieu.MaPhongChieu || index} className={cn("border-slate-800", 
+                        isShowing ? "bg-green-900/10 border-green-900/50" : 
+                        isUpcoming ? "bg-yellow-900/10 border-yellow-900/50" : 
+                        "bg-slate-900/50"
+                    )}>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex justify-between items-center">
+                                {room.PhongChieu.TenPhongChieu}
+                                <Badge variant="outline" className={cn(
+                                    isShowing ? "bg-green-500/10 text-green-500 border-green-500/20" : 
+                                    isUpcoming ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : 
+                                    "bg-slate-500/10 text-slate-500 border-slate-500/20"
+                                )}>
+                                    {isShowing ? 'Đang chiếu' : isUpcoming ? 'Sắp chiếu' : 'Trống'}
+                                </Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {room.SuatChieuTiepTheo ? (
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="font-semibold text-slate-200 line-clamp-1" title={room.SuatChieuTiepTheo.TenPhim}>
+                                            {room.SuatChieuTiepTheo.TenPhim}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            {format(new Date(room.SuatChieuTiepTheo.ThoiGianBatDau), 'HH:mm')} - {format(new Date(room.SuatChieuTiepTheo.ThoiGianKetThuc), 'HH:mm')}
+                                        </p>
+                                    </div>
+                                    
+                                    {isShowing && (
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-xs text-slate-400">
+                                                <span>Đã đặt: {room.GheDaDat}/{room.TongGhe}</span>
+                                                <span>{occupancyRate.toFixed(0)}%</span>
+                                            </div>
+                                            <Progress value={occupancyRate} className="h-1.5 bg-slate-800" />
+                                        </div>
+                                    )}
+
+                                    {isUpcoming && (
+                                        <div className="text-xs text-yellow-500 flex items-center gap-1">
+                                            <span>Sẽ chiếu trong {room.SuatChieuTiepTheo.SoPhutConLai} phút nữa</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-500 italic py-2">Hiện không có suất chiếu</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                );
+            })}
+        </div>
     );
 }

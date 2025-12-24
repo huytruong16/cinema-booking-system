@@ -7,6 +7,7 @@ import {
   Post,
   Body,
   ParseArrayPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { SeatService } from './seat.service';
@@ -17,15 +18,20 @@ import {
   ApiResponse,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GetSeatsDto } from './dtos/get-seat.dto';
 import { CreateSeatDto } from './dtos/create-seat.dto';
 import { CreateSeatSeatTypeDto } from './dtos/create-seat-seat-type.dto';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RoleEnum } from 'src/libs/common/enums';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
 
 @ApiTags('Ghế')
 @Controller('seats')
 export class SeatController {
-  constructor(private readonly seatService: SeatService) { }
+  constructor(private readonly seatService: SeatService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các ghế được chia theo loại ghế' })
@@ -49,6 +55,9 @@ export class SeatController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo danh sách ghế' })
   @ApiBody({ type: [CreateSeatDto] })
   @ApiResponse({ status: 201 })
@@ -59,6 +68,9 @@ export class SeatController {
   }
 
   @Post('/seat-type')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo ghế loại ghế' })
   @ApiBody({ type: [CreateSeatSeatTypeDto] })
   @ApiResponse({ status: 201 })

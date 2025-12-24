@@ -124,7 +124,7 @@ function PaymentContent() {
 
       console.log("Sending payment payload:", payload);
 
-      const res = await invoiceService.create(payload);
+      const res: any = await invoiceService.create(payload);
       
       if (res.GiaoDichUrl) {
         window.location.href = res.GiaoDichUrl;

@@ -1,13 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import apiClient from "@/lib/apiClient";
-import { 
-  DashboardSummary, 
-  RevenueChartData, 
-} from "@/types/dashboard";
-
+import apiClient from '@/lib/apiClient';
+import {
+  RoomStatus,
+  StatisticsSummary,
+  RevenueChartData,
+  TopMovie,
+  TopStaff,
+} from '@/types/statistics';
 
 export interface GetSummaryParams {
-  range: 'day' | 'week' | 'month' | 'year';
+  range: 'day' | 'week' | 'month' | 'year' | 'all';
   date?: string;
 }
 
@@ -18,41 +19,44 @@ export interface GetRevenueChartParams {
 
 export interface GetTopMovieParams {
   range: 'day' | 'week' | 'month' | 'year' | 'all';
+  limit?: number;
 }
 
 export interface GetTopStaffParams {
-  range: 'day' | 'week' | 'month' | 'year';
-  date?: string;
+  range: 'day' | 'week' | 'month' | 'year' | 'all';
+  limit?: number;
 }
 
 export const statisticsService = {
-  // 1. Tổng quan
-  getSummary: async (params: GetSummaryParams) => {
-    const res = await apiClient.get<DashboardSummary>('/statistics/summary', { params });
+
+  getSummary: async (params: GetSummaryParams): Promise<StatisticsSummary> => {
+    const res = await apiClient.get<StatisticsSummary>('/statistics/summary', { params });
     return res.data;
   },
 
-  // 2. Biểu đồ doanh thu
-  getRevenueChart: async (params: GetRevenueChartParams) => {
+  getRevenueChart: async (
+    params: GetRevenueChartParams
+  ): Promise<RevenueChartData[]> => {
     const res = await apiClient.get<RevenueChartData[]>('/statistics/revenue-chart', { params });
     return res.data;
   },
 
-  // 3. Top phim
-  getTopMovies: async (params: GetTopMovieParams) => {
-    const res = await apiClient.get<any[]>('/statistics/top-movies', { params });
+  getTopMovies: async (
+    params: GetTopMovieParams
+  ): Promise<TopMovie[]> => {
+    const res = await apiClient.get<TopMovie[]>('/statistics/top-movies', { params });
     return res.data;
   },
 
-  // 4. Top nhân viên
-  getTopStaff: async (params: GetTopStaffParams) => {
-    const res = await apiClient.get<any[]>('/statistics/top-staff', { params });
+  getTopStaff: async (
+    params: GetTopStaffParams
+  ): Promise<TopStaff[]> => {
+    const res = await apiClient.get<TopStaff[]>('/statistics/top-staff', { params });
     return res.data;
   },
 
-  // 5. Trạng thái phòng
-  getRoomStatus: async () => {
-    const res = await apiClient.get<any[]>('/statistics/room-status');
+  getRoomStatus: async (): Promise<RoomStatus[]> => {
+    const res = await apiClient.get<RoomStatus[]>('/statistics/room-status');
     return res.data;
-  }
+  },
 };

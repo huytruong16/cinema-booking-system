@@ -8,7 +8,7 @@ import { SeatCheckResponseDto } from './dtos/post-check-available.dto';
 
 @Injectable()
 export class SeatService {
-  constructor(readonly prisma: PrismaService) { }
+  constructor(readonly prisma: PrismaService) {}
 
   // ghế đã chia theo loại ghế
   async getAllSeats(query?: GetSeatsDto) {
@@ -181,7 +181,7 @@ export class SeatService {
                 },
               });
             }
-          } catch { }
+          } catch {}
         })();
       }, timeoutMs);
     }

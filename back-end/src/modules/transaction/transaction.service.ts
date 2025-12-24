@@ -32,7 +32,7 @@ export class TransactionService {
     private readonly mailService: MailService,
     private readonly refundRequestService: RefundRequestService,
     @Inject(REQUEST) private readonly request: any,
-  ) { }
+  ) {}
 
   sendInvoiceEmail(transaction: NonNullable<any>) {
     const invoice = transaction.HoaDon;
@@ -104,10 +104,21 @@ export class TransactionService {
     );
   }
 
-  async getAllTransactions(filters?: GetTransactionDto) {
+  async getAllTransactions(
+    userId: string,
+    role: string,
+    filters?: GetTransactionDto,
+  ) {
     const [data, pagination] = await this.prisma.xprisma.gIAODICH
       .paginate({
-        where: { DeletedAt: null },
+        where: {
+          ...(role === RoleEnum.KHACHHANG && {
+            HoaDon: {
+              KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } },
+            },
+          }),
+          DeletedAt: null,
+        },
         orderBy: [{ CreatedAt: 'desc' }, { MaGiaoDich: 'desc' }],
       })
       .withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaGiaoDich'));
@@ -115,10 +126,22 @@ export class TransactionService {
     return { data, pagination };
   }
 
-  async getTransactionById(id: string) {
-    return await this.prisma.gIAODICH.findUnique({
-      where: { MaGiaoDich: id, DeletedAt: null },
+  async getTransactionById(userId: string, role: string, id: string) {
+    const transaction = await this.prisma.gIAODICH.findUnique({
+      where: {
+        MaGiaoDich: id,
+        ...(role === RoleEnum.KHACHHANG && {
+          HoaDon: { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } },
+        }),
+        DeletedAt: null,
+      },
     });
+
+    if (!transaction) {
+      throw new NotFoundException('Giao dịch không tồn tại');
+    }
+
+    return transaction;
   }
 
   async updateTransactionStatus(webhookBody: any) {
@@ -316,7 +339,10 @@ export class TransactionService {
   async createRefundTransaction(payload: CreateRefundTransactionDto) {
     const { MaYeuCau, PhuongThuc } = payload;
 
-    if (this.request?.user?.vaitro !== RoleEnum.NHANVIEN && this.request?.user?.vaitro !== RoleEnum.ADMIN) {
+    if (
+      this.request?.user?.vaitro !== RoleEnum.NHANVIEN &&
+      this.request?.user?.vaitro !== RoleEnum.ADMIN
+    ) {
       throw new BadRequestException(
         'Chỉ nhân viên mới có quyền tạo giao dịch hoàn tiền',
       );
@@ -376,7 +402,11 @@ export class TransactionService {
 
       return transaction;
     });
-    return await this.getTransactionById(ts.MaGiaoDich);
+    return await this.getTransactionById(
+      userId,
+      this.request?.user?.vaitro,
+      ts.MaGiaoDich,
+    );
   }
 
   async updateRefundTransactionStatus(
@@ -437,6 +467,10 @@ export class TransactionService {
       }
     }
 
-    return await this.getTransactionById(transactionId);
+    return await this.getTransactionById(
+      this.request?.user?.id,
+      this.request?.user?.vaitro,
+      transactionId,
+    );
   }
 }

@@ -7,6 +7,7 @@ import {
   Post,
   Patch,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { RatingService } from './rating.service';
 import {
@@ -15,10 +16,15 @@ import {
   ApiParam,
   ApiResponse,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { CreateRatingDto } from './dtos/create-rating.dto';
 import { UpdateRatingDto } from './dtos/update-rating.dto';
+import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { Roles } from 'src/libs/common/decorators/role.decorator';
+import { RolesGuard } from 'src/libs/common/guards/role.guard';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Nhãn phim')
 @Controller('ratings')
@@ -44,6 +50,9 @@ export class RatingController {
   }
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Tạo nhãn phim mới' })
   @ApiBody({ type: CreateRatingDto })
   @ApiResponse({
@@ -55,6 +64,9 @@ export class RatingController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Cập nhật nhãn phim (partial)' })
   @ApiParam({
     name: 'id',
@@ -78,6 +90,9 @@ export class RatingController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
   @ApiOperation({ summary: 'Xóa mềm nhãn phim' })
   @ApiParam({
     name: 'id',

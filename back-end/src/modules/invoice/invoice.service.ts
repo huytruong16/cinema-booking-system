@@ -38,7 +38,11 @@ export class InvoiceService {
     @Inject(REQUEST) private readonly request: any,
   ) {}
 
-  async getAllInvoices(filters?: GetInvoiceDto) {
+  async getAllInvoices(
+    userId: string,
+    role: RoleEnum,
+    filters?: GetInvoiceDto,
+  ) {
     const [data, pagination] = await this.prisma.xprisma.hOADON
       .paginate({
         where: {
@@ -62,6 +66,15 @@ export class InvoiceService {
                 NgayLap: {
                   gte: new Date(new Date(filters.date).setHours(0, 0, 0, 0)),
                   lt: new Date(new Date(filters.date).setHours(23, 59, 59, 0)),
+                },
+              }
+            : undefined),
+          ...(role === RoleEnum.KHACHHANG
+            ? {
+                KhachHang: {
+                  NguoiDungPhanMem: {
+                    MaNguoiDung: userId,
+                  },
                 },
               }
             : undefined),
@@ -166,9 +179,21 @@ export class InvoiceService {
     return { data: mappedData, pagination };
   }
 
-  async getInvoiceById(id: string) {
+  async getInvoiceById(userid: string, role: RoleEnum, id: string) {
     const invoice = await this.prisma.hOADON.findUnique({
-      where: { MaHoaDon: id, DeletedAt: null },
+      where: {
+        MaHoaDon: id,
+        ...(role === RoleEnum.KHACHHANG
+          ? {
+              KhachHang: {
+                NguoiDungPhanMem: {
+                  MaNguoiDung: userid,
+                },
+              },
+            }
+          : undefined),
+        DeletedAt: null,
+      },
       include: {
         GiaoDichs: true,
         HoaDonKhuyenMais: {
