@@ -80,6 +80,9 @@ export default function MovieManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFilm, setEditingFilm] = useState<BackendFilm | null>(null);
+  const [deletingFilm, setDeletingFilm] = useState<BackendFilm | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchAllData = async () => {
     try {
@@ -130,13 +133,23 @@ export default function MovieManagementPage() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const openDeleteDialog = (film: BackendFilm) => {
+    setDeletingFilm(film);
+    setIsDeleteOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!deletingFilm || isDeleting) return;
+    setIsDeleting(true);
     try {
-      await filmService.delete(id);
+      await filmService.delete(deletingFilm.MaPhim);
       toast.success("Xóa phim thành công!");
       fetchAllData();
+      setIsDeleteOpen(false);
     } catch (error) {
       toast.error("Xóa phim thất bại.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -183,7 +196,7 @@ export default function MovieManagementPage() {
                 key={film.MaPhim}
                 film={film}
                 onEdit={() => handleEdit(film)}
-                onDelete={() => handleDelete(film.MaPhim)}
+                onDelete={() => openDeleteDialog(film)}
               />
             ))}
             {filteredFilms.length === 0 && (
@@ -205,6 +218,41 @@ export default function MovieManagementPage() {
           labelsList={labels}
         />
       )}
+
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa phim?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Phim &quot;{deletingFilm?.TenHienThi}&quot; sẽ bị xóa (ẩn) khỏi hệ
+              thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-transparent border-slate-700 hover:bg-slate-800"
+              disabled={isDeleting}
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                executeDelete();
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="animate-spin size-4 mr-2" />
+              ) : (
+                <Trash2 className="size-4 mr-2" />
+              )}
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -287,37 +335,14 @@ function FilmCard({
           >
             <Edit className="size-3 mr-2" /> Sửa
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 w-full"
-              >
-                <Trash2 className="size-3 mr-2" /> Xóa
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white max-w-[90%] sm:max-w-lg rounded-lg">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Xác nhận xóa phim?</AlertDialogTitle>
-                <AlertDialogDescription className="text-slate-400">
-                  Phim &quot;{film.TenHienThi}&quot; sẽ bị xóa (ẩn) khỏi hệ
-                  thống.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 mt-0">
-                  Hủy
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={onDelete}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  Xóa
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onDelete}
+            className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 w-full"
+          >
+            <Trash2 className="size-3 mr-2" /> Xóa
+          </Button>
         </div>
       </CardContent>
     </Card>

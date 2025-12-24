@@ -153,6 +153,7 @@ export default function RefundManagementPage() {
     useState<YeuCauHoanVeDetail | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -229,6 +230,8 @@ export default function RefundManagementPage() {
       req: YeuCauHoanVeDetail,
       data: { transactionCode: string; note: string }
     ) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
       try {
         await refundService.approveRefund({
           MaYeuCauHoanTien: req.MaYeuCau,
@@ -245,10 +248,14 @@ export default function RefundManagementPage() {
           ? msg.join(", ")
           : msg || "Lỗi khi xử lý hoàn tiền.";
         toast.error(displayMsg);
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
   const handleRejectRefund = async (req: YeuCauHoanVeDetail, note: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await refundService.updateStatus(req.MaYeuCau, "DAHUY", note);
       toast.info(`Đã hủy yêu cầu hoàn vé.`);
@@ -261,6 +268,8 @@ export default function RefundManagementPage() {
         ? msg.join(", ")
         : msg || "Lỗi khi từ chối yêu cầu.";
       toast.error(displayMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -417,13 +426,12 @@ export default function RefundManagementPage() {
           request={selectedRequest}
           onApprove={handleApproveRefund}
           onReject={handleRejectRefund}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
   );
 }
-
-// --- COMPONENT MODAL CHI TIẾT ---
 interface RefundDetailDialogProps {
   isOpen: boolean;
   isLoading: boolean;
@@ -434,6 +442,7 @@ interface RefundDetailDialogProps {
     data: { transactionCode: string; note: string }
   ) => void;
   onReject: (req: YeuCauHoanVeDetail, note: string) => void;
+  isSubmitting: boolean;
 }
 
 function RefundDetailDialog({
@@ -443,6 +452,7 @@ function RefundDetailDialog({
   request,
   onApprove,
   onReject,
+  isSubmitting,
 }: RefundDetailDialogProps) {
   const [mode, setMode] = useState<"VIEW" | "APPROVE" | "REJECT">("VIEW");
   const [transactionCode, setTransactionCode] = useState("");
@@ -463,8 +473,6 @@ function RefundDetailDialog({
     request.HoaDon?.Ves?.[0]?.GheSuatChieu?.SuatChieu?.PhienBanPhim?.Phim;
   const showtimeInfo =
     request.HoaDon?.Ves?.[0]?.GheSuatChieu?.SuatChieu?.ThoiGianBatDau;
-
-  // Lấy danh sách Combo
   const comboList = request.HoaDon?.HoaDonCombos || [];
 
   return (
@@ -549,7 +557,6 @@ function RefundDetailDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 2. CỘT TRÁI: CHI TIẾT HÓA ĐƠN (VÉ + COMBO) */}
                 <div className="space-y-6">
-                  {/* A. Danh sách Vé */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-slate-300 uppercase flex items-center gap-2">
                       <MapPin className="size-4" /> Danh sách ghế hoàn
@@ -601,7 +608,6 @@ function RefundDetailDialog({
                     </div>
                   </div>
 
-                  {/* B. Danh sách Combo (MỚI) */}
                   {comboList.length > 0 && (
                     <div className="space-y-3">
                       <h4 className="text-sm font-semibold text-slate-300 uppercase flex items-center gap-2">
@@ -721,6 +727,7 @@ function RefundDetailDialog({
             variant="ghost"
             onClick={() => (mode === "VIEW" ? onClose() : setMode("VIEW"))}
             className="text-slate-400 hover:text-black"
+            disabled={isSubmitting}
           >
             {mode === "VIEW" ? "Đóng" : "Quay lại"}
           </Button>
@@ -745,8 +752,13 @@ function RefundDetailDialog({
                 onApprove(request, { transactionCode, note: adminNote })
               }
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+              disabled={isSubmitting}
             >
-              Xác nhận đã chuyển {Number(request.SoTien).toLocaleString()}đ
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                `Xác nhận đã chuyển ${Number(request.SoTien).toLocaleString()}đ`
+              )}
             </Button>
           )}
 
@@ -755,8 +767,13 @@ function RefundDetailDialog({
               onClick={() => onReject(request, adminNote)}
               variant="destructive"
               className="w-full sm:w-auto"
+              disabled={isSubmitting}
             >
-              Gửi từ chối
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Gửi từ chối"
+              )}
             </Button>
           )}
         </DialogFooter>

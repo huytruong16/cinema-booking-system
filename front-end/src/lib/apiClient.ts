@@ -188,4 +188,31 @@ api.interceptors.response.use(
     }
 );
 
+if (!isServer) {
+    setInterval(async () => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        try {
+            const decoded: DecodedToken = jwtDecode(token);
+            const currentTime = Date.now() / 1000;
+            const timeUntilExpire = decoded.exp - currentTime;
+
+            if (timeUntilExpire < 5 * 60 && !isRefreshing) {
+                console.log("Auto-refresh triggered by interval (Idle check)");
+                isRefreshing = true;
+                try {
+                    await handleRefreshToken();
+                } catch (error) {
+                    console.error("Auto-refresh failed", error);
+                } finally {
+                    isRefreshing = false;
+                }
+            }
+        } catch (error) {
+            console.error("Error in auto-refresh interval", error);
+        }
+    }, 60 * 1000); 
+}
+
 export default api;

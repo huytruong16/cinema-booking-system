@@ -50,7 +50,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, CalendarIcon } from "lucide-react";
+import { Search, Plus, Edit, Trash2, CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -263,7 +263,7 @@ export default function PromotionManagementPage() {
 interface PromotionCardProps {
   promotion: Voucher;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: () => Promise<void>;
   getBadgeVariant: (trangThai: TrangThaiKhuyenMai) => string;
   getBadgeLabel: (trangThai: TrangThaiKhuyenMai) => string;
 }
@@ -275,6 +275,19 @@ function PromotionCard({
   getBadgeVariant,
   getBadgeLabel,
 }: PromotionCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const displayValue = useMemo(() => {
     if (promotion.LoaiGiamGia === "PHANTRAM") {
       return `GIẢM ${Number(promotion.GiaTri)}%`;
@@ -390,9 +403,17 @@ function PromotionCard({
               </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive hover:bg-destructive/90"
-                onClick={onDelete}
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
               >
-                Xác nhận Xóa
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  "Xác nhận Xóa"
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -421,7 +442,7 @@ interface PromotionFormState {
 interface PromotionFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateVoucherDto) => void;
+  onSubmit: (data: CreateVoucherDto) => Promise<void>;
   promotion: Voucher | null;
 }
 
@@ -431,6 +452,7 @@ function PromotionFormDialog({
   onSubmit,
   promotion,
 }: PromotionFormDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PromotionFormState>({
     TenKhuyenMai: "",
     MoTa: "",
@@ -512,8 +534,9 @@ function PromotionFormDialog({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     const errors = [];
 
     const positiveIntegerRegex = /^[1-9]\d*$/;
@@ -563,7 +586,12 @@ function PromotionFormDialog({
       DoiTuongApDung: formData.DoiTuongApDung,
     };
 
-    onSubmit(dataToSubmit);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(dataToSubmit);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -831,7 +859,10 @@ function PromotionFormDialog({
                 Hủy
               </Button>
             </DialogClose>
-            <Button type="submit">{promotion ? "Cập nhật" : "Lưu"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {promotion ? "Cập nhật" : "Lưu"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -89,6 +89,8 @@ export default function ComboManagementPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchCombos = async () => {
     try {
@@ -147,13 +149,18 @@ export default function ComboManagementPage() {
     }
   };
 
-  const handleDelete = async (maCombo: string) => {
+  const handleDelete = async () => {
+    if (!deletingId || isDeleting) return;
+    setIsDeleting(true);
     try {
-      await comboService.delete(maCombo);
+      await comboService.delete(deletingId);
       toast.success("Đã xóa combo");
       fetchCombos();
+      setDeletingId(null);
     } catch (error) {
       toast.error("Xóa thất bại");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -216,7 +223,7 @@ export default function ComboManagementPage() {
                 key={combo.MaCombo}
                 combo={combo}
                 onEdit={() => handleEdit(combo)}
-                onDelete={() => handleDelete(combo.MaCombo)}
+                onDelete={() => setDeletingId(combo.MaCombo)}
                 getBadgeLabel={getBadgeLabel}
                 getBadgeVariant={getBadgeVariant}
               />
@@ -233,6 +240,39 @@ export default function ComboManagementPage() {
           combo={editingCombo}
         />
       )}
+
+      <AlertDialog
+        open={!!deletingId}
+        onOpenChange={(open) => !open && setDeletingId(null)}
+      >
+        <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Hành động này không thể hoàn tác. Combo sẽ bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-transparent border-slate-700 hover:bg-slate-800"
+              disabled={isDeleting}
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="animate-spin size-4 mr-2" />}
+              Xác nhận Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -310,37 +350,14 @@ function ComboCard({
           Sửa
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full bg-transparent border-slate-700 text-red-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50"
-            >
-              <Trash2 className="size-4 mr-2" />
-              Xóa
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
-              <AlertDialogDescription className="text-slate-400">
-                Hành động này không thể hoàn tác. Combo &quot;{combo.TenCombo}
-                &quot; sẽ bị xóa vĩnh viễn.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800">
-                Hủy
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={onDelete}
-              >
-                Xác nhận Xóa
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button
+          variant="outline"
+          className="w-full bg-transparent border-slate-700 text-red-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50"
+          onClick={onDelete}
+        >
+          <Trash2 className="size-4 mr-2" />
+          Xóa
+        </Button>
       </CardFooter>
     </Card>
   );

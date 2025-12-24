@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "@/components/ui/input-otp"
 import {authService} from "@/lib/api/authService";
+import { getErrorMessage } from "@/lib/error-helper";
 
 interface OTPDialogProps {
     email: string
@@ -35,7 +36,7 @@ export function OTPVerificationDialog({ email, onClose, onVerified }: OTPDialogP
             setTimeout(() => (window.location.href = "/login"), 1500);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
-            setMessage(err.message || "❌ Mã OTP không hợp lệ hoặc đã hết hạn.");
+            setMessage(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

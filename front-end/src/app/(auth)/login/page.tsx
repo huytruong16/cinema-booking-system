@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { jwtDecode } from "jwt-decode"
 import { getMyProfile } from "@/services/user.service"
+import { getErrorMessage } from "@/lib/error-helper"
 
 type VaiTro = "KHACHHANG" | "NHANVIEN" | "ADMIN";
 type TrangThaiNguoiDung = "CHUAKICHHOAT" | "CONHOATDONG" | "KHONGHOATDONG";
@@ -122,18 +123,7 @@ export default function LoginPage() {
             }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
-            if (err.message === "Bad credentials") {
-                setError("❌ Email hoặc mật khẩu không đúng.")}
-            else
-                if (err.message === "password: Password must contain at least 1 number, 1 special character, and 1 uppercase letter") {
-                    setError("❌ Mật khẩu phải chứa ít nhất 1 số, 1 ký tự đặc biệt và 1 chữ hoa.");
-            }
-                else
-                    if (err.message === "Failed to fetch") {
-                        setError("Hệ thống đang bận. Thử lại sau!");}
-                    else {
-                setError(err.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
-            }
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }

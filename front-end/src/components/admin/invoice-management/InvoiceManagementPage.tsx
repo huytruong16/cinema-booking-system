@@ -107,7 +107,7 @@ interface VeMua {
   PhongChieu: string;
   Ghe: string;
   GiaVe: number;
-  TrangThai: TrangThaiVe; // Sử dụng enum trạng thái vé chuẩn xác
+  TrangThai: TrangThaiVe; 
 }
 
 interface ComboMua {
@@ -218,6 +218,8 @@ export default function InvoiceManagementPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<HoaDon | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+  const [isPrintingInvoice, setIsPrintingInvoice] = useState(false);
+  const [isPrintingTicket, setIsPrintingTicket] = useState(false);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -350,13 +352,14 @@ export default function InvoiceManagementPage() {
   };
 
   const handlePrintInvoice = async () => {
-    if (!selectedInvoice) return;
+    if (!selectedInvoice || isPrintingInvoice) return;
 
     if (!selectedInvoice.Ves || selectedInvoice.Ves.length === 0) {
       toast.error("Hóa đơn này chỉ có Combo hoặc không có vé để in.");
       return;
     }
 
+    setIsPrintingInvoice(true);
     const toastId = toast.loading("Đang tải hóa đơn PDF...");
 
     try {
@@ -394,17 +397,20 @@ export default function InvoiceManagementPage() {
       } else {
         toast.error("Lỗi kết nối đến máy chủ.", { id: toastId });
       }
+    } finally {
+      setIsPrintingInvoice(false);
     }
   };
 
   const handlePrintTicket = async () => {
-    if (!selectedInvoice) return;
+    if (!selectedInvoice || isPrintingTicket) return;
 
     if (!selectedInvoice.Ves || selectedInvoice.Ves.length === 0) {
       toast.error("Hóa đơn này chỉ có Combo hoặc không có vé để in.");
       return;
     }
 
+    setIsPrintingTicket(true);
     const toastId = toast.loading("Đang tải vé PDF...");
 
     try {
@@ -442,6 +448,8 @@ export default function InvoiceManagementPage() {
       } else {
         toast.error("Lỗi kết nối đến máy chủ.", { id: toastId });
       }
+    } finally {
+      setIsPrintingTicket(false);
     }
   };
 
@@ -466,6 +474,7 @@ export default function InvoiceManagementPage() {
       toast.error(
         error.response?.data?.message || "Lỗi khi gửi yêu cầu hoàn tiền"
       );
+      throw error;
     }
   };
 
@@ -690,6 +699,8 @@ export default function InvoiceManagementPage() {
           onRefund={() => setIsRefundDialogOpen(true)}
           onPrintInvoice={handlePrintInvoice}
           onPrintTicket={handlePrintTicket}
+          isPrintingInvoice={isPrintingInvoice}
+          isPrintingTicket={isPrintingTicket}
         />
       )}
 
@@ -712,6 +723,8 @@ function InvoiceDetailDialog({
   onPrintInvoice,
   onPrintTicket,
   onRefund,
+  isPrintingInvoice,
+  isPrintingTicket,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -719,6 +732,8 @@ function InvoiceDetailDialog({
   onPrintInvoice: () => void;
   onPrintTicket: () => void;
   onRefund: () => void;
+  isPrintingInvoice: boolean;
+  isPrintingTicket: boolean;
 }) {
   const successfulTx = invoice.GiaoDichs.some(
     (gd) => gd.TrangThai === "THANHCONG"
@@ -1093,15 +1108,27 @@ function InvoiceDetailDialog({
               variant="outline"
               className="bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white"
               onClick={onPrintInvoice}
+              disabled={isPrintingInvoice}
             >
-              <Download className="size-4 mr-2" /> Xuất hóa đơn
+              {isPrintingInvoice ? (
+                <Loader2 className="animate-spin size-4 mr-2" />
+              ) : (
+                <Download className="size-4 mr-2" />
+              )}{" "}
+              Xuất hóa đơn
             </Button>
             <Button
               variant="outline"
               className="bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white"
               onClick={onPrintTicket}
+              disabled={isPrintingTicket}
             >
-              <Download className="size-4 mr-2" /> Xuất vé
+              {isPrintingTicket ? (
+                <Loader2 className="animate-spin size-4 mr-2" />
+              ) : (
+                <Download className="size-4 mr-2" />
+              )}{" "}
+              Xuất vé
             </Button>
             {canRefund && (
               <Button
