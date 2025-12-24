@@ -117,14 +117,14 @@ export interface Showtime {
     };
   };
 
-  PhongChieu: {
+  PhongChieu?: {
     MaPhongChieu: string;
     TenPhongChieu: string;
     TrangThai?: string;
     SoDoGhe: SeatMap;
   };
 
-  GheSuatChieus: GheSuatChieu[];
+  GheSuatChieus?: GheSuatChieu[];
 }
 
 export interface GetShowtimesParams {
@@ -136,6 +136,7 @@ export interface GetShowtimesParams {
   TrangThai?: string;
   TuNgay?: string;
   DenNgay?: string;
+  limit?: number;
 }
 
 export interface SuatChieuSimple {
