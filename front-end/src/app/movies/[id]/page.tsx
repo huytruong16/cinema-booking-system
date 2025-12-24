@@ -358,7 +358,7 @@ export default function MovieDetailPage() {
         </div>
 
         <div className='m-10'>
-          <MovieReviews movieId={movie.id} movieRating={movie.rating} />
+          {movie && <MovieReviews movieId={movie.id} movieRating={movie.rating} />}
         </div>
 
       </div>

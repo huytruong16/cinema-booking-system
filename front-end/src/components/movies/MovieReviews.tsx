@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
-import React, { useState } from 'react';
-import { Star, MessageSquare, ThumbsUp, PenLine } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, MessageSquare, PenLine } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { mockReviews } from '@/lib/mockData';
 import {
   Dialog,
   DialogContent,
@@ -18,27 +17,79 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useAuth } from '@/contexts/AuthContext';
+import { reviewService } from '@/services/review.service';
+import { useRouter } from 'next/navigation';
 
 interface MovieReviewsProps {
   movieId: string | number;
   movieRating?: number; 
 }
 
+interface UIReview {
+  id: string | number;
+  movieId: string | number;
+  user: string;
+  avatar: string;
+  rating: number;
+  date: string;
+  content: string;
+}
+
 export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
-  const [reviews, setReviews] = useState(
-    mockReviews.filter(r => r.movieId.toString() === movieId.toString())
-  );
+  const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
+
+  const [reviews, setReviews] = useState<UIReview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0); 
   const [reviewContent, setReviewContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      setIsLoading(true);
+      try {
+        const [fetchedReviews] = await reviewService.getReviewsByMovieId(movieId.toString());
+        const mappedReviews: UIReview[] = fetchedReviews.map(r => ({
+          id: r.MaDanhGia,
+          movieId: r.MaPhim,
+          user: r.NguoiDungPhanMem?.HoTen || "Người dùng ẩn danh",
+          avatar: r.NguoiDungPhanMem?.AvatarUrl || "",
+          rating: r.Diem,
+          date: new Date(r.CreatedAt).toLocaleDateString('vi-VN'),
+          content: r.NoiDung
+        }));
+        setReviews(mappedReviews);
+      } catch (error) {
+        console.error("Failed to fetch reviews:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (movieId) {
+      fetchReviews();
+    }
+  }, [movieId]);
 
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length) 
     : (movieRating || 0);
 
-  const handleSubmitReview = () => {
+  const handleOpenDialog = () => {
+    if (!isLoggedIn) {
+      toast.error("Vui lòng đăng nhập để viết đánh giá!");
+      router.push('/login');
+      return;
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
     if (userRating === 0) {
       toast.error("Vui lòng chọn số sao đánh giá!");
       return;
@@ -48,22 +99,44 @@ export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
       return;
     }
 
-    const newReview = {
-      id: Date.now(), 
-      movieId: Number(movieId),
-      user: "Bạn (Mới)", 
-      avatar: "", 
-      rating: userRating * 2, 
-      date: "Vừa xong",
-      content: reviewContent,
-    };
+    setIsSubmitting(true);
+    try {
+      const newReviewData = await reviewService.createReview({
+        MaPhim: movieId.toString(),
+        NoiDung: reviewContent,
+        Diem: userRating * 2 
+      });
 
-    setReviews([newReview, ...reviews]);
-    
-    setUserRating(0);
-    setReviewContent("");
-    setIsDialogOpen(false);
-    toast.success("Đánh giá của bạn đã được đăng thành công!");
+      const newReview: UIReview = {
+        id: newReviewData.MaDanhGia, 
+        movieId: Number(newReviewData.MaPhim),
+        user: user?.username || "Bạn", 
+        avatar: user?.avatarUrl || "", 
+        rating: newReviewData.Diem, 
+        date: new Date(newReviewData.CreatedAt).toLocaleDateString('vi-VN'),
+        content: newReviewData.NoiDung,
+      };
+
+      setReviews((prevReviews) => {
+        const existingIndex = prevReviews.findIndex(r => r.id === newReview.id);
+        if (existingIndex >= 0) {
+          const updated = [...prevReviews];
+          updated[existingIndex] = newReview;
+          return updated;
+        }
+        return [newReview, ...prevReviews];
+      });
+      
+      setUserRating(0);
+      setReviewContent("");
+      setIsDialogOpen(false);
+      toast.success("Đánh giá của bạn đã được đăng thành công!");
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+      toast.error("Có lỗi xảy ra khi đăng đánh giá. Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -91,23 +164,35 @@ export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
 
             <Separator className="bg-zinc-800 my-4" />
             <div className="space-y-2 mb-6">
-              {[5, 4, 3, 2, 1].map((star) => (
-                <div key={star} className="flex items-center gap-2 text-xs">
-                  <span className="w-3 font-bold text-white">{star}</span>
-                  <Star className="w-3 h-3 text-zinc-500" />
-                  <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-yellow-500 rounded-full" 
-                      style={{ width: star >= 4 ? '40%' : '10%' }} 
-                    ></div>
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = reviews.filter(r => Math.round(r.rating / 2) === star).length;
+                const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+                return (
+                  <div key={star} className="flex items-center gap-2 text-xs">
+                    <span className="w-3 font-bold text-white">{star}</span>
+                    <Star className="w-3 h-3 text-zinc-500" />
+                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-yellow-500 rounded-full" 
+                        style={{ width: `${percentage}%` }} 
+                      ></div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700">
+                <Button 
+                  onClick={(e) => {
+                    if (!isLoggedIn) {
+                      e.preventDefault();
+                      handleOpenDialog();
+                    }
+                  }}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700"
+                >
                   <PenLine className="w-4 h-4 mr-2" />
                   Viết đánh giá
                 </Button>
@@ -161,8 +246,10 @@ export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
                 </div>
 
                 <DialogFooter>
-                  <Button onClick={() => setIsDialogOpen(false)} className="bg-amber-800 hover:bg-amber-600 text-white">Hủy</Button>
-                  <Button onClick={handleSubmitReview} className="bg-primary hover:bg-primary/90">Gửi đánh giá</Button>
+                  <Button onClick={() => setIsDialogOpen(false)} variant="ghost" className="text-zinc-400 hover:text-white hover:bg-zinc-800">Hủy</Button>
+                  <Button onClick={handleSubmitReview} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+                    {isSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -170,7 +257,9 @@ export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
           </div>
         </div>
         <div className="lg:col-span-2 space-y-4">
-          {reviews.length > 0 ? (
+          {isLoading ? (
+             <div className="text-center py-10 text-zinc-500">Đang tải đánh giá...</div>
+          ) : reviews.length > 0 ? (
             reviews.map((review) => (
               <div key={review.id} className="bg-[#1C1C1C] border border-zinc-800 p-5 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-start">
@@ -185,7 +274,7 @@ export function MovieReviews({ movieId, movieRating }: MovieReviewsProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20">
-                    <span className="text-yellow-500 font-bold text-sm">{review.rating > 5 ? review.rating/2 : review.rating}</span> {/* Giả lập hiển thị 5 sao */}
+                    <span className="text-yellow-500 font-bold text-sm">{review.rating}</span>
                     <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                   </div>
                 </div>
