@@ -29,7 +29,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Loại ghế')
 @Controller('seat-types')
 export class SeatTypeController {
-  constructor(private readonly seatTypeService: SeatTypeService) {}
+  constructor(private readonly seatTypeService: SeatTypeService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các loại ghế' })
@@ -66,7 +66,7 @@ export class SeatTypeController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật loại ghế (partial)' })
   @ApiParam({
     name: 'id',
@@ -92,7 +92,7 @@ export class SeatTypeController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm loại ghế' })
   @ApiParam({
     name: 'id',

@@ -30,7 +30,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Mã giảm giá')
 @Controller('vouchers')
 export class VoucherController {
-  constructor(private readonly voucherService: VoucherService) {}
+  constructor(private readonly voucherService: VoucherService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các voucher' })
@@ -52,7 +52,7 @@ export class VoucherController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo voucher mới' })
   @ApiBody({ type: CreateVoucherDto })
   @ApiResponse({ status: 201, description: 'Tạo voucher thành công.' })
@@ -63,7 +63,7 @@ export class VoucherController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật voucher (có thể cập nhật một phần)' })
   @ApiParam({
     name: 'id',
@@ -82,7 +82,7 @@ export class VoucherController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm voucher (Cập nhật trạng thái)' })
   @ApiParam({ name: 'id', description: 'Mã voucher cần xóa', required: true })
   @ApiResponse({ status: 200, description: 'Xóa voucher thành công.' })

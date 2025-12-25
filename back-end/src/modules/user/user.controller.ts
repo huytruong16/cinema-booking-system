@@ -159,7 +159,7 @@ export class UserController {
 
   @Post('assign-group')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN gán người dùng vào nhóm' })
   @ApiBody({
