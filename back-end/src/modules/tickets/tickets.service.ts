@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 import { GetTicketsDto } from './dtos/get-tickets.dto';
@@ -76,6 +76,34 @@ export class TicketsService {
       },
       include: ticketIncludes,
     });
+  }
+
+  async checkinTicketByCode(code: string) {
+    const ticket = await this.prisma.vE.findUnique({
+      where: { Code: code, DeletedAt: null },
+    });
+
+    if (!ticket) throw new NotFoundException('Vé không tồn tại');
+
+    if (ticket.TrangThaiVe === TicketStatusEnum.DASUDUNG)
+      throw new BadRequestException('Vé đã được sử dụng');
+
+    if (ticket.TrangThaiVe === TicketStatusEnum.DAHOAN)
+      throw new BadRequestException('Vé đã được hoàn');
+
+    if (ticket.TrangThaiVe === TicketStatusEnum.CHOHOANTIEN || ticket.TrangThaiVe === TicketStatusEnum.CHUAHOANTIEN)
+      throw new BadRequestException('Vé đang trong quá trình hoàn tiền');
+
+    if (ticket.TrangThaiVe === TicketStatusEnum.DAHETHAN)
+      throw new BadRequestException('Vé đã hết hạn');
+
+    await this.prisma.vE.update({
+      where: { MaVe: ticket.MaVe },
+      data: { TrangThaiVe: TicketStatusEnum.DASUDUNG },
+      include: ticketIncludes,
+    });
+
+    return { 'message': 'Checkin thành công' };
   }
 
   async getTicketById(userId: string, role: string, id: string) {
