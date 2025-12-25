@@ -41,6 +41,8 @@ export class RefundRequestService {
   }
 
   async createNewRefundRequest(
+    userId: string,
+    role: RoleEnum,
     refundRequestData: CreateRefundRequestDto,
   ): Promise<any> {
     const prisma = this.prisma;
@@ -94,8 +96,8 @@ export class RefundRequestService {
           MaHoaDon: inv.MaHoaDon,
           LyDoHoan: refundRequestData.LyDo,
           MaNganHang: refundRequestData.MaNganHang,
-          SoTaiKhoan: refundRequestData.SoTaiKhoan,
-          TenChuTaiKhoan: refundRequestData.ChuTaiKhoan,
+          SoTaiKhoan: refundRequestData.SoTaiKhoan ?? '',
+          TenChuTaiKhoan: refundRequestData.ChuTaiKhoan ?? '',
           SoTien: inv.TongTien,
           TrangThai: RefundRequestStatusEnum.DANGCHO,
         },

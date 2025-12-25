@@ -8,6 +8,7 @@ import {
   Patch,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { RefundRequestService } from './refund-request.service';
 import {
@@ -23,6 +24,7 @@ import { GetRefundRequestDto } from './dto/get-refund-request.dto';
 import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
 import { UpdateRefundRequestDto } from './dto/update-refund-request.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
+import { RoleEnum } from 'src/libs/common/enums';
 
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
@@ -37,11 +39,18 @@ export class RefundRequestController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Tạo yêu cầu hoàn vé' })
   async createRefundRequest(
+    @Req() req,
     @Body() createRefundRequestDto: CreateRefundRequestDto,
   ) {
+    if (req.user.vaitro === RoleEnum.KHACHHANG && (!createRefundRequestDto.MaNganHang || !createRefundRequestDto.SoTaiKhoan || !createRefundRequestDto.ChuTaiKhoan)) {
+      throw new BadRequestException('Khách hàng phải cung cấp thông tin ngân hàng để hoàn vé');
+    }
     return this.refundRequestService.createNewRefundRequest(
+      req.user.id,
+      req.user.vaitro,
       createRefundRequestDto,
     );
   }
