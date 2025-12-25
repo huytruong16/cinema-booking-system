@@ -639,7 +639,7 @@ export class ShowtimeService {
           DiscountAmount: discountAmount,
           CancellationReason: LyDoHuy ?? 'Suất chiếu bị hủy',
         });
-      } catch (e) {
+      } catch {
       }
     }
   }
