@@ -23,10 +23,10 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiTags('Thống kê')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(RoleEnum.ADMIN)
+@Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
 @Controller('statistics')
 export class StatisticsController {
-  constructor(private readonly statisticsService: StatisticsService) {}
+  constructor(private readonly statisticsService: StatisticsService) { }
 
   @Get('room-status')
   @ApiOperation({
