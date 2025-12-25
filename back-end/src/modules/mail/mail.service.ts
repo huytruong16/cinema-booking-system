@@ -24,7 +24,111 @@ export class MailService {
     });
   }
 
-  async sendOTPEmail(
+  sendShowtimeCancellationEmail(
+    to: string,
+    data: {
+      BookingCode: string;
+      MovieName: string;
+      CinemaRoom: string;
+      ShowTime: string;
+      Tickets: { Code: string; SeatCode: string; Price: string }[];
+      Combos: { Name: string; Quantity: number; Price: string; Total: string }[];
+      RefundAmount: string;
+      DiscountAmount?: string;
+      CancellationReason: string;
+    },
+  ) {
+    const smtpConfig = this.configService.get('smtp');
+
+    const htmlTemplate = readFileSync(
+      join(__dirname, '..', '..', '..', 'templates', 'email-showtime-cancel.hbs'),
+      'utf-8',
+    );
+
+    let invoiceTableHtml = '';
+    let stt = 1;
+    let rows = '';
+
+    if (data.Tickets && data.Tickets.length) {
+      data.Tickets.forEach((t) => {
+        rows += `
+        <tr>
+          <td class="text-center">${stt++}</td>
+          <td class="text-left">Vé ${t.Code}${t.SeatCode ? ' - Ghế ' + t.SeatCode : ''}</td>
+          <td class="text-center">1</td>
+          <td class="text-right">${t.Price}</td>
+          <td class="text-right">${t.Price}</td>
+        </tr>
+      `;
+      });
+    }
+
+    if (data.Combos && data.Combos.length) {
+      data.Combos.forEach((c) => {
+        rows += `
+        <tr>
+          <td class="text-center">${stt++}</td>
+          <td class="text-left">${c.Name}</td>
+          <td class="text-center">${c.Quantity}</td>
+          <td class="text-right">${c.Price}</td>
+          <td class="text-right">${c.Total}</td>
+        </tr>
+      `;
+      });
+    }
+
+    if (data.DiscountAmount) {
+      rows += `
+        <tr>
+          <td colspan="4" class="text-right" style="font-weight: 600;">Giảm giá</td>
+          <td class="text-right">${data.DiscountAmount}</td>
+        </tr>
+      `;
+    }
+
+    rows += `
+        <tr>
+          <td colspan="4" class="text-right" style="font-weight: 600;">Tổng</td>
+          <td class="text-right">${data.RefundAmount}</td>
+        </tr>
+      `;
+
+    invoiceTableHtml = `
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">STT</th>
+              <th>Mặt hàng</th>
+              <th style="width:60px;">SL</th>
+              <th style="width:110px;">Đơn giá</th>
+              <th style="width:110px;">Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      `;
+
+    const htmlContent = htmlTemplate
+      .replace('{{booking_code}}', data.BookingCode)
+      .replace('{{movie_name}}', data.MovieName)
+      .replace('{{cinema_room}}', data.CinemaRoom)
+      .replace('{{show_time}}', data.ShowTime)
+      .replace('{{{invoice_table}}}', invoiceTableHtml)
+      .replace('{{refund_amount}}', data.RefundAmount)
+      .replace('{{discount_amount}}', data.DiscountAmount || '')
+      .replace('{{cancellation_reason}}', data.CancellationReason)
+
+    this.transporter.sendMail({
+      from: `"Movix Support" <${smtpConfig.from}>`,
+      to,
+      subject: `[Movix] Thông báo hủy suất chiếu - Đơn hàng ${data.BookingCode}`,
+      html: htmlContent,
+    });
+  }
+
+  sendOTPEmail(
     to: string,
     subject: string,
     otp: string,
@@ -66,7 +170,7 @@ export class MailService {
       .replace('{{otp_purpose}}', config.purpose)
       .replace('{{instruction_text}}', config.instruction);
 
-    await this.transporter.sendMail({
+    this.transporter.sendMail({
       from: `"Support" <${smtpConfig.from}>`,
       to,
       subject,
@@ -74,7 +178,7 @@ export class MailService {
     });
   }
 
-  async sendInvoiceEmail(
+  sendInvoiceEmail(
     to: string,
     subject: string,
     invoiceData: InvoiceMailDto,
@@ -178,7 +282,7 @@ export class MailService {
       .replace('{{total_amount}}', totalAmount)
       .replace('{{{invoice_items_rows}}}', rowsHtml);
 
-    await this.transporter.sendMail({
+    this.transporter.sendMail({
       from: `"Movix" <${smtpConfig.from}>`,
       to,
       subject,
@@ -186,7 +290,7 @@ export class MailService {
     });
   }
 
-  async sendRefundDecisionEmail(
+  sendRefundDecisionEmail(
     to: string,
     data: {
       BookingCode: string;
@@ -337,7 +441,7 @@ export class MailService {
       .replace('{{{refund_items}}}', refundItemsHtml)
       .replace('{{{transaction_details}}}', transactionDetailsHtml);
 
-    await this.transporter.sendMail({
+    this.transporter.sendMail({
       from: `"Movix Support" <${smtpConfig.from}>`,
       to,
       subject,
