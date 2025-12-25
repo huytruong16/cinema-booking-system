@@ -27,7 +27,7 @@ export class RefundRequestService {
     readonly prisma: PrismaService,
     @Inject(REQUEST) private readonly request: any,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
   async getAllRefundRequests(filters: GetRefundRequestDto) {
     const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE
       .paginate({
@@ -41,6 +41,8 @@ export class RefundRequestService {
   }
 
   async createNewRefundRequest(
+    userId: string,
+    role: RoleEnum,
     refundRequestData: CreateRefundRequestDto,
   ): Promise<any> {
     const prisma = this.prisma;
@@ -94,8 +96,8 @@ export class RefundRequestService {
           MaHoaDon: inv.MaHoaDon,
           LyDoHoan: refundRequestData.LyDo,
           MaNganHang: refundRequestData.MaNganHang,
-          SoTaiKhoan: refundRequestData.SoTaiKhoan,
-          TenChuTaiKhoan: refundRequestData.ChuTaiKhoan,
+          SoTaiKhoan: refundRequestData.SoTaiKhoan ?? '',
+          TenChuTaiKhoan: refundRequestData.ChuTaiKhoan ?? '',
           SoTien: inv.TongTien,
           TrangThai: RefundRequestStatusEnum.DANGCHO,
         },
@@ -217,6 +219,70 @@ export class RefundRequestService {
       throw new NotFoundException('Yêu cầu hoàn vé không tồn tại');
     }
     return refundRequest;
+  }
+
+  async updateRefundRequestInfo(
+    id: string,
+    payload: any,
+  ): Promise<any> {
+    const userRole = this.request?.user?.vaitro;
+    const userId = this.request?.user?.id;
+
+    const prisma = this.prisma;
+
+    const refundRequest = await prisma.yEUCAUHOANVE.findFirst({
+      where: {
+        MaYeuCau: id,
+        DeletedAt: null,
+        ...(userRole === RoleEnum.KHACHHANG &&
+          { HoaDon: { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } } }
+        )
+      },
+      include: {
+        HoaDon: {
+          select: {
+            KhachHang: {
+              select: {
+                NguoiDungPhanMem: { select: { MaNguoiDung: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!refundRequest) {
+      throw new NotFoundException('Yêu cầu hoàn vé không tồn tại');
+    }
+
+    if (refundRequest.TrangThai !== RefundRequestStatusEnum.DANGCHO) {
+      throw new BadRequestException(
+        'Chỉ có thể cập nhật thông tin khi yêu cầu đang ở trạng thái đang chờ',
+      );
+    }
+
+    if (refundRequest.MaGiaoDich !== null) {
+      throw new BadRequestException(
+        'Yêu cầu hoàn vé đang được xử lý hoàn tiền, không thể cập nhật',
+      );
+    }
+
+    if (payload.MaNganHang) {
+      const bank = await prisma.nGANHANG.findUnique({
+        where: { MaNganHang: payload.MaNganHang },
+      });
+      if (!bank) throw new NotFoundException('Ngân hàng không tồn tại');
+    }
+
+    const data: any = { UpdatedAt: new Date() };
+    if (payload.LyDo) data.LyDoHoan = payload.LyDo;
+    if (payload.MaNganHang) data.MaNganHang = payload.MaNganHang;
+    if (payload.SoTaiKhoan) data.SoTaiKhoan = payload.SoTaiKhoan;
+    if (payload.TenChuTaiKhoan) data.TenChuTaiKhoan = payload.TenChuTaiKhoan;
+
+    await prisma.yEUCAUHOANVE.update({ where: { MaYeuCau: id }, data });
+
+    return this.getRefundRequestById(id);
   }
 
   async updateRefundRequestStatus(

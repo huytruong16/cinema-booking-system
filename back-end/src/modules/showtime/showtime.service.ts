@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ShowtimeStatusEnum } from 'src/libs/common/enums/showtime-status.enum';
+import { TicketStatusEnum, RefundRequestStatusEnum } from 'src/libs/common/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
+import formatCurrency from 'src/libs/common/helpers/format-vn-currency';
 import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
 import { GetShowtimeByMovieDto } from './dtos/get-showtime-by-movie.dto';
 import { CreateShowtimeDto } from './dtos/create-showtime.dto';
@@ -8,7 +12,7 @@ import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class ShowtimeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) { }
 
   private applyShowtimeFilters(
     filters: GetAllShowtimeDto,
@@ -455,5 +459,188 @@ export class ShowtimeService {
     });
 
     return { message: 'Xóa suất chiếu thành công' };
+  }
+
+  async cancelShowtime(id: string, LyDoHuy?: string) {
+    const showtime = await this.prisma.sUATCHIEU.findFirst({
+      where: { MaSuatChieu: id, DeletedAt: null },
+      include: {
+        PhienBanPhim: {
+          include: {
+            Phim: true,
+          },
+        },
+        PhongChieu: true,
+        GheSuatChieus: {
+          include: {
+            GhePhongChieu: {
+              include: {
+                GheLoaiGhe: {
+                  include: {
+                    Ghe: true,
+                  },
+                },
+              },
+            },
+            Ves: {
+              include: {
+                HoaDon: {
+                  include: {
+                    Ves: {
+                      include: {
+                        GheSuatChieu: {
+                          include: {
+                            GhePhongChieu: {
+                              include: {
+                                GheLoaiGhe: {
+                                  include: {
+                                    Ghe: true,
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    HoaDonCombos: {
+                      include: {
+                        Combo: true,
+                      },
+                    },
+                    HoaDonKhuyenMais: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!showtime) {
+      throw new NotFoundException(`Suất chiếu với ID ${id} không tồn tại`);
+    }
+
+    if (showtime.TrangThai === ShowtimeStatusEnum.DAHUY) {
+      throw new BadRequestException('Suất chiếu đã bị hủy trước đó');
+    }
+
+    if (showtime.TrangThai === ShowtimeStatusEnum.DANGCHIEU) {
+      throw new BadRequestException('Không thể hủy suất chiếu đang diễn ra');
+    }
+
+    if (showtime.TrangThai === ShowtimeStatusEnum.DACHIEU) {
+      throw new BadRequestException('Không thể hủy suất chiếu đã kết thúc');
+    }
+
+    const invoiceMap: Record<string, any> = {};
+    for (const gs of showtime.GheSuatChieus || []) {
+      for (const ve of gs.Ves || []) {
+        if (ve && ve.HoaDon && ve.HoaDon.MaHoaDon) {
+          invoiceMap[ve.HoaDon.MaHoaDon] = ve.HoaDon;
+        }
+      }
+    }
+
+    const mailsToSend: any[] = [];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sUATCHIEU.update({
+        where: { MaSuatChieu: id },
+        data: { TrangThai: ShowtimeStatusEnum.DAHUY, UpdatedAt: new Date() },
+      });
+
+      const ticketIds: string[] = [];
+
+      for (const gs of showtime.GheSuatChieus || []) {
+        for (const ve of gs.Ves || []) {
+          if (ve && ve.MaVe && ve.TrangThaiVe !== TicketStatusEnum.DAHOAN && ve.TrangThaiVe !== TicketStatusEnum.CHUAHOANTIEN) {
+            ticketIds.push(ve.MaVe);
+          }
+        }
+      }
+
+      if (ticketIds.length) {
+        await tx.vE.updateMany({
+          where: {
+            MaVe: { in: ticketIds },
+            DeletedAt: null,
+          },
+          data: {
+            TrangThaiVe: TicketStatusEnum.CHOHOANTIEN,
+            UpdatedAt: new Date(),
+          },
+        });
+      }
+
+      const invoiceIds = Object.keys(invoiceMap);
+      if (invoiceIds.length) {
+        const existingRefunds = await tx.yEUCAUHOANVE.findMany({
+          where: { MaHoaDon: { in: invoiceIds }, DeletedAt: null },
+          select: { MaHoaDon: true },
+        });
+        const existingSet = new Set(existingRefunds.map((r: any) => r.MaHoaDon));
+
+        for (const invoiceId of invoiceIds) {
+          if (existingSet.has(invoiceId)) continue;
+          await tx.yEUCAUHOANVE.create({
+            data: {
+              MaHoaDon: invoiceId,
+              TrangThai: RefundRequestStatusEnum.DANGCHO,
+              LyDoHoan: 'Suất chiếu bị hủy',
+              SoTaiKhoan: '',
+              TenChuTaiKhoan: '',
+              SoTien: invoiceMap[invoiceId].TongTien || 0,
+              CreatedAt: new Date(),
+            }
+          });
+          const inv = invoiceMap[invoiceId];
+          mailsToSend.push({ invoiceId, inv });
+        }
+      }
+
+      return { message: 'Hủy suất chiếu thành công' };
+    }, { timeout: 600000 });
+
+    for (const m of mailsToSend) {
+      const invoiceId = m.invoiceId;
+      const inv = m.inv;
+      try {
+        const tickets = (inv.Ves || []).map((ve: any) => {
+          const seatGhe = ve.GheSuatChieu?.GhePhongChieu?.GheLoaiGhe?.Ghe;
+          const seatCode = seatGhe ? `${seatGhe.Hang}${seatGhe.Cot}` : '??';
+          return {
+            Code: ve.Code,
+            SeatCode: seatCode,
+            Price: formatCurrency(Number(ve.GiaVe || 0)),
+          };
+        });
+
+        const combos = (inv.HoaDonCombos || []).map((c: any) => ({
+          Name: c.Combo?.TenCombo || c.TenCombo || 'Combo',
+          Quantity: c.SoLuong || 1,
+          Price: formatCurrency(Number(c.DonGia || 0)),
+          Total: formatCurrency(Number((c.DonGia || 0) * (c.SoLuong || 1))),
+        }));
+
+        const refundAmount = formatCurrency(Number(inv.TongTien || 0));
+        const discountValue = (inv.HoaDonKhuyenMais || []).reduce((s: number, a: any) => s + Number(a.GiaTriGiam || 0), 0);
+        const discountAmount = discountValue ? formatCurrency(discountValue) : '';
+
+        this.mailService.sendShowtimeCancellationEmail(inv.Email, {
+          BookingCode: inv.Code || invoiceId,
+          MovieName: showtime!.PhienBanPhim?.Phim?.TenHienThi || '',
+          CinemaRoom: showtime!.PhongChieu?.TenPhongChieu || '',
+          ShowTime: new Date(showtime!.ThoiGianBatDau).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+          Tickets: tickets,
+          Combos: combos,
+          RefundAmount: refundAmount,
+          DiscountAmount: discountAmount,
+          CancellationReason: LyDoHuy ?? 'Suất chiếu bị hủy',
+        });
+      } catch {
+      }
+    }
   }
 }

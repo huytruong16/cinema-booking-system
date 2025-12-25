@@ -21,6 +21,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ShowtimeService } from './showtime.service';
+import { CancelShowtimeDto } from './dtos/cancel-showtime.dto';
 import { GetAllShowtimeDto } from './dtos/get-showtime.dto';
 import { ShowtimeStatusEnum } from '../../libs/common/enums/showtime-status.enum';
 import { isUUID } from 'class-validator';
@@ -35,7 +36,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Suất chiếu')
 @Controller('showtimes')
 export class ShowtimeController {
-  constructor(private readonly showtimeService: ShowtimeService) {}
+  constructor(private readonly showtimeService: ShowtimeService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách suất chiếu với bộ lọc' })
@@ -167,5 +168,18 @@ export class ShowtimeController {
       throw new BadRequestException('id phải là UUID v4 hợp lệ');
     }
     return this.showtimeService.removeShowtime(id);
+  }
+
+  @Post(':id/cancel')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
+  @ApiOperation({ summary: 'Đánh dấu suất chiếu đã bị hủy' })
+  @ApiParam({ name: 'id', description: 'Mã suất chiếu' })
+  async cancel(@Param('id') id: string, @Body() body: CancelShowtimeDto) {
+    if (!isUUID(id, '4')) {
+      throw new BadRequestException('id phải là UUID v4 hợp lệ');
+    }
+    return this.showtimeService.cancelShowtime(id, body.LyDo);
   }
 }
