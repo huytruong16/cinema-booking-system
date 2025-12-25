@@ -21,12 +21,13 @@ import { isUUID } from 'class-validator';
 import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
 import { GetRefundRequestDto } from './dto/get-refund-request.dto';
 import { UpdateRefundRequestStatusDto } from './dto/update-refund-request-status.dto';
+import { UpdateRefundRequestDto } from './dto/update-refund-request.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
 export class RefundRequestController {
-  constructor(private readonly refundRequestService: RefundRequestService) {}
+  constructor(private readonly refundRequestService: RefundRequestService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách yêu cầu hoàn vé' })
@@ -57,6 +58,20 @@ export class RefundRequestController {
     if (!isUUID(id, '4'))
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     return this.refundRequestService.updateRefundRequestStatus(id, body);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cập nhật thông tin yêu cầu hoàn vé' })
+  @ApiParam({ name: 'id', description: 'Mã yêu cầu hoàn vé', required: true })
+  async updateRefundRequest(
+    @Param('id') id: string,
+    @Body() body: UpdateRefundRequestDto,
+  ) {
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    return this.refundRequestService.updateRefundRequestInfo(id, body);
   }
 
   @Get(':id')
