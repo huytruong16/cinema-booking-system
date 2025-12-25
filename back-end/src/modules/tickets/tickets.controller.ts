@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   NotFoundException,
   Param,
   BadRequestException,
@@ -27,7 +28,17 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Vé')
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  constructor(private readonly ticketsService: TicketsService) { }
+
+  @Post('checkin/:code')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.NHANVIEN, RoleEnum.ADMIN)
+  @ApiOperation({ summary: 'Checkin vé bằng mã cho nhân viên soát vé' })
+  @ApiParam({ name: 'code', description: 'Mã vé', required: true })
+  async checkin(@Param('code') code: string) {
+    return await this.ticketsService.checkinTicketByCode(code);
+  }
 
   @Get()
   @ApiBearerAuth()
