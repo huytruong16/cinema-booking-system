@@ -27,17 +27,17 @@ import { RoleEnum } from 'src/libs/common/enums';
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(private readonly employeeService: EmployeeService) { }
 
   @Get()
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Lấy danh sách các nhân viên' })
   async getAllEmployees() {
     return this.employeeService.getAllEmployees();
   }
 
   @Get(':id')
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Lấy chi tiết nhân viên theo mã' })
   @ApiParam({ name: 'id', description: 'Mã nhân viên', required: true })
   async getEmployeeById(@Param('id') id: string) {
@@ -47,7 +47,7 @@ export class EmployeeController {
   }
 
   @Patch(':id')
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Admin cập nhật ngày vào làm và trạng thái nhân viên (partial)',
   })
@@ -64,7 +64,7 @@ export class EmployeeController {
   }
 
   @Delete(':id')
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Admin xoá mềm nhân viên',
   })
