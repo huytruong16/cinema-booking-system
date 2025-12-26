@@ -643,9 +643,11 @@ function SeatMapEditorDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (seatTypes.length > 0 && selectedTool === "disabled")
+    if (seatTypes.length > 0 && selectedTool === "disabled") {
       setSelectedTool(seatTypes[0].MaLoaiGhe);
-  }, [seatTypes, selectedTool]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatTypes]);
 
   const parseRowRange = (range: string): string[] => {
     const [start, end] = range.split("-").map((s) => s.trim().toUpperCase());
