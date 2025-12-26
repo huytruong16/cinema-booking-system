@@ -32,7 +32,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiBearerAuth()
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(private readonly invoiceService: InvoiceService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })
@@ -51,6 +51,34 @@ export class InvoiceController {
     if (!isUUID(id, '4'))
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     return this.invoiceService.getInvoiceById(req.user.id, req.user.vaitro, id);
+  }
+
+  @Get(':id/combo/pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
+  @ApiOperation({ summary: 'In phiếu xuất combo' })
+  @ApiParam({ name: 'id', description: 'Mã hóa đơn', required: true })
+  async printComboSlip(
+    @Req() req,
+    @Param('id') id: string,
+    @Res() res: express.Response,
+  ) {
+    if (!isUUID(id, '4'))
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+
+    const buffer = await this.invoiceService.printComboSlip(
+      req.user.id,
+      req.user.vaitro,
+      id,
+    );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=combo-slip-${id}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
   }
 
   @Post()
