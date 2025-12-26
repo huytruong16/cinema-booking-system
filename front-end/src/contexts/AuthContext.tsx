@@ -17,7 +17,8 @@ interface AuthUser {
   role: VaiTro; 
   trangThai: TrangThaiNguoiDung;
   soDienThoai?: string | null; 
-  avatarUrl?: string | null; 
+  avatarUrl?: string | null;
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -27,6 +28,7 @@ interface AuthContextType {
   login: (user: AuthUser) => void;
   logout: () => void;
   setUser: (user: AuthUser | null) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,14 +47,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const parsedUser = JSON.parse(storedUser);
           _setUser(parsedUser);
 
-          // Refresh profile to get latest avatar
           try {
             const profile = await getMyProfile();
+            const permissions = profile.NhomNguoiDung?.QuyenNhomNguoiDungs?.map(q => q.Quyen) || [];
+            
             const updatedUser = {
               ...parsedUser,
               username: profile.HoTen,
               avatarUrl: profile.AvatarUrl,
-              soDienThoai: profile.SoDienThoai
+              soDienThoai: profile.SoDienThoai,
+              permissions: permissions
             };
             _setUser(updatedUser);
             localStorage.setItem("user", JSON.stringify(updatedUser));
@@ -84,27 +88,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(user);    
   };
 
- const logout = async () => {
-  let currentToken = null;
-  if (typeof window !== 'undefined') {
-    currentToken = localStorage.getItem("accessToken");
-  }
-  setUser(null);
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-  }
-  router.push("/login");
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (user.role === 'ADMIN') return true;
+    return user.permissions?.includes(permission) || false;
+  };
 
-  if (currentToken) {
-    try {
-      await authService.logout(currentToken);
-      console.log("Đã gọi API logout thành công (Cookie đã được xóa)");
-    } catch (error) {
-      console.error("Lỗi API logout (background):", error);
+  const logout = async () => {
+    setUser(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
     }
-  }
-};
+    router.push("/login");
+
+    try {
+      await authService.logout();
+      console.log("Đã gọi API logout thành công");
+    } catch (error) {
+      console.warn("Lỗi API logout:", error);
+    }
+  };
   const isLoggedIn = !!user;
 
   return (
@@ -114,7 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login, 
       logout, 
       isLoggedIn, 
-      setUser, 
+      setUser,
+      hasPermission
     }}>
       {children}
     </AuthContext.Provider>

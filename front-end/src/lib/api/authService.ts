@@ -78,12 +78,17 @@ export const authService = {
   },
 
   async logout() {
-    const response = await apiClient.post('/auth/logout');
-    
-    if (typeof window !== 'undefined') {
+    try {
+      const response = await apiClient.post('/auth/logout');
+      return response.data;
+    } catch (error) {
+      // Ignore logout errors
+      return null;
+    } finally {
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
+      }
     }
-    return response.data;
   },
 };

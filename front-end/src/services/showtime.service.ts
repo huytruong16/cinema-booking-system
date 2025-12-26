@@ -121,5 +121,16 @@ export const showtimeService = {
             console.error(`Lỗi khi xóa suất chiếu ${id}:`, error);
             throw error;
         }
+    },
+
+    // Hủy suất chiếu
+    cancel: async (id: string, reason: string) => {
+        try {
+            const response = await api.post(`/showtimes/${id}/cancel`, { LyDo: reason });
+            return response.data;
+        } catch (error) {
+            console.error(`Lỗi khi hủy suất chiếu ${id}:`, error);
+            throw error;
+        }
     }
 };

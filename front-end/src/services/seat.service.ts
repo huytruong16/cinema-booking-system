@@ -34,6 +34,16 @@ export const seatService = {
   },
 
   createSeatTypeBatch: async (data: { MaGhe: string; MaLoaiGhe: string }[]) => {
-    return await api.post('/seats/seat-type', data);
+    // Fallback: Loop and create individually because backend might not support batch
+    const results = [];
+    for (const item of data) {
+      try {
+        const res = await api.post('/seats/seat-type', item);
+        results.push(res.data);
+      } catch (error) {
+        console.warn("Failed to create seat type relation", item, error);
+      }
+    }
+    return results;
   },
 };

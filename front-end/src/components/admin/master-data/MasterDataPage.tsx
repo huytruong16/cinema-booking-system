@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface ColumnConfig {
   accessorKey: string;
@@ -76,6 +77,7 @@ export default function MasterDataPage({
   const [currentItem, setCurrentItem] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { hasPermission } = useAuth();
 
   const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -201,9 +203,11 @@ export default function MasterDataPage({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          {hasPermission("QLDANHMUC") && (
           <Button onClick={handleOpenCreate}>
             <Plus className="mr-2 h-4 w-4" /> Thêm Mới
           </Button>
+          )}
         </div>
       </div>
 
@@ -253,6 +257,8 @@ export default function MasterDataPage({
                     </TableCell>
                   ))}
                   <TableCell className="text-right">
+                    {hasPermission("QLDANHMUC") && (
+                    <>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -270,6 +276,8 @@ export default function MasterDataPage({
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
+                    </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

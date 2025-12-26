@@ -50,11 +50,13 @@ import {
   ChevronsRight,
   ChevronsLeft,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays, subDays, startOfDay, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { showtimeService } from "@/services/showtime.service";
 import { roomService } from "@/services/room.service";
@@ -172,6 +174,7 @@ export default function ShowtimeManagementPage() {
     null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { hasPermission } = useAuth();
 
   const fetchMasterData = async () => {
     try {
@@ -233,7 +236,7 @@ export default function ShowtimeManagementPage() {
     }
   };
 
-  const mapShowtimes = (raw: any[], rooms: PhongChieu[]): SuatChieuView[] => {
+  const mapShowtimes = (raw: any[], rooms: PhongChieu[], versions: PhimDinhDang[]): SuatChieuView[] => {
     if (!Array.isArray(raw)) return [];
     return raw.map((st: any) => {
       const matchedRoom = rooms.find(
@@ -243,13 +246,19 @@ export default function ShowtimeManagementPage() {
         ? matchedRoom.TenPhongChieu
         : st.PhongChieu?.TenPhongChieu || "Phòng chưa xác định";
 
+      const matchedVersion = versions.find(v => v.MaPhimDinhDang === st.MaPhienBanPhim);
+      const tenPhim = matchedVersion ? matchedVersion.TenPhim : (st.PhienBanPhim?.Phim?.TenHienThi || "Unknown");
+      const tenDinhDang = matchedVersion ? matchedVersion.TenDinhDang : `${st.PhienBanPhim?.DinhDang?.TenDinhDang || ""} - ${st.PhienBanPhim?.NgonNgu?.TenNgonNgu || ""}`;
+      const posterUrl = matchedVersion ? matchedVersion.PosterUrl : (st.PhienBanPhim?.Phim?.PosterUrl || null);
+      const thoiLuong = matchedVersion ? matchedVersion.ThoiLuong : (st.PhienBanPhim?.Phim?.ThoiLuong || 0);
+
       return {
         MaSuatChieu: st.MaSuatChieu,
         MaPhimDinhDang: st.MaPhienBanPhim,
-        TenPhim: st.PhienBanPhim?.Phim?.TenHienThi || "Unknown",
-        TenDinhDang: `${st.PhienBanPhim?.DinhDang?.TenDinhDang} - ${st.PhienBanPhim?.NgonNgu?.TenNgonNgu}`,
-        PosterUrl: st.PhienBanPhim?.Phim?.PosterUrl || null,
-        ThoiLuong: st.PhienBanPhim?.Phim?.ThoiLuong || 0,
+        TenPhim: tenPhim,
+        TenDinhDang: tenDinhDang,
+        PosterUrl: posterUrl,
+        ThoiLuong: thoiLuong,
         MaPhongChieu: st.MaPhongChieu,
         TenPhongChieu: tenPhong,
         ThoiGianBatDau: parseISO(st.ThoiGianBatDau),
@@ -260,8 +269,8 @@ export default function ShowtimeManagementPage() {
   };
 
   const allShowtimes = useMemo(() => {
-    return mapShowtimes(rawShowtimes, phongChieuList);
-  }, [rawShowtimes, phongChieuList]);
+    return mapShowtimes(rawShowtimes, phongChieuList, phimDinhDangList);
+  }, [rawShowtimes, phongChieuList, phimDinhDangList]);
 
   const selectedShowtime = useMemo(
     () =>
@@ -366,19 +375,16 @@ export default function ShowtimeManagementPage() {
     }
   };
 
-  const handleDelete = async (maSuatChieu: string) => {
+  const handleCancelShowtime = async (maSuatChieu: string, reason: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await showtimeService.delete(maSuatChieu);
-      toast.success("Xóa thành công");
-      if (selectedShowtime?.MaSuatChieu === maSuatChieu) {
-        setSelectedShowtimeId(null);
-      }
+      await showtimeService.cancel(maSuatChieu, reason);
+      toast.success("Hủy suất chiếu thành công. Hệ thống đã tạo yêu cầu hoàn vé cho khách hàng.");
       fetchShowtimes();
     } catch (error) {
-      console.error("Lỗi xóa suất chiếu:", error);
-      toast.error("Xóa thất bại");
+      console.error("Lỗi hủy suất chiếu:", error);
+      toast.error("Hủy suất chiếu thất bại");
     } finally {
       setIsSubmitting(false);
     }
@@ -434,13 +440,15 @@ export default function ShowtimeManagementPage() {
             </Button>
           </div>
 
-          <Button
-            onClick={handleAddNew}
-            className="bg-primary hover:bg-primary/90 "
-          >
-            <Plus className="size-4 mr-2" />
-            Thêm lịch chiếu
-          </Button>
+          {hasPermission("QLLICHCHIEU") && (
+            <Button
+              onClick={handleAddNew}
+              className="bg-primary hover:bg-primary/90 "
+            >
+              <Plus className="size-4 mr-2" />
+              Thêm lịch chiếu
+            </Button>
+          )}
         </div>
 
         <ScrollArea className="flex-1 pr-4 pt-5">
@@ -486,7 +494,7 @@ export default function ShowtimeManagementPage() {
             showtime={selectedShowtime}
             onClose={() => setSelectedShowtimeId(null)}
             onEdit={() => handleEdit(selectedShowtime)}
-            onDelete={handleDelete}
+            onCancel={handleCancelShowtime}
             isSubmitting={isSubmitting}
           />
         ) : (
@@ -613,16 +621,20 @@ interface DetailPanelProps {
   showtime: SuatChieuView;
   onClose: () => void;
   onEdit: () => void;
-  onDelete: (maSuatChieu: string) => void;
+  onCancel: (maSuatChieu: string, reason: string) => void;
   isSubmitting: boolean;
 }
 
 function ShowtimeDetailPanel({
   showtime,
   onEdit,
-  onDelete,
+  onCancel,
   isSubmitting,
 }: DetailPanelProps) {
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const { hasPermission } = useAuth();
+
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-4">
       <CardHeader className="relative">
@@ -650,15 +662,17 @@ function ShowtimeDetailPanel({
               >
                 {getBadgeLabel(showtime.TrangThai)}
               </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEdit}
-                className="bg-transparent border-slate-700 hover:bg-slate-800"
-              >
-                <Edit className="size-3 mr-1.5" />
-                Chỉnh sửa
-              </Button>
+              {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && hasPermission("QLLICHCHIEU") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onEdit}
+                  className="bg-transparent border-slate-700 hover:bg-slate-800"
+                >
+                  <Edit className="size-3 mr-1.5" />
+                  Chỉnh sửa
+                </Button>
+              )}
             </div>
 
             <InfoRow label="Phòng chiếu" value={showtime.TenPhongChieu} />
@@ -681,46 +695,60 @@ function ShowtimeDetailPanel({
             />
             <InfoRow label="Thời lượng" value={`${showtime.ThoiLuong} phút`} />
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full mt-4">
-                  <Trash2 className="size-4 mr-2" />
-                  Xóa suất chiếu này
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Bạn có chắc chắn muốn xóa?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-slate-400">
-                    Hành động này không thể hoàn tác. Lịch chiếu phim &quot;
-                    {showtime.TenPhim}&quot; lúc{" "}
-                    {format(showtime.ThoiGianBatDau, "HH:mm dd/MM/yyyy")} sẽ bị
-                    xóa vĩnh viễn.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800">
-                    Hủy
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive hover:bg-destructive/90"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onDelete(showtime.MaSuatChieu);
-                    }}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      "Xác nhận Xóa"
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && hasPermission("QLLICHCHIEU") && (
+              <div className="space-y-2 mt-4">
+                <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full bg-orange-600 hover:bg-orange-700">
+                      <XCircle className="size-4 mr-2" />
+                      Hủy suất chiếu (Hoàn vé)
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Xác nhận hủy suất chiếu?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-slate-400">
+                        Hành động này sẽ hủy suất chiếu và <strong>tự động tạo yêu cầu hoàn vé</strong> cho tất cả khách hàng đã đặt vé.
+                        <br/><br/>
+                        Vui lòng nhập lý do hủy:
+                      </AlertDialogDescription>
+                      <Input 
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Ví dụ: Phòng chiếu bảo trì, Lỗi kỹ thuật..."
+                        className="mt-2 bg-[#252525] border-slate-700"
+                      />
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800">
+                        Đóng
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-orange-600 hover:bg-orange-700"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (!cancelReason.trim()) {
+                            toast.warning("Vui lòng nhập lý do hủy");
+                            return;
+                          }
+                          onCancel(showtime.MaSuatChieu, cancelReason);
+                          setIsCancelDialogOpen(false);
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          "Xác nhận Hủy"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

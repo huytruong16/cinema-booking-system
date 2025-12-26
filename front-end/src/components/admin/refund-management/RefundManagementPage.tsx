@@ -55,6 +55,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { refundService } from "@/services/refund.service";
 import apiClient from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 type TrangThaiYeuCau = "DANGCHO" | "DAHOAN" | "DAHUY";
 
@@ -143,6 +144,7 @@ const getStatusLabel = (status: string) => {
 };
 
 export default function RefundManagementPage() {
+  const { hasPermission } = useAuth();
   const [requests, setRequests] = useState<YeuCauHoanVeDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -732,7 +734,7 @@ function RefundDetailDialog({
             {mode === "VIEW" ? "Đóng" : "Quay lại"}
           </Button>
 
-          {isPending && mode === "VIEW" && (
+          {isPending && mode === "VIEW" && hasPermission("QLHOANVE") && (
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="destructive" onClick={() => setMode("REJECT")}>
                 <XCircle className="size-4 mr-2" /> Từ chối

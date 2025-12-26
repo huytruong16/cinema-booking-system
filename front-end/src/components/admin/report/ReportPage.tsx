@@ -45,6 +45,7 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import { Label } from '@/components/ui/label';
 import { statisticsService } from '@/services/statistics.service';
 import { RoomStatus, StatisticsSummary, RevenueChartData, TopMovie, TopStaff } from '@/types/statistics';
+import { useAuth } from "@/contexts/AuthContext";
 
 type ReportType = 'revenue' | 'movies' | 'staff' | 'room_status';
 
@@ -69,9 +70,11 @@ export default function ReportPage() {
   const [topStaff, setTopStaff] = useState<TopStaff[]>([]);
   const [roomStatus, setRoomStatus] = useState<RoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!hasPermission("BCTHONGKE")) return;
       if (!dateRange?.from || !dateRange?.to) return;
 
       setLoading(true);
@@ -168,6 +171,14 @@ Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
               );
       }
   };
+
+  if (!hasPermission("BCTHONGKE")) {
+    return (
+      <div className="flex items-center justify-center h-screen text-slate-400">
+        Bạn không có quyền xem báo cáo này.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-slate-100">

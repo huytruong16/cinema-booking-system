@@ -70,6 +70,7 @@ import {
   Label as FilmLabel,
 } from "@/services/film.service";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MovieManagementPage() {
   const [films, setFilms] = useState<BackendFilm[]>([]);
@@ -83,6 +84,7 @@ export default function MovieManagementPage() {
   const [deletingFilm, setDeletingFilm] = useState<BackendFilm | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { hasPermission } = useAuth();
 
   const fetchAllData = async () => {
     try {
@@ -173,13 +175,15 @@ export default function MovieManagementPage() {
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           </div>
-          <Button
-            onClick={handleAddNew}
-            className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
-          >
-            <Plus className="size-4 mr-2" />
-            Thêm phim mới
-          </Button>
+          {hasPermission("QLPHIM") && (
+            <Button
+              onClick={handleAddNew}
+              className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
+            >
+              <Plus className="size-4 mr-2" />
+              Thêm phim mới
+            </Button>
+          )}
         </div>
       </div>
 
@@ -266,6 +270,8 @@ function FilmCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { hasPermission } = useAuth();
+
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 overflow-hidden flex flex-col h-full group hover:border-primary/50 transition-colors">
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
@@ -326,23 +332,27 @@ function FilmCard({
           </span>
         </div>
 
-        <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onEdit}
-            className="bg-transparent border-slate-700 hover:bg-slate-800 w-full"
-          >
-            <Edit className="size-3 mr-2" /> Sửa
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onDelete}
-            className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 w-full"
-          >
-            <Trash2 className="size-3 mr-2" /> Xóa
-          </Button>
+        <div className="mt-auto pt-4 flex gap-2">
+          {hasPermission("QLPHIM") && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onEdit}
+              className="bg-transparent border-slate-700 hover:bg-slate-800 w-full"
+            >
+              <Edit className="size-3 mr-2" /> Sửa
+            </Button>
+          )}
+          {hasPermission("QLPHIM") && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDelete}
+              className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 w-full"
+            >
+              <Trash2 className="size-3 mr-2" /> Xóa
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

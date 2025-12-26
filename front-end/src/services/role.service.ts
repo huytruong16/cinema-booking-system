@@ -2,16 +2,16 @@ import api from "@/lib/apiClient";
 
 export interface Role {
   MaNhomNguoiDung: string;
-  TenNhom: string;
+  TenNhomNguoiDung: string;
   QuyenNhomNguoiDungs: { Quyen: string }[];
 }
 
 export interface CreateRoleDto {
-  TenNhom: string;
+  TenNhomNguoiDung: string;
 }
 
 export interface UpdateRoleDto {
-  TenNhom: string;
+  TenNhomNguoiDung: string;
 }
 
 export interface AssignEmployeeDto {
@@ -50,15 +50,17 @@ export const roleService = {
 
   updatePermissions: async (groupId: string, permissions: string[]) => {
     const res = await api.patch('/user-groups/permissions', {
-      MaNhom: groupId,
-      DanhSachQuyen: permissions
+      groupId: groupId,
+      permissions: permissions
     });
     return res.data;
   },
 
   getUsersInGroup: async (groupId: string) => {
     const res = await api.get(`/user-groups/${groupId}/users`);
-    return res.data;
+    // API returns { data: User[], pagination: ... }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (res.data as any).data || [];
   },
 
   assignEmployee: async (data: AssignEmployeeDto) => {
@@ -68,8 +70,8 @@ export const roleService = {
 
   assignGroup: async (userId: string, groupId: string) => {
     const res = await api.post('/users/assign-group', {
-      MaNguoiDung: userId,
-      MaNhom: groupId
+      userId: userId,
+      groupId: groupId
     });
     return res.data;
   }

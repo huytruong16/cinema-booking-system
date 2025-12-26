@@ -10,7 +10,15 @@ export interface UserProfile {
   AvatarUrl: string | null;
   VaiTro: string;
   MaNhomNguoiDung: string | null;
-  NhomNguoiDung: any | null;
+  NhomNguoiDung: {
+    MaNhomNguoiDung: string;
+    TenNhomNguoiDung: string;
+    QuyenNhomNguoiDungs: {
+      MaQuyenNhomNguoiDung: string;
+      MaNhomNguoiDung: string;
+      Quyen: string;
+    }[];
+  } | null;
   CreatedAt: string;
   UpdatedAt: string;
   DeletedAt: string | null;
@@ -46,6 +54,11 @@ export const updateMyProfile = async (
 
 export const changePassword = async (data: { oldPassword: string, newPassword: string }) => {
   const response = await apiClient.post('/auth/change-password', data);
+  return response.data;
+};
+
+export const getAllUsers = async (): Promise<UserProfile[]> => {
+  const response = await apiClient.get<UserProfile[]>('/users');
   return response.data;
 };
 
