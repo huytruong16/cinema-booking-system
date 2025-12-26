@@ -29,6 +29,7 @@ interface AuthUser {
   trangThai: TrangThaiNguoiDung;
   soDienThoai?: string | null;
   avatarUrl?: string | null;
+  permissions?: string[];
 }
 
 interface JwtPayload {
@@ -104,11 +105,14 @@ export default function LoginPage() {
 
             try {
                 const profile = await getMyProfile();
+                const permissions = profile.NhomNguoiDung?.QuyenNhomNguoiDungs?.map(q => q.Quyen) || [];
+                
                 login({
                     ...authUserForContext,
                     username: profile.HoTen,
                     avatarUrl: profile.AvatarUrl,
-                    soDienThoai: profile.SoDienThoai
+                    soDienThoai: profile.SoDienThoai,
+                    permissions: permissions
                 });
             } catch (error) {
                 console.error("Failed to fetch user profile:", error);

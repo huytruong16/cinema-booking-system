@@ -61,6 +61,7 @@ import { roomService } from "@/services/room.service";
 import { seatTypeService } from "@/services/seat-type.service";
 import { SeatType } from "@/types/seat-management";
 import { seatService } from "@/services/seat.service";
+import { useAuth } from "@/contexts/AuthContext";
 
 type TrangThaiPhongChieu = "TRONG" | "SAPCHIEU" | "DANGCHIEU";
 
@@ -157,6 +158,7 @@ const parseBackendToMap = (room: PhongChieu): SeatMapData => {
 };
 
 export default function RoomManagementPage() {
+  const { hasPermission } = useAuth();
   const [rooms, setRooms] = useState<PhongChieu[]>([]);
   const [seatTypes, setSeatTypes] = useState<SeatType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,7 +181,7 @@ export default function RoomManagementPage() {
       ]);
       setRooms((roomsData as any) || []);
       setSeatTypes(typesData || []);
-    } catch (error) {
+    } catch {
       toast.error("Không thể tải dữ liệu.");
     } finally {
       setLoading(false);
@@ -362,12 +364,14 @@ export default function RoomManagementPage() {
           >
             <Ticket className="size-4 mr-2" /> Loại Ghế
           </Button>
-          <Button
-            onClick={handleAddNew}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="size-4 mr-2" /> Thêm Phòng
-          </Button>
+          {hasPermission("QLPHONGCHIEU") && (
+            <Button
+              onClick={handleAddNew}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="size-4 mr-2" /> Thêm Phòng
+            </Button>
+          )}
         </div>
       </div>
 
@@ -462,6 +466,7 @@ export default function RoomManagementPage() {
 }
 
 function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
+  const { hasPermission } = useAuth();
   const totalSeats = useMemo(() => {
     let count = 0;
     try {
@@ -521,31 +526,39 @@ function RoomCard({ room, onEditInfo, onEditMap, onDelete }: any) {
         </div>
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-2 !pt-4 border-t border-slate-800">
-        <Button
-          variant="outline"
-          className="w-full bg-transparent border-slate-700 hover:bg-slate-800 text-slate-300"
-          onClick={onEditMap}
-        >
-          <MapIcon className="size-4 mr-2" /> Sơ đồ
-        </Button>
-        <div className="flex gap-2">
+        {hasPermission("QLPHONGCHIEU") ? (
           <Button
             variant="outline"
-            size="icon"
-            className="flex-1 bg-transparent border-slate-700 hover:bg-slate-800 text-blue-400"
-            onClick={onEditInfo}
+            className="w-full bg-transparent border-slate-700 hover:bg-slate-800 text-slate-300"
+            onClick={onEditMap}
           >
-            <Edit className="size-4" />
+            <MapIcon className="size-4 mr-2" /> Sơ đồ
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="flex-1 bg-transparent border-slate-700 hover:bg-red-900/20 text-red-400"
-            onClick={onDelete}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
+        ) : (
+          <div />
+        )}
+        {hasPermission("QLPHONGCHIEU") ? (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="flex-1 bg-transparent border-slate-700 hover:bg-slate-800 text-blue-400"
+              onClick={onEditInfo}
+            >
+              <Edit className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="flex-1 bg-transparent border-slate-700 hover:bg-red-900/20 text-red-400"
+              onClick={onDelete}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ) : (
+          <div />
+        )}
       </CardFooter>
     </Card>
   );
@@ -632,7 +645,7 @@ function SeatMapEditorDialog({
   useEffect(() => {
     if (seatTypes.length > 0 && selectedTool === "disabled")
       setSelectedTool(seatTypes[0].MaLoaiGhe);
-  }, [seatTypes]);
+  }, [seatTypes, selectedTool]);
 
   const parseRowRange = (range: string): string[] => {
     const [start, end] = range.split("-").map((s) => s.trim().toUpperCase());
@@ -934,7 +947,7 @@ function SeatMapEditorDialog({
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-700"
+            className="border-slate-700 text-black"
             disabled={isSaving}
           >
             Đóng

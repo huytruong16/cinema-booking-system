@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, subDays, startOfDay, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { showtimeService } from "@/services/showtime.service";
 import { roomService } from "@/services/room.service";
@@ -173,6 +174,7 @@ export default function ShowtimeManagementPage() {
     null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { hasPermission } = useAuth();
 
   const fetchMasterData = async () => {
     try {
@@ -234,7 +236,7 @@ export default function ShowtimeManagementPage() {
     }
   };
 
-  const mapShowtimes = (raw: any[], rooms: PhongChieu[]): SuatChieuView[] => {
+  const mapShowtimes = (raw: any[], rooms: PhongChieu[], versions: PhimDinhDang[]): SuatChieuView[] => {
     if (!Array.isArray(raw)) return [];
     return raw.map((st: any) => {
       const matchedRoom = rooms.find(
@@ -244,13 +246,19 @@ export default function ShowtimeManagementPage() {
         ? matchedRoom.TenPhongChieu
         : st.PhongChieu?.TenPhongChieu || "Phòng chưa xác định";
 
+      const matchedVersion = versions.find(v => v.MaPhimDinhDang === st.MaPhienBanPhim);
+      const tenPhim = matchedVersion ? matchedVersion.TenPhim : (st.PhienBanPhim?.Phim?.TenHienThi || "Unknown");
+      const tenDinhDang = matchedVersion ? matchedVersion.TenDinhDang : `${st.PhienBanPhim?.DinhDang?.TenDinhDang || ""} - ${st.PhienBanPhim?.NgonNgu?.TenNgonNgu || ""}`;
+      const posterUrl = matchedVersion ? matchedVersion.PosterUrl : (st.PhienBanPhim?.Phim?.PosterUrl || null);
+      const thoiLuong = matchedVersion ? matchedVersion.ThoiLuong : (st.PhienBanPhim?.Phim?.ThoiLuong || 0);
+
       return {
         MaSuatChieu: st.MaSuatChieu,
         MaPhimDinhDang: st.MaPhienBanPhim,
-        TenPhim: st.PhienBanPhim?.Phim?.TenHienThi || "Unknown",
-        TenDinhDang: `${st.PhienBanPhim?.DinhDang?.TenDinhDang} - ${st.PhienBanPhim?.NgonNgu?.TenNgonNgu}`,
-        PosterUrl: st.PhienBanPhim?.Phim?.PosterUrl || null,
-        ThoiLuong: st.PhienBanPhim?.Phim?.ThoiLuong || 0,
+        TenPhim: tenPhim,
+        TenDinhDang: tenDinhDang,
+        PosterUrl: posterUrl,
+        ThoiLuong: thoiLuong,
         MaPhongChieu: st.MaPhongChieu,
         TenPhongChieu: tenPhong,
         ThoiGianBatDau: parseISO(st.ThoiGianBatDau),
@@ -261,8 +269,8 @@ export default function ShowtimeManagementPage() {
   };
 
   const allShowtimes = useMemo(() => {
-    return mapShowtimes(rawShowtimes, phongChieuList);
-  }, [rawShowtimes, phongChieuList]);
+    return mapShowtimes(rawShowtimes, phongChieuList, phimDinhDangList);
+  }, [rawShowtimes, phongChieuList, phimDinhDangList]);
 
   const selectedShowtime = useMemo(
     () =>
@@ -432,13 +440,15 @@ export default function ShowtimeManagementPage() {
             </Button>
           </div>
 
-          <Button
-            onClick={handleAddNew}
-            className="bg-primary hover:bg-primary/90 "
-          >
-            <Plus className="size-4 mr-2" />
-            Thêm lịch chiếu
-          </Button>
+          {hasPermission("QLLICHCHIEU") && (
+            <Button
+              onClick={handleAddNew}
+              className="bg-primary hover:bg-primary/90 "
+            >
+              <Plus className="size-4 mr-2" />
+              Thêm lịch chiếu
+            </Button>
+          )}
         </div>
 
         <ScrollArea className="flex-1 pr-4 pt-5">
@@ -623,6 +633,7 @@ function ShowtimeDetailPanel({
 }: DetailPanelProps) {
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const { hasPermission } = useAuth();
 
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg sticky top-4">
@@ -651,7 +662,7 @@ function ShowtimeDetailPanel({
               >
                 {getBadgeLabel(showtime.TrangThai)}
               </Badge>
-              {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && (
+              {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && hasPermission("QLLICHCHIEU") && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -684,7 +695,7 @@ function ShowtimeDetailPanel({
             />
             <InfoRow label="Thời lượng" value={`${showtime.ThoiLuong} phút`} />
 
-            {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && (
+            {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && hasPermission("QLLICHCHIEU") && (
               <div className="space-y-2 mt-4">
                 <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                   <AlertDialogTrigger asChild>

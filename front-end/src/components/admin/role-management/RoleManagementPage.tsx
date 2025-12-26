@@ -10,12 +10,19 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +35,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Search,
-  Edit,
   Shield,
   ShieldCheck,
   Save,
@@ -36,82 +42,40 @@ import {
   Loader2,
   Plus,
   Trash2,
-  Pencil,
+  MoreVertical,
+  LayoutGrid,
+  CheckCircle2,
+  XCircle,
+  Users,
+  Settings2,
+  SearchX,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { roleService, Role } from "@/services/role.service";
+import { getAllUsers, UserProfile } from "@/services/user.service";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { PERMISSION_GROUPS } from "@/lib/permissions";
 
-type Quyen =
-  | "BANVE"
-  | "HOANVE"
-  | "YEUCAUHOANVE"
-  | "SOATVE"
-  | "BAOCAODOANHTHU"
-  | "QLPHIM"
-  | "QLLICHCHIEU"
-  | "QLPHONGCHIEU"
-  | "QLSUATCHIEU"
-  | "QLGHE"
-  | "MUAVE"
-  | "QLCOMBO"
-  | "QLKHUYENMAI"
-  | "QLNHANVIEN"
-  | "QLHOADON";
-
-interface PermissionGroup {
-  label: string;
-  color: string; 
-  permissions: { code: Quyen; label: string }[];
-}
-
-const PERMISSION_GROUPS: PermissionGroup[] = [
-  {
-    label: "Bán hàng & Soát vé",
-    color: "text-green-400",
-    permissions: [
-      { code: "BANVE", label: "Bán vé tại quầy" },
-      { code: "MUAVE", label: "Đặt vé (Khách hàng)" },
-      { code: "SOATVE", label: "Soát vé (Check-in)" },
-    ],
-  },
-  {
-    label: "Giao dịch & Hóa đơn",
-    color: "text-blue-400",
-    permissions: [
-      { code: "QLHOADON", label: "Tra cứu hóa đơn" },
-      { code: "HOANVE", label: "Thực hiện hoàn vé" },
-      { code: "YEUCAUHOANVE", label: "Duyệt yêu cầu hoàn tiền" },
-    ],
-  },
-  {
-    label: "Quản lý Phim & Lịch chiếu",
-    color: "text-purple-400",
-    permissions: [
-      { code: "QLPHIM", label: "Quản lý Phim & Phiên bản" },
-      { code: "QLLICHCHIEU", label: "Quản lý Lịch chiếu tổng thể" },
-      { code: "QLSUATCHIEU", label: "Quản lý chi tiết Suất chiếu" },
-    ],
-  },
-  {
-    label: "Tài nguyên & Sản phẩm",
-    color: "text-orange-400",
-    permissions: [
-      { code: "QLPHONGCHIEU", label: "Quản lý Phòng chiếu" },
-      { code: "QLGHE", label: "Quản lý Sơ đồ ghế" },
-      { code: "QLCOMBO", label: "Quản lý Combo / Bắp nước" },
-      { code: "QLKHUYENMAI", label: "Quản lý Khuyến mãi" },
-    ],
-  },
-  {
-    label: "Hệ thống & Báo cáo",
-    color: "text-red-400",
-    permissions: [
-      { code: "BAOCAODOANHTHU", label: "Xem báo cáo doanh thu" },
-      { code: "QLNHANVIEN", label: "Quản lý Nhân viên" },
-    ],
-  },
-];
 
 export default function RoleManagementPage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -121,10 +85,15 @@ export default function RoleManagementPage() {
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
 
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [roleFormData, setRoleFormData] = useState({ TenNhom: "" });
+  const [roleFormData, setRoleFormData] = useState({ TenNhomNguoiDung: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [usersInGroup, setUsersInGroup] = useState<UserProfile[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [selectedUserIdToAssign, setSelectedUserIdToAssign] = useState("");
 
   const fetchRoles = async () => {
     setLoading(true);
@@ -147,20 +116,19 @@ export default function RoleManagementPage() {
 
   const filteredRoles = useMemo(() => {
     return roles.filter((role) =>
-      (role.TenNhom || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (role.TenNhomNguoiDung || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [roles, searchTerm]);
 
-  // Handlers
   const handleOpenCreate = () => {
     setSelectedRole(null);
-    setRoleFormData({ TenNhom: "" });
+    setRoleFormData({ TenNhomNguoiDung: "" });
     setIsRoleModalOpen(true);
   };
 
   const handleOpenEditName = (role: Role) => {
     setSelectedRole(role);
-    setRoleFormData({ TenNhom: role.TenNhom });
+    setRoleFormData({ TenNhomNguoiDung: role.TenNhomNguoiDung });
     setIsRoleModalOpen(true);
   };
 
@@ -174,8 +142,52 @@ export default function RoleManagementPage() {
     setIsDeleteAlertOpen(true);
   };
 
+  const handleOpenUsers = async (role: Role) => {
+    setSelectedRole(role);
+    setIsUsersModalOpen(true);
+    setUsersInGroup([]);
+    setAllUsers([]);
+    setSelectedUserIdToAssign("");
+
+    try {
+      const [groupUsers, users] = await Promise.all([
+        roleService.getUsersInGroup(role.MaNhomNguoiDung),
+        getAllUsers(),
+      ]);
+      setUsersInGroup(groupUsers);
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Lỗi tải danh sách người dùng:", error);
+      toast.error("Không thể tải danh sách người dùng");
+    }
+  };
+
+  const handleAssignUser = async () => {
+    if (!selectedRole || !selectedUserIdToAssign) return;
+
+    setIsSubmitting(true);
+    try {
+      await roleService.assignGroup(
+        selectedUserIdToAssign,
+        selectedRole.MaNhomNguoiDung
+      );
+      toast.success("Gán người dùng thành công");
+
+      const groupUsers = await roleService.getUsersInGroup(
+        selectedRole.MaNhomNguoiDung
+      );
+      setUsersInGroup(groupUsers);
+      setSelectedUserIdToAssign("");
+    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((error as any).response?.data?.message || "Lỗi gán người dùng");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSaveRole = async () => {
-    if (!roleFormData.TenNhom.trim()) {
+    if (!roleFormData.TenNhomNguoiDung.trim()) {
       toast.warning("Tên nhóm không được để trống");
       return;
     }
@@ -184,11 +196,11 @@ export default function RoleManagementPage() {
     try {
       if (selectedRole) {
         await roleService.update(selectedRole.MaNhomNguoiDung, {
-          TenNhom: roleFormData.TenNhom,
+          TenNhomNguoiDung: roleFormData.TenNhomNguoiDung,
         });
         toast.success("Cập nhật tên nhóm thành công");
       } else {
-        await roleService.create({ TenNhom: roleFormData.TenNhom });
+        await roleService.create({ TenNhomNguoiDung: roleFormData.TenNhomNguoiDung });
         toast.success("Tạo nhóm mới thành công");
       }
       setIsRoleModalOpen(false);
@@ -229,44 +241,57 @@ export default function RoleManagementPage() {
       fetchRoles();
     } catch (error) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      toast.error((error as any).response?.data?.message || "Lỗi cập nhật quyền");
+      toast.error(
+        (error as any).response?.data?.message || "Lỗi cập nhật quyền"
+      );
     }
   };
 
   return (
-    <div className="space-y-6 text-white h-[calc(100vh-100px)] flex flex-col p-2">
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+    <div className="space-y-6 text-white h-[calc(100vh-100px)] flex flex-col p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 shrink-0 bg-[#1C1C1C] p-4 rounded-xl border border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
             <ShieldCheck className="size-6 text-primary" />
-            Phân Quyền Hệ Thống
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Quản lý nhóm người dùng và phân quyền truy cập.
-          </p>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-100">
+              Phân Quyền Hệ Thống
+            </h1>
+            <p className="text-slate-400 text-sm">
+              Quản lý vai trò và giới hạn truy cập người dùng.
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
             <Input
-              placeholder="Tìm nhóm quyền..."
+              placeholder="Tìm kiếm nhóm quyền..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-[#1C1C1C] border-slate-700 focus:border-primary"
+              className="pl-9 bg-[#252525] border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="mr-2 h-4 w-4" /> Thêm Nhóm
+          <Button
+            onClick={handleOpenCreate}
+            className="shadow-lg shadow-primary/20"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Thêm Nhóm Mới
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin text-primary size-8" />
+        <div className="flex justify-center items-center flex-1 min-h-[400px]">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="animate-spin text-primary size-10" />
+            <span className="text-slate-500 text-sm">Đang tải dữ liệu...</span>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 overflow-y-auto pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-10">
           {filteredRoles.map((role) => (
             <RoleCard
               key={role.MaNhomNguoiDung}
@@ -274,36 +299,41 @@ export default function RoleManagementPage() {
               onEditName={() => handleOpenEditName(role)}
               onConfigPermissions={() => handleOpenPermissions(role)}
               onDelete={() => handleOpenDelete(role)}
+              onViewUsers={() => handleOpenUsers(role)}
             />
           ))}
           {filteredRoles.length === 0 && (
-            <div className="col-span-full text-center text-slate-500 py-10">
-              Không tìm thấy nhóm người dùng nào.
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-500 border border-dashed border-slate-800 rounded-xl bg-[#1C1C1C]/50">
+              <SearchX className="size-12 mb-3 opacity-50" />
+              <p>Không tìm thấy nhóm người dùng nào phù hợp.</p>
             </div>
           )}
         </div>
       )}
 
       <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
-        <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
+        <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {selectedRole ? "Đổi Tên Nhóm" : "Tạo Nhóm Mới"}
+              {selectedRole ? "Cập Nhật Tên Nhóm" : "Tạo Nhóm Mới"}
             </DialogTitle>
             <DialogDescription>
-              Nhập tên cho nhóm người dùng này.
+              Tên nhóm giúp phân biệt các vai trò trong hệ thống.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label>Tên nhóm</Label>
-            <Input
-              value={roleFormData.TenNhom}
-              onChange={(e) =>
-                setRoleFormData({ ...roleFormData, TenNhom: e.target.value })
-              }
-              className="mt-2 bg-[#2a2a2a] border-slate-700"
-              placeholder="Ví dụ: Quản lý kho"
-            />
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Tên hiển thị</Label>
+              <Input
+                value={roleFormData.TenNhomNguoiDung}
+                onChange={(e) =>
+                  setRoleFormData({ ...roleFormData, TenNhomNguoiDung: e.target.value })
+                }
+                className="bg-[#252525] border-slate-700"
+                placeholder="Ví dụ: Quản lý kho, Nhân viên bán vé..."
+                autoFocus
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -311,13 +341,13 @@ export default function RoleManagementPage() {
               onClick={() => setIsRoleModalOpen(false)}
               disabled={isSubmitting}
             >
-              Hủy
+              Hủy bỏ
             </Button>
             <Button onClick={handleSaveRole} disabled={isSubmitting}>
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Lưu
+              {selectedRole ? "Lưu thay đổi" : "Tạo mới"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -332,21 +362,43 @@ export default function RoleManagementPage() {
         />
       )}
 
+      {selectedRole && (
+        <RoleUsersDialog
+          isOpen={isUsersModalOpen}
+          onClose={() => setIsUsersModalOpen(false)}
+          role={selectedRole}
+          usersInGroup={usersInGroup}
+          allUsers={allUsers}
+          selectedUserId={selectedUserIdToAssign}
+          onSelectUser={setSelectedUserIdToAssign}
+          onAssign={handleAssignUser}
+          isSubmitting={isSubmitting}
+        />
+      )}
+
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Hành động này sẽ xóa nhóm &quot;
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+              <Trash2 className="size-6 text-red-500" />
+            </div>
+            <AlertDialogTitle className="text-center">
+              Xác nhận xóa nhóm?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-400">
+              Bạn đang thực hiện xóa nhóm{" "}
               <span className="text-white font-bold">
-                {selectedRole?.TenNhom}
+                {selectedRole?.TenNhomNguoiDung}
               </span>
-              &quot;. Các tài khoản thuộc nhóm này có thể bị mất quyền truy cập.
+              .
+              <br />
+              Hành động này không thể hoàn tác và các tài khoản thuộc nhóm này
+              sẽ mất quyền truy cập tương ứng.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-slate-700 text-white hover:bg-slate-800">
-              Hủy
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white">
+              Hủy bỏ
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteRole}
@@ -355,7 +407,7 @@ export default function RoleManagementPage() {
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                "Xóa"
+                "Xóa vĩnh viễn"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -370,94 +422,246 @@ function RoleCard({
   onEditName,
   onConfigPermissions,
   onDelete,
+  onViewUsers,
 }: {
   role: Role;
   onEditName: () => void;
   onConfigPermissions: () => void;
   onDelete: () => void;
+  onViewUsers: () => void;
 }) {
   const permissions = role.QuyenNhomNguoiDungs?.map((q) => q.Quyen) || [];
+  const permissionCount = permissions.length;
 
   return (
-    <Card className="bg-[#1C1C1C] border-slate-800 flex flex-col hover:border-slate-600 transition-colors group relative">
-      <div className="p-5 flex-1">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-              {role.TenNhom}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={onEditName}
-              >
-                <Pencil className="size-3 text-slate-400 hover:text-white" />
-              </Button>
-            </h3>
-            <p className="text-xs text-slate-500 font-mono mt-1">
-              ID: {role.MaNhomNguoiDung.substring(0, 8)}...
-            </p>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onConfigPermissions}
-              className="bg-slate-800 border-slate-700 hover:bg-primary hover:text-white hover:border-primary"
-            >
-              <Edit className="size-3.5 mr-2" /> Phân quyền
-            </Button>
+    <Card className="bg-[#1C1C1C] border-slate-800 hover:border-slate-600 transition-all duration-300 group flex flex-col h-full overflow-hidden relative">
+      <div className="absolute top-0 left-0 w-1 h-full bg-slate-800 group-hover:bg-primary transition-colors" />
+
+      <CardHeader className="pb-3 pl-7 flex flex-row items-start justify-between space-y-0">
+        <div className="space-y-1">
+          <CardTitle className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            {role.TenNhomNguoiDung}
+          </CardTitle>
+          <p className="text-xs text-slate-500 font-mono">
+            ID: {role.MaNhomNguoiDung.slice(0, 8)}
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              onClick={onDelete}
-              className="text-slate-500 hover:text-red-500 hover:bg-red-500/10"
+              className="h-8 w-8 text-slate-500 hover:text-white"
             >
-              <Trash2 className="size-4" />
+              <MoreVertical className="size-4" />
             </Button>
-          </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="bg-[#252525] border-slate-700 text-slate-200"
+          >
+            <DropdownMenuItem onClick={onViewUsers} className="cursor-pointer">
+              Quản lý thành viên
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onEditName} className="cursor-pointer">
+              Đổi tên nhóm
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-slate-700" />
+            <DropdownMenuItem
+              onClick={onDelete}
+              className="text-red-400 focus:text-red-400 cursor-pointer"
+            >
+              Xóa nhóm
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+
+      <CardContent className="pl-7 flex-1">
+        <div className="flex items-center gap-2 mb-4">
+          <Badge
+            variant={permissionCount > 0 ? "default" : "secondary"}
+            className={cn(
+              "rounded-md px-2 py-0.5 text-xs font-semibold",
+              permissionCount > 0
+                ? "bg-primary/20 text-primary hover:bg-primary/30"
+                : "bg-slate-800 text-slate-400"
+            )}
+          >
+            {permissionCount > 0
+              ? `${permissionCount} quyền hạn`
+              : "Chưa phân quyền"}
+          </Badge>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-            Quyền hạn ({permissions.length})
-          </Label>
-          <div className="flex flex-wrap gap-1.5 min-h-[60px]">
-            {permissions.length > 0 ? (
-              <>
-                {permissions.slice(0, 5).map((q) => (
-                  <Badge
-                    key={q}
-                    variant="secondary"
-                    className="bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700/50"
-                  >
-                    {q}
-                  </Badge>
-                ))}
-                {permissions.length > 5 && (
-                  <Badge
-                    variant="outline"
-                    className="text-slate-500 border-slate-700 border-dashed"
-                  >
-                    +{permissions.length - 5}
-                  </Badge>
-                )}
-              </>
-            ) : (
-              <span className="text-sm text-slate-600 italic flex items-center gap-2">
-                <Shield className="size-3" /> Chưa được cấp quyền
+        {permissionCount > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {permissions.slice(0, 6).map((p) => (
+              <span
+                key={p}
+                className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700"
+              >
+                {p}
+              </span>
+            ))}
+            {permissions.length > 6 && (
+              <span className="text-[10px] px-1.5 py-0.5 text-slate-500">
+                +{permissions.length - 6} khác
               </span>
             )}
           </div>
-        </div>
-      </div>
-
-      <div
-        className={cn(
-          "h-1 w-full mt-auto rounded-b-lg bg-gradient-to-r from-transparent via-slate-700 to-transparent opacity-50"
+        ) : (
+          <p className="text-sm text-slate-600 italic">
+            Nhóm này chưa có quyền nào được gán.
+          </p>
         )}
-      />
+      </CardContent>
+
+      <CardFooter className="pl-7 pt-2 pb-5 border-t border-slate-800/50 mt-auto bg-slate-900/20 flex gap-2">
+        <Button
+          variant="secondary"
+          onClick={onConfigPermissions}
+          className="flex-1 bg-slate-800 text-slate-300 hover:bg-primary hover:text-white transition-colors border border-slate-700"
+        >
+          <Settings2 className="size-4 mr-2" /> Phân quyền
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={onViewUsers}
+          className="bg-slate-800 text-slate-300 hover:bg-primary hover:text-white transition-colors border border-slate-700 px-3"
+          title="Quản lý thành viên"
+        >
+          <Users className="size-4" />
+        </Button>
+      </CardFooter>
     </Card>
+  );
+}
+
+interface RoleUsersDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  role: Role;
+  usersInGroup: UserProfile[];
+  allUsers: UserProfile[];
+  selectedUserId: string;
+  onSelectUser: (id: string) => void;
+  onAssign: () => void;
+  isSubmitting: boolean;
+}
+
+function RoleUsersDialog({
+  isOpen,
+  onClose,
+  role,
+  usersInGroup,
+  allUsers,
+  selectedUserId,
+  onSelectUser,
+  onAssign,
+  isSubmitting,
+}: RoleUsersDialogProps) {
+  const availableUsers = allUsers.filter(
+    (u) =>
+      u.VaiTro !== "KHACHHANG" &&
+      !usersInGroup.some((ug) => ug.MaNguoiDung === u.MaNguoiDung)
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Thành viên nhóm: {role.TenNhomNguoiDung}</DialogTitle>
+          <DialogDescription>
+            Quản lý danh sách người dùng thuộc nhóm quyền này.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Add User Section */}
+          <div className="flex gap-3 items-end bg-[#252525] p-4 rounded-lg border border-slate-700">
+            <div className="flex-1 space-y-2">
+              <Label>Thêm thành viên mới</Label>
+              <Select value={selectedUserId} onValueChange={onSelectUser}>
+                <SelectTrigger className="bg-[#1C1C1C] border-slate-600">
+                  <SelectValue placeholder="Chọn người dùng..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white">
+                  {availableUsers.map((user) => (
+                    <SelectItem
+                      key={user.MaNguoiDung}
+                      value={user.MaNguoiDung}
+                      className="focus:bg-slate-800 focus:text-white cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={user.AvatarUrl || ""} />
+                          <AvatarFallback className="text-[10px] bg-slate-700">
+                            {user.HoTen.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {user.HoTen} ({user.Email})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {availableUsers.length === 0 && (
+                    <div className="p-2 text-sm text-slate-500 text-center">
+                      Không còn người dùng nào khả dụng
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={onAssign}
+              disabled={!selectedUserId || isSubmitting}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4 mr-2" />
+              )}
+              Thêm
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Danh sách thành viên ({usersInGroup.length})</Label>
+            <ScrollArea className="h-[300px] pr-4">
+              <div className="space-y-2">
+                {usersInGroup.map((user) => (
+                  <div
+                    key={user.MaNguoiDung}
+                    className="flex items-center justify-between p-3 rounded-lg bg-[#252525] border border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={user.AvatarUrl || ""} />
+                        <AvatarFallback className="bg-slate-700">
+                          {user.HoTen.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{user.HoTen}</p>
+                        <p className="text-xs text-slate-400">{user.Email}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {usersInGroup.length === 0 && (
+                  <div className="text-center py-10 text-slate-500 border border-dashed border-slate-800 rounded-lg">
+                    Chưa có thành viên nào trong nhóm này.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -477,11 +681,13 @@ function RolePermissionDialog({
   const [permissions, setPermissions] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
 
   useEffect(() => {
     const currentPerms = role.QuyenNhomNguoiDungs?.map((q) => q.Quyen) || [];
     setPermissions(currentPerms);
     setHasChanges(false);
+    setFilterQuery("");
   }, [role, isOpen]);
 
   const handleToggle = (code: string) => {
@@ -493,18 +699,39 @@ function RolePermissionDialog({
     });
   };
 
-  const handleGroupToggle = (groupPerms: { code: string }[]) => {
+  const handleGroupToggle = (
+    groupPerms: { code: string }[],
+    forceState?: boolean
+  ) => {
     setPermissions((prev) => {
       const codes = groupPerms.map((p) => p.code);
-      const allSelected = codes.every((c) => prev.includes(c));
+
+      let shouldSelectAll = forceState;
+      if (forceState === undefined) {
+        const allSelected = codes.every((c) => prev.includes(c));
+        shouldSelectAll = !allSelected;
+      }
+
       setHasChanges(true);
 
-      if (allSelected) {
+      if (!shouldSelectAll) {
         return prev.filter((c) => !codes.includes(c));
       } else {
         return Array.from(new Set([...prev, ...codes]));
       }
     });
+  };
+
+  const handleToggleAll = (checked: boolean) => {
+    if (checked) {
+      const allCodes = PERMISSION_GROUPS.flatMap((g) =>
+        g.permissions.map((p) => p.code)
+      );
+      setPermissions(allCodes as string[]);
+    } else {
+      setPermissions([]);
+    }
+    setHasChanges(true);
   };
 
   const handleReset = () => {
@@ -523,146 +750,232 @@ function RolePermissionDialog({
     }
   };
 
+  const filteredGroups = useMemo(() => {
+    if (!filterQuery) return PERMISSION_GROUPS;
+    const lowerQuery = filterQuery.toLowerCase();
+
+    return PERMISSION_GROUPS.map((group) => {
+      const groupMatches = group.label.toLowerCase().includes(lowerQuery);
+      const matchingPermissions = group.permissions.filter(
+        (p) =>
+          p.label.toLowerCase().includes(lowerQuery) ||
+          p.code.toLowerCase().includes(lowerQuery)
+      );
+
+      if (groupMatches) return group; 
+      if (matchingPermissions.length > 0) {
+        return { ...group, permissions: matchingPermissions }; 
+      }
+      return null;
+    }).filter(Boolean) as PermissionGroup[];
+  }, [filterQuery]);
+
+  const totalPermissions = PERMISSION_GROUPS.reduce(
+    (acc, g) => acc + g.permissions.length,
+    0
+  );
+  const selectedCount = permissions.length;
+  const isAllSelected =
+    selectedCount === totalPermissions && totalPermissions > 0;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white w-full max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-        {/* Header */}
-        <DialogHeader className="px-6 py-5 border-b border-slate-800 bg-[#151515] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <ShieldCheck className="size-6 text-primary" />
+    <Dialog open={isOpen} onOpenChange={(open) => !isSubmitting && onClose()}>
+      <DialogContent className="bg-[#1C1C1C] border-slate-800 text-white sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 py-5 border-b border-slate-800 bg-[#1C1C1C] shrink-0">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                <Shield className="size-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  Phân Quyền:{" "}
+                  <span className="text-primary">{role.TenNhomNguoiDung}</span>
+                </DialogTitle>
+                <DialogDescription className="text-slate-400">
+                  Điều chỉnh chi tiết quyền truy cập chức năng cho nhóm người
+                  dùng này.
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl">
-                Phân quyền: {role.TenNhom}
-              </DialogTitle>
-              <DialogDescription className="text-slate-400 mt-1">
-                Điều chỉnh quyền hạn truy cập chức năng cho nhóm này.
-              </DialogDescription>
+
+            <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-500" />
+                <Input
+                  placeholder="Tìm quyền (VD: Xóa, Bán vé)..."
+                  className="pl-9 h-9 bg-[#252525] border-slate-700 text-sm focus:border-primary"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center space-x-2 bg-[#252525] px-3 py-1.5 rounded-lg border border-slate-700">
+                <Switch
+                  id="select-all-global"
+                  checked={isAllSelected}
+                  onCheckedChange={handleToggleAll}
+                  className="scale-90"
+                />
+                <Label
+                  htmlFor="select-all-global"
+                  className="text-sm font-medium cursor-pointer whitespace-nowrap"
+                >
+                  Tất cả ({totalPermissions})
+                </Label>
+              </div>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto bg-[#1C1C1C] custom-scrollbar">
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {PERMISSION_GROUPS.map((group, idx) => {
-              const groupCodes = group.permissions.map((p) => p.code);
-              const isAllSelected = groupCodes.every((c) =>
-                permissions.includes(c)
-              );
+        <div className="flex-1 bg-[#121212] overflow-y-auto">
+          <div className="p-6">
+            {filteredGroups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                <SearchX className="size-16 mb-4 text-slate-600" />
+                <p className="text-slate-400">
+                  Không tìm thấy quyền nào phù hợp với từ khóa.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredGroups.map((group) => {
+                  const groupCodes = group.permissions.map((p: { code: Quyen }) => p.code);
+                  const selectedInGroup = groupCodes.filter((c: Quyen) =>
+                    permissions.includes(c)
+                  );
+                  const isGroupAllSelected =
+                    groupCodes.length > 0 &&
+                    selectedInGroup.length === groupCodes.length;
 
-              return (
-                <div
-                  key={idx}
-                  className="bg-[#222] border border-slate-800 rounded-xl overflow-hidden flex flex-col"
-                >
-                  <div className="px-4 py-3 bg-[#2a2a2a] border-b border-slate-800 flex justify-between items-center">
-                    <h4
-                      className={cn(
-                        "text-sm font-bold flex items-center gap-2",
-                        group.color
-                      )}
+                  return (
+                    <div
+                      key={group.id}
+                      className="rounded-xl border border-slate-800 bg-[#1C1C1C] overflow-hidden shadow-sm"
                     >
-                      <Shield className="size-4" />
-                      {group.label}
-                    </h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleGroupToggle(group.permissions)}
-                      className="h-7 text-xs text-slate-400 hover:text-white hover:bg-slate-700"
-                    >
-                      {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
-                    </Button>
-                  </div>
-
-                  <div className="p-4 grid grid-cols-1 gap-3">
-                    {group.permissions.map((perm) => {
-                      const isChecked = permissions.includes(perm.code);
-                      return (
-                        <div
-                          key={perm.code}
-                          className={cn(
-                            "flex items-start space-x-3 p-2 rounded-lg transition-colors cursor-pointer border border-transparent",
-                            isChecked
-                              ? "bg-primary/10 border-primary/20"
-                              : "hover:bg-slate-800"
-                          )}
-                          onClick={() => handleToggle(perm.code)}
-                        >
-                          <Checkbox
-                            id={`perm-${perm.code}`}
-                            checked={isChecked}
-                            onCheckedChange={() => handleToggle(perm.code)}
-                            className="mt-0.5 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                          <div className="flex flex-col">
-                            <label
-                              htmlFor={`perm-${perm.code}`}
-                              className={cn(
-                                "text-sm font-medium leading-none cursor-pointer",
-                                isChecked
-                                  ? "text-primary-foreground"
-                                  : "text-slate-300"
-                              )}
-                            >
-                              {perm.label}
-                            </label>
-                            <span className="text-[10px] text-slate-500 font-mono mt-1">
-                              {perm.code}
-                            </span>
+                      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800/50 bg-[#222]">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-lg", group.color)}>
+                            <group.icon className="size-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-slate-200">
+                              {group.label}
+                            </h4>
+                            <p className="text-xs text-slate-500 hidden sm:block">
+                              {group.description}
+                            </p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-mono text-slate-500 bg-slate-800 px-2 py-1 rounded">
+                            {selectedInGroup.length}/{groupCodes.length}
+                          </span>
+                          <Switch
+                            checked={isGroupAllSelected}
+                            onCheckedChange={(checked) =>
+                              handleGroupToggle(group.permissions, checked)
+                            }
+                            className="data-[state=unchecked]:bg-slate-700"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {group.permissions.map((perm: { code: Quyen; label: string; desc?: string }) => {
+                          const isChecked = permissions.includes(perm.code);
+                          return (
+                            <div
+                              key={perm.code}
+                              onClick={() => handleToggle(perm.code)}
+                              className={cn(
+                                "relative flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer group/item select-none",
+                                isChecked
+                                  ? "bg-primary/5 border-primary/40 shadow-[0_0_10px_-5px_rgba(var(--primary),0.3)]"
+                                  : "bg-[#252525] border-slate-800 hover:border-slate-600 hover:bg-[#2a2a2a]"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleToggle(perm.code)}
+                                className={cn(
+                                  "mt-0.5 border-slate-500 data-[state=checked]:bg-primary data-[state=checked]:border-primary transition-colors",
+                                  isChecked
+                                    ? ""
+                                    : "group-hover/item:border-slate-400"
+                                )}
+                              />
+                              <div className="flex-1 space-y-1">
+                                <p
+                                  className={cn(
+                                    "text-sm font-medium leading-none transition-colors",
+                                    isChecked
+                                      ? "text-primary-foreground"
+                                      : "text-slate-300"
+                                  )}
+                                >
+                                  {perm.label}
+                                </p>
+                                <p className="text-xs text-slate-500 line-clamp-1">
+                                  {perm.desc || perm.code}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-slate-800 bg-[#151515] shrink-0 flex justify-between sm:justify-between items-center">
-          <div className="flex items-center gap-4 text-sm text-slate-400">
-            {hasChanges && (
-              <span className="text-yellow-500 flex items-center gap-1 animate-pulse">
-                ● Có thay đổi chưa lưu
+        <DialogFooter className="px-6 py-4 border-t border-slate-800 bg-[#1C1C1C] shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4 order-2 sm:order-1">
+            <div className="flex flex-col text-sm">
+              <span className="text-slate-400">Đã chọn:</span>
+              <span className="font-bold text-white text-lg">
+                {selectedCount}{" "}
+                <span className="text-slate-500 text-sm font-normal">
+                  / {totalPermissions} quyền
+                </span>
               </span>
+            </div>
+            {hasChanges && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 text-yellow-500 rounded-full text-xs font-medium border border-yellow-500/20 animate-pulse">
+                <div className="size-2 bg-yellow-500 rounded-full" />
+                Thay đổi chưa lưu
+              </div>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              disabled={!hasChanges || isSubmitting}
-              className="text-slate-500 hover:text-white"
-            >
-              <RotateCcw className="size-3.5 mr-1.5" /> Khôi phục
-            </Button>
           </div>
 
-          <div className="flex gap-3">
-            <DialogClose asChild>
-              <Button
-                variant="outline"
-                className="bg-transparent border-slate-700 hover:bg-slate-800 text-white"
-                disabled={isSubmitting}
-              >
-                Đóng
-              </Button>
-            </DialogClose>
+          <div className="flex gap-3 order-1 sm:order-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              disabled={!hasChanges || isSubmitting}
+              className="flex-1 sm:flex-none border-slate-700 hover:bg-slate-800 bg-transparent text-slate-300"
+            >
+              <RotateCcw className="size-4 mr-2" /> Khôi phục
+            </Button>
             <Button
               onClick={handleSave}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
               disabled={!hasChanges || isSubmitting}
+              className={cn(
+                "flex-1 sm:flex-none min-w-[140px]",
+                hasChanges
+                  ? "bg-primary hover:bg-primary/90"
+                  : "bg-slate-700 text-slate-400 cursor-not-allowed"
+              )}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang lưu...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Lưu...
                 </>
               ) : (
                 <>
-                  <Save className="size-4 mr-2" /> Lưu thay đổi
+                  <Save className="size-4 mr-2" /> Lưu Cấu Hình
                 </>
               )}
             </Button>

@@ -39,35 +39,37 @@ type NavItem = {
   label: string;
   href: string;
   icon: React.ElementType;
+  permissions?: string[]; 
+  adminOnly?: boolean;
 };
 
 const operationalNavItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid },
-  { id: "pos", label: "Bán & Soát vé (POS)", href: "/admin/pos", icon: Ticket }, 
-  { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt },
-  { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign }, 
+  { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid, permissions: [] }, 
+  { id: "pos", label: "Bán & Soát vé (POS)", href: "/admin/pos", icon: Ticket, permissions: ["BANVE", "SOATVE"] }, 
+  { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt, permissions: ["QLHOANVE"] },
+  { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign, permissions: ["QLHOADON"] }, 
 ];
 
 const contentManagementNavItems: NavItem[] = [
-  { id: "movies", label: "Quản lý phim", href: "/admin/movie-management", icon: Film },
-  { id: "versions", label: "Phiên bản phim", href: "/admin/movie-version-management", icon: Layers },
-  { id: "showtimes", label: "Quản lý lịch chiếu", href: "/admin/showtime-management", icon: Calendar },
-  { id: "rooms", label: "Quản lý phòng chiếu", href: "/admin/room-management", icon: Armchair },
+  { id: "movies", label: "Quản lý phim", href: "/admin/movie-management", icon: Film, permissions: ["QLPHIM"] },
+  { id: "versions", label: "Phiên bản phim", href: "/admin/movie-version-management", icon: Layers, permissions: ["QLPHIM"] },
+  { id: "showtimes", label: "Quản lý lịch chiếu", href: "/admin/showtime-management", icon: Calendar, permissions: ["QLLICHCHIEU"] },
+  { id: "rooms", label: "Quản lý phòng chiếu", href: "/admin/room-management", icon: Armchair, permissions: ["QLPHONGCHIEU"] },
 ];
 
 const masterDataNavItems: NavItem[] = [
-  { id: "genres", label: "Thể loại", href: "/admin/master-data/genre", icon: Tags },
-  { id: "formats", label: "Định dạng", href: "/admin/master-data/format", icon: Type },
-  { id: "languages", label: "Ngôn ngữ", href: "/admin/master-data/language", icon: Languages },
-  { id: "labels", label: "Nhãn phim", href: "/admin/master-data/label", icon: Sticker },
+  { id: "genres", label: "Thể loại", href: "/admin/master-data/genre", icon: Tags, permissions: ["QLDANHMUC"] },
+  { id: "formats", label: "Định dạng", href: "/admin/master-data/format", icon: Type, permissions: ["QLDANHMUC"] },
+  { id: "languages", label: "Ngôn ngữ", href: "/admin/master-data/language", icon: Languages, permissions: ["QLDANHMUC"] },
+  { id: "labels", label: "Nhãn phim", href: "/admin/master-data/label", icon: Sticker, permissions: ["QLDANHMUC"] },
 ];
 
 const systemManagementNavItems: NavItem[] = [
-  { id: "combos", label: "Quản lý Combo", href: "/admin/combo-management", icon: ShoppingCart },
-  { id: "promotions", label: "Quản lý khuyến mãi", href: "/admin/promotion-management", icon: Percent },
-  { id: "users", label: "Quản lý người dùng", href: "/admin/user-management", icon: UserCog },
-  { id: "report", label: "Báo cáo thống kê", href: "/admin/report", icon: Book },
-  { id: "roles", label: "Phân quyền (Roles)", href: "/admin/role-management", icon: ShieldCheck },
+  { id: "combos", label: "Quản lý Combo", href: "/admin/combo-management", icon: ShoppingCart, permissions: ["QLCOMBO"] },
+  { id: "promotions", label: "Quản lý khuyến mãi", href: "/admin/promotion-management", icon: Percent, permissions: ["QLKHUYENMAI"] },
+  { id: "users", label: "Quản lý người dùng", href: "/admin/user-management", icon: UserCog, permissions: ["QLNGUOIDUNG"] },
+  { id: "report", label: "Báo cáo thống kê", href: "/admin/report", icon: Book, permissions: ["BCTHONGKE"] },
+  { id: "roles", label: "Phân quyền (Roles)", href: "/admin/role-management", icon: ShieldCheck, permissions: [], adminOnly: true },
 ];
 
 const NavItemLink = ({ item, active, open, onClick, className }: {
@@ -179,15 +181,31 @@ export default function AdminSidebar({
   const [active, setActive] = useState<string>(defaultActive);
   const pathname = usePathname();
 
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const role = user?.role; 
 
-  const visibleOperationalNavItems = useMemo(() => operationalNavItems, []);
-  const visibleContentManagementNavItems = useMemo(() => role === "ADMIN" ? contentManagementNavItems : [], [role]);
+  const checkMenuPermission = (item: NavItem) => {
+    if (role === "ADMIN") return true;
+    if (item.adminOnly) return false;
+    if (!item.permissions || item.permissions.length === 0) return true;
+    return item.permissions.some(p => hasPermission(p));
+  };
+
+  const visibleOperationalNavItems = useMemo(() => 
+    operationalNavItems.filter(checkMenuPermission), 
+  [role, user?.permissions]);
+
+  const visibleContentManagementNavItems = useMemo(() => 
+    contentManagementNavItems.filter(checkMenuPermission), 
+  [role, user?.permissions]);
   
-  const visibleMasterDataNavItems = useMemo(() => role === "ADMIN" ? masterDataNavItems : [], [role]); 
+  const visibleMasterDataNavItems = useMemo(() => 
+    masterDataNavItems.filter(checkMenuPermission), 
+  [role, user?.permissions]); 
   
-  const visibleSystemManagementNavItems = useMemo(() => role === "ADMIN" ? systemManagementNavItems : [], [role]);
+  const visibleSystemManagementNavItems = useMemo(() => 
+    systemManagementNavItems.filter(checkMenuPermission), 
+  [role, user?.permissions]);
 
   useEffect(() => {
     if (!pathname) return;

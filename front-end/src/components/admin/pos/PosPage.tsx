@@ -53,6 +53,7 @@ import { invoiceService } from '@/services/invoice.service';
 import { Movie } from '@/types/movie';
 import { Showtime, SeatType } from '@/types/showtime';
 import BookingSeatMap, { SelectedSeat, SeatRenderMeta } from '@/components/booking/BookingSeatMap';
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PosPage() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -80,6 +81,7 @@ export default function PosPage() {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -602,6 +604,7 @@ export default function PosPage() {
                             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)}
                         </span>
                     </div>
+                    {hasPermission("BANVE") && (
                     <Button 
                         className="w-full" 
                         size="lg" 
@@ -618,6 +621,7 @@ export default function PosPage() {
                             </>
                         )}
                     </Button>
+                    )}
                 </CardFooter>
             </Card>
         </div>
