@@ -9,7 +9,7 @@ import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
 
 @Injectable()
 export class ScreeningRoomService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private getSeatsIncludeQuery(): any {
     return {
@@ -189,7 +189,10 @@ export class ScreeningRoomService {
     }
   }
 
-  async updateScreeningRoom(id: string, updateDto: UpdateScreeningRoomDto) {
+  async updateScreeningRoom(
+    id: string,
+    updateDto: UpdateScreeningRoomDto,
+  ) {
     const prisma = this.prisma;
 
     const screeningRoom = await prisma.pHONGCHIEU.findFirst({
@@ -197,7 +200,9 @@ export class ScreeningRoomService {
     });
 
     if (!screeningRoom) {
-      throw new NotFoundException(`Phòng chiếu với ID ${id} không tồn tại`);
+      throw new NotFoundException(
+        `Phòng chiếu với ID ${id} không tồn tại`,
+      );
     }
 
     if (
@@ -214,6 +219,46 @@ export class ScreeningRoomService {
 
       if (exists) {
         throw new BadRequestException('Tên phòng chiếu đã tồn tại');
+      }
+    }
+
+    let validatedSeats: {
+      MaGheLoaiGhe: string;
+    }[] = [];
+
+    if (updateDto.DanhSachGhe && updateDto.DanhSachGhe.length > 0) {
+      for (const seat of updateDto.DanhSachGhe) {
+        const { Hang, Cot, MaLoaiGhe } = seat;
+
+        const ghe = await prisma.gHE.findFirst({
+          where: { Hang, Cot, DeletedAt: null },
+          select: { MaGhe: true },
+        });
+
+        if (!ghe) {
+          throw new BadRequestException(
+            `Ghế tại hàng ${Hang} cột ${Cot} không tồn tại`,
+          );
+        }
+
+        const gheLoai = await prisma.gHE_LOAIGHE.findFirst({
+          where: {
+            MaGhe: ghe.MaGhe,
+            MaLoaiGhe,
+            DeletedAt: null,
+          },
+          select: { MaGheLoaiGhe: true },
+        });
+
+        if (!gheLoai) {
+          throw new BadRequestException(
+            `Ghế ${Hang}${Cot} không có loại ghế được chọn`,
+          );
+        }
+
+        validatedSeats.push({
+          MaGheLoaiGhe: gheLoai.MaGheLoaiGhe,
+        });
       }
     }
 
@@ -239,7 +284,7 @@ export class ScreeningRoomService {
         data: updateData,
       });
 
-      if (updateDto.DanhSachGhe) {
+      if (validatedSeats.length > 0) {
         await tx.gHE_PHONGCHIEU.updateMany({
           where: {
             MaPhongChieu: id,
@@ -250,42 +295,12 @@ export class ScreeningRoomService {
           },
         });
 
-        for (const seat of updateDto.DanhSachGhe) {
-          const { Hang, Cot, MaLoaiGhe } = seat;
-
-          const ghe = await tx.gHE.findFirst({
-            where: { Hang, Cot, DeletedAt: null },
-            select: { MaGhe: true },
-          });
-
-          if (!ghe) {
-            throw new BadRequestException(
-              `Ghế tại hàng ${Hang} cột ${Cot} không tồn tại`,
-            );
-          }
-
-          const gheLoai = await tx.gHE_LOAIGHE.findFirst({
-            where: {
-              MaGhe: ghe.MaGhe,
-              MaLoaiGhe,
-              DeletedAt: null,
-            },
-            select: { MaGheLoaiGhe: true },
-          });
-
-          if (!gheLoai) {
-            throw new BadRequestException(
-              `Ghế ${Hang}${Cot} không có loại ghế được chọn`,
-            );
-          }
-
-          await tx.gHE_PHONGCHIEU.create({
-            data: {
-              MaPhongChieu: id,
-              MaGheLoaiGhe: gheLoai.MaGheLoaiGhe,
-            },
-          });
-        }
+        await tx.gHE_PHONGCHIEU.createMany({
+          data: validatedSeats.map((seat) => ({
+            MaPhongChieu: id,
+            MaGheLoaiGhe: seat.MaGheLoaiGhe,
+          })),
+        });
       }
     });
 

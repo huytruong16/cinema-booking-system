@@ -8,7 +8,7 @@ import GetInvoiceResponseDto from '../invoice/dtos/get-invoice-response.dto';
 
 @Injectable()
 export class PdfService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async generateInvoicePdf(invoice: GetInvoiceResponseDto): Promise<Buffer> {
     const qrCodeBuffer = await QRCode.toBuffer(invoice.Code);
@@ -351,4 +351,65 @@ export class PdfService {
         .text(ticket.Code, 470, 165, { width: 100, align: 'center' });
     }
   }
+
+  async generateComboSlipPdf(invoice: GetInvoiceResponseDto): Promise<Buffer> {
+    const qrCodeBuffer = await QRCode.toBuffer(invoice.Code).catch(() => null);
+
+    return new Promise((resolve) => {
+      const doc = new PDFDocument({ size: 'A5', margin: 40 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+      this.registerFonts(doc);
+
+      const logoPath = path.join(__dirname, '..', '..', 'images', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 40, 30, { width: 50 });
+      }
+
+      if (qrCodeBuffer) {
+        doc.image(qrCodeBuffer, 320, 30, { width: 60 });
+      }
+
+      doc.font('Arial-Bold').fontSize(18).text('PHIẾU XUẤT COMBO', 40, 105, {
+        width: 340,
+        align: 'center'
+      });
+
+      const infoStartY = 140;
+      doc.font('Arial').fontSize(10);
+      doc.text(`Mã hóa đơn: ${invoice.Code}`, 40, infoStartY);
+      doc.text(
+        `Ngày lập: ${new Date(invoice.NgayLap).toLocaleString('vi-VN')}`,
+        40,
+        infoStartY + 15,
+      );
+
+      const tableTop = infoStartY + (invoice.Email ? 60 : 45);
+      const itemX = 40;
+      const qtyX = 340;
+
+      doc.font('Arial-Bold').fontSize(11);
+      doc.text('Tên Combo', itemX, tableTop);
+      doc.text('SL', qtyX, tableTop);
+
+      doc.moveTo(40, tableTop + 16).lineTo(380, tableTop + 16).stroke();
+
+      let currentY = tableTop + 24;
+      doc.font('Arial').fontSize(10);
+
+      (invoice.Combos || []).forEach((combo: any) => {
+        const maxWidth = qtyX - itemX - 15;
+        const nameHeight = doc.heightOfString(combo.TenCombo || '', { width: maxWidth });
+        doc.text(combo.TenCombo || '', itemX, currentY, { width: maxWidth });
+        doc.text(String(combo.SoLuong ?? ''), qtyX, currentY);
+        currentY += Math.max(20, nameHeight + 8);
+      });
+
+      doc.end();
+    });
+  };
 }
+
