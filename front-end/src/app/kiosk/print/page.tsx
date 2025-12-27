@@ -3,22 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Ticket, Printer, Search, ArrowLeft, CheckCircle2, QrCode } from 'lucide-react';
+import { Ticket, Printer, Search, ArrowLeft, CheckCircle2, QrCode, Camera } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { useAuth } from "@/contexts/AuthContext";
 import { invoiceService } from "@/services/invoice.service";
 import { TicketResponse } from "@/types/ticket";
 import { format } from 'date-fns';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 export default function KioskPrintPage() {
   const [step, setStep] = useState<'input' | 'preview' | 'printing' | 'success'>('input');
   const [bookingCode, setBookingCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [ticketData, setTicketData] = useState<Blob | null>(null);
   const [comboData, setComboData] = useState<Blob | null>(null);
   
@@ -34,9 +37,8 @@ export default function KioskPrintPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingCode.trim()) return;
+  const processSearch = async (code: string) => {
+    if (!code.trim()) return;
     
     setIsLoading(true);
     setTicketData(null);
@@ -45,14 +47,14 @@ export default function KioskPrintPage() {
     try {
       let invoice = null;
       try {
-        const invoicesRes: any = await invoiceService.getAll({ search: bookingCode });
+        const invoicesRes: any = await invoiceService.getAll({ search: code });
         const invoices = invoicesRes.data || [];
-        invoice = invoices.find((inv: any) => inv.Code === bookingCode || inv.GiaoDich?.Code === bookingCode);
+        invoice = invoices.find((inv: any) => inv.Code === code || inv.GiaoDich?.Code === code);
       } catch (err) {
         console.error("Error fetching invoice details", err);
       }
 
-      const data = await invoiceService.getInvoiceByCode(bookingCode);
+      const data = await invoiceService.getInvoiceByCode(code);
       setTicketData(data as unknown as Blob);
 
       if (invoice && invoice.Combos && invoice.Combos.length > 0) {
@@ -72,6 +74,20 @@ export default function KioskPrintPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await processSearch(bookingCode);
+  };
+
+  const handleScan = (result: any[]) => {
+      if (result && result[0]) {
+          const scannedCode = result[0].rawValue;
+          setBookingCode(scannedCode);
+          setIsScanning(false);
+          processSearch(scannedCode);
+      }
   };
 
   const handlePrint = async () => {
@@ -166,7 +182,6 @@ export default function KioskPrintPage() {
                     Mã đặt vé đã được gửi đến email của bạn
                   </p>
                 </div>
-
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-zinc-700" />
@@ -180,6 +195,7 @@ export default function KioskPrintPage() {
                   type="button" 
                   variant="outline" 
                   className="w-full h-14 border-dashed border-zinc-600 bg-zinc-900/50 hover:bg-zinc-800 hover:border-zinc-500 text-zinc-300 hover:text-white transition-all group"
+                  onClick={() => setIsScanning(true)}
                 >
                   <QrCode className="mr-2 h-5 w-5 text-zinc-400 group-hover:text-white transition-colors" />
                   <span className="transition-colors">Quét mã QR</span>
@@ -270,8 +286,26 @@ export default function KioskPrintPage() {
       </div>
       
       <div className="absolute bottom-4 text-zinc-600 text-sm">
-        Kiosk ID: K-01 • Version 1.0.0
+        &copy; 2025 Movix - Rạp chiếu phim hàng đầu UIT
       </div>
+
+      <Dialog open={isScanning} onOpenChange={setIsScanning}>
+        <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle>Quét mã QR</DialogTitle>
+          </DialogHeader>
+          <div className="aspect-square overflow-hidden rounded-lg bg-black">
+            {isScanning && (
+                <Scanner 
+                    onScan={handleScan}
+                    styles={{
+                        container: { width: '100%', height: '100%' }
+                    }}
+                />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

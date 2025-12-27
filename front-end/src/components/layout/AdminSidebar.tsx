@@ -28,7 +28,8 @@ import {
   Layers,
   Receipt,
   DollarSign,
-  ShieldCheck
+  ShieldCheck,
+  QrCode
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ type NavItem = {
 const operationalNavItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid, permissions: [] }, 
   { id: "pos", label: "Bán & Soát vé (POS)", href: "/admin/pos", icon: Ticket, permissions: ["BANVE", "SOATVE"] }, 
+  { id: "checkin", label: "Soát vé", href: "/admin/check-in", icon: QrCode, permissions: ["SOATVE"] },
   { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt, permissions: ["QLHOANVE"] },
   { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign, permissions: ["QLHOADON"] }, 
 ];
