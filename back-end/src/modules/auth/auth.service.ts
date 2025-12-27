@@ -86,16 +86,15 @@ export class AuthService {
     });
     const hashed = await bcryptUtil.hashPassword(matkhau);
 
-    let user;
     if (existing) {
       if (existing.TrangThai !== 'CHUAKICHHOAT')
         throw new ConflictException('Email đã tồn tại.');
-      user = await this.prisma.nGUOIDUNGPHANMEM.update({
+      await this.prisma.nGUOIDUNGPHANMEM.update({
         where: { Email: email },
         data: { HoTen: hoTen, MatKhau: hashed },
       });
     } else {
-      user = await this.prisma.nGUOIDUNGPHANMEM.create({
+      await this.prisma.nGUOIDUNGPHANMEM.create({
         data: { Email: email, HoTen: hoTen, MatKhau: hashed },
       });
     }
@@ -105,7 +104,7 @@ export class AuthService {
 
     await this.redisService.setEx(`otp:${email}`, 300, hashOtp);
     await this.redisService.setEx(`otp_attempts:${email}`, 300, '0');
-    this.mailService.sendOTPEmail(
+    await this.mailService.sendOTPEmail(
       email,
       'Xác minh tài khoản',
       `${otp}`,
