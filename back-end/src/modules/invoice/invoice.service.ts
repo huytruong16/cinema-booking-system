@@ -258,9 +258,13 @@ export class InvoiceService {
     return this.mapToInvoiceResponse(invoice);
   }
 
-  async getInvoiceByCode(code: string) {
+  async getInvoiceByCode(userId: string, role: RoleEnum, code: string) {
     const invoice = await this.prisma.hOADON.findFirst({
-      where: { Code: code, DeletedAt: null },
+      where: {
+        ...(role === RoleEnum.KHACHHANG ? { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } } : {}),
+        Code: code,
+        DeletedAt: null
+      },
       include: {
         GiaoDichs: true,
         HoaDonKhuyenMais: {
@@ -325,8 +329,8 @@ export class InvoiceService {
     return this.mapToInvoiceResponse(invoice);
   }
 
-  async printInvoice(code: string) {
-    const invoice = await this.getInvoiceByCode(code);
+  async printInvoice(userId: string, role: RoleEnum, code: string) {
+    const invoice = await this.getInvoiceByCode(userId, role, code);
     return this.pdfService.generateInvoicePdf(invoice);
   }
 
@@ -535,6 +539,7 @@ export class InvoiceService {
     return {
       MaGiaoDich: transaction.MaGiaoDich,
       GiaoDichUrl: paymentData?.checkoutUrl,
+      CodeHoaDon: created.Code,
     };
 
     async function checkAvailableUserVoucher() {
@@ -751,8 +756,8 @@ export class InvoiceService {
     }
   }
 
-  async printComboSlip(userId: string, role: RoleEnum, id: string) {
-    const invoice = await this.getInvoiceById(userId, role, id);
+  async printComboSlip(userId: string, role: RoleEnum, code: string) {
+    const invoice = await this.getInvoiceByCode(userId, role, code);
     if (!invoice.Combos || invoice.Combos.length === 0) {
       throw new BadRequestException('Hóa đơn không có combo');
     }
