@@ -51,6 +51,7 @@ export default function PosPage() {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pendingInvoiceCodeRef = useRef<string | null>(null);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -173,24 +174,37 @@ export default function PosPage() {
 
   const handlePaymentSuccess = async (code: string) => {
       setShowPaymentDialog(false);
+      pendingInvoiceCodeRef.current = null;
       toast.success("Thanh toán thành công! Đang in vé...");
       
-      try {
-          const blob = await invoiceService.printInvoice(code) as unknown as Blob;
-          const url = window.URL.createObjectURL(blob);
-          const printWindow = window.open(url);
-          if (printWindow) {
-          } else {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Ticket-${code}.pdf`;
-            link.click();
-          }
-      } catch (error) {
-          console.error("Print error:", error);
-          toast.error("Lỗi in vé");
+      const printDoc = async (fetcher: (code: string) => Promise<any>, name: string) => {
+        try {
+            const blob = await fetcher(code) as unknown as Blob;
+            const url = window.URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (!printWindow) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${name}-${code}.pdf`;
+                link.click();
+            }
+        } catch (e) {
+            console.error(`Error printing ${name}:`, e);
+        }
+      };
+
+      const hasCombos = Object.values(comboQuantities).some(qty => qty > 0);
+      const printTasks = [
+        printDoc(invoiceService.printInvoice, 'Invoice'),
+        printDoc(invoiceService.printTicket, 'Ticket')
+      ];
+
+      if (hasCombos) {
+        printTasks.push(printDoc(invoiceService.getComboPdf, 'Combo'));
       }
-        // Reset state after successful payment
+
+      await Promise.all(printTasks);
+
       setSelectedSeats([]);
       setComboQuantities({});
       setSelectedShowtime(null); 
@@ -206,7 +220,10 @@ export default function PosPage() {
               if (href.includes('/success') && href.includes('status=PAID')) {
                   const url = new URL(href);
                   const orderCode = url.searchParams.get('orderCode');
-                  if (orderCode) {
+                  
+                  if (pendingInvoiceCodeRef.current) {
+                      handlePaymentSuccess(pendingInvoiceCodeRef.current);
+                  } else if (orderCode) {
                       handlePaymentSuccess(orderCode);
                   }
               }
@@ -236,18 +253,26 @@ export default function PosPage() {
 
       const res = await invoiceService.create(invoiceData);
       
+      if (res && res.CodeHoaDon) {
+        pendingInvoiceCodeRef.current = res.CodeHoaDon;
+      }
+
       if (res && res.GiaoDichUrl) {
           setPaymentUrl(res.GiaoDichUrl);
           setTransactionId(res.MaGiaoDich);
           setShowPaymentDialog(true);
           toast.success("Đơn hàng đã được tạo. Vui lòng thanh toán.");
       } else {
-          toast.success("Thanh toán thành công!");
-          setSelectedSeats([]);
-          setComboQuantities({});
-          setSelectedShowtime(null); 
-          if (selectedShowtime) {
-              handleShowtimeSelect(selectedShowtime.MaSuatChieu);
+          if (res && res.CodeHoaDon) {
+            handlePaymentSuccess(res.CodeHoaDon);
+          } else {
+            toast.success("Thanh toán thành công!");
+            setSelectedSeats([]);
+            setComboQuantities({});
+            setSelectedShowtime(null); 
+            if (selectedShowtime) {
+                handleShowtimeSelect(selectedShowtime.MaSuatChieu);
+            }
           }
       }
 
