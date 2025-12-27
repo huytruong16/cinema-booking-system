@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -26,7 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async login(dto: LoginDto) {
     const { email, matkhau } = dto;
@@ -79,25 +80,25 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const { email, hoTen } = dto;
-    // const existing = await this.prisma.nGUOIDUNGPHANMEM.findUnique({
-    //   where: { Email: email },
-    // });
-    //const hashed = await bcryptUtil.hashPassword(matkhau);
+    const { email, hoTen, matkhau } = dto;
+    const existing = await this.prisma.nGUOIDUNGPHANMEM.findUnique({
+      where: { Email: email },
+    });
+    const hashed = await bcryptUtil.hashPassword(matkhau);
 
-    // let user;
-    // if (existing) {
-    //   if (existing.TrangThai !== 'CHUAKICHHOAT')
-    //     throw new ConflictException('Email đã tồn tại.');
-    //   user = await this.prisma.nGUOIDUNGPHANMEM.update({
-    //     where: { Email: email },
-    //     data: { HoTen: hoTen, MatKhau: hashed },
-    //   });
-    // } else {
-    //   user = await this.prisma.nGUOIDUNGPHANMEM.create({
-    //     data: { Email: email, HoTen: hoTen, MatKhau: hashed },
-    //   });
-    // }
+    let user;
+    if (existing) {
+      if (existing.TrangThai !== 'CHUAKICHHOAT')
+        throw new ConflictException('Email đã tồn tại.');
+      user = await this.prisma.nGUOIDUNGPHANMEM.update({
+        where: { Email: email },
+        data: { HoTen: hoTen, MatKhau: hashed },
+      });
+    } else {
+      user = await this.prisma.nGUOIDUNGPHANMEM.create({
+        data: { Email: email, HoTen: hoTen, MatKhau: hashed },
+      });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashOtp = await bcryptUtil.hashPassword(otp);
@@ -139,10 +140,25 @@ export class AuthService {
       throw new ForbiddenException(`OTP không đúng (${attempts + 1}/5 lần).`);
     }
 
-    await this.prisma.nGUOIDUNGPHANMEM.update({
+    const user = await this.prisma.nGUOIDUNGPHANMEM.update({
       where: { Email: email },
       data: { TrangThai: 'CONHOATDONG' },
     });
+
+    if (user.VaiTro === 'KHACHHANG') {
+      const existedCustomer = await this.prisma.kHACHHANG.findFirst({
+        where: { MaNguoiDung: user.MaNguoiDung },
+      });
+
+      if (!existedCustomer) {
+        await this.prisma.kHACHHANG.create({
+          data: {
+            MaNguoiDung: user.MaNguoiDung,
+            CreatedAt: new Date(),
+          },
+        });
+      }
+    }
     await this.redisService.del(`otp:${email}`, `otp_attempts:${email}`);
 
     return { message: 'Xác minh thành công, bạn có thể đăng nhập.' };
