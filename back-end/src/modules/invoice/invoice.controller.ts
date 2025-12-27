@@ -53,28 +53,25 @@ export class InvoiceController {
     return this.invoiceService.getInvoiceById(req.user.id, req.user.vaitro, id);
   }
 
-  @Get(':id/combo/pdf')
+  @Get(':code/combo/pdf')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'In phiếu xuất combo' })
-  @ApiParam({ name: 'id', description: 'Mã hóa đơn', required: true })
+  @ApiParam({ name: 'code', description: 'Code hóa đơn', required: true })
   async printComboSlip(
     @Req() req,
-    @Param('id') id: string,
+    @Param('code') code: string,
     @Res() res: express.Response,
   ) {
-    if (!isUUID(id, '4'))
-      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-
     const buffer = await this.invoiceService.printComboSlip(
       req.user.id,
       req.user.vaitro,
-      id,
+      code,
     );
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=combo-slip-${id}.pdf`,
+      'Content-Disposition': `attachment; filename=combo-slip-${code}.pdf`,
       'Content-Length': buffer.length,
     });
 
@@ -96,8 +93,13 @@ export class InvoiceController {
   async printInvoice(
     @Param('code') code: string,
     @Res() res: express.Response,
+    @Req() req,
   ) {
-    const buffer = await this.invoiceService.printInvoice(code);
+    const buffer = await this.invoiceService.printInvoice(
+      req.user.id,
+      req.user.vaitro,
+      code,
+    );
 
     res.set({
       'Content-Type': 'application/pdf',
