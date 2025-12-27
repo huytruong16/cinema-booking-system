@@ -20,6 +20,7 @@ export default function KioskPrintPage() {
   const [bookingCode, setBookingCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [ticketData, setTicketData] = useState<Blob | null>(null);
+  const [comboData, setComboData] = useState<Blob | null>(null);
   
   const { user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
@@ -38,9 +39,31 @@ export default function KioskPrintPage() {
     if (!bookingCode.trim()) return;
     
     setIsLoading(true);
+    setTicketData(null);
+    setComboData(null);
+    
     try {
+      let invoice = null;
+      try {
+        const invoicesRes: any = await invoiceService.getAll({ search: bookingCode });
+        const invoices = invoicesRes.data || [];
+        invoice = invoices.find((inv: any) => inv.Code === bookingCode || inv.GiaoDich?.Code === bookingCode);
+      } catch (err) {
+        console.error("Error fetching invoice details", err);
+      }
+
       const data = await invoiceService.getInvoiceByCode(bookingCode);
       setTicketData(data as unknown as Blob);
+
+      if (invoice && invoice.Combos && invoice.Combos.length > 0) {
+        try {
+          const comboBlob = await invoiceService.getComboPdf(invoice.MaHoaDon);
+          setComboData(comboBlob as unknown as Blob);
+        } catch (comboError) {
+          console.error("Failed to fetch combo PDF", comboError);
+        }
+      }
+
       setStep('preview');
     } catch (error: any) {
       console.error(error);
@@ -61,17 +84,26 @@ export default function KioskPrintPage() {
       // Open PDF in new window for printing
       const printWindow = window.open(url);
       if (printWindow) {
-        // Note: print() might be blocked or behave differently depending on browser/PDF viewer
-        // For a kiosk, usually the browser is configured to print silently or show print dialog immediately
+   
       } else {
-        // Fallback if popup blocked
         const link = document.createElement('a');
         link.href = url;
         link.download = `Ticket-${bookingCode}.pdf`;
         link.click();
       }
+      if (comboData) {
+        setTimeout(() => {
+          const comboUrl = window.URL.createObjectURL(comboData);
+          const comboWindow = window.open(comboUrl);
+          if (!comboWindow) {
+            const link = document.createElement('a');
+            link.href = comboUrl;
+            link.download = `Combo-${bookingCode}.pdf`;
+            link.click();
+          }
+        }, 1000);
+      }
       
-      // Wait a bit to show success state
       setTimeout(() => {
         setStep('success');
       }, 2000);
@@ -87,6 +119,7 @@ export default function KioskPrintPage() {
     setStep('input');
     setBookingCode('');
     setTicketData(null);
+    setComboData(null);
   };
 
   if (isAuthLoading) {
@@ -181,7 +214,7 @@ export default function KioskPrintPage() {
                 <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
                   <CheckCircle2 className="h-8 w-8 text-green-500" />
                 </div>
-                <CardTitle className="text-2xl">Vé đã sẵn sàng</CardTitle>
+                <CardTitle className="text-2xl text-yellow-400">Vé đã sẵn sàng</CardTitle>
                 <CardDescription>Mã đặt vé: {bookingCode}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

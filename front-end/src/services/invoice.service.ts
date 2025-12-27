@@ -113,6 +113,13 @@ export const invoiceService = {
     return res.data; 
   },
 
+  getComboPdf: async (id: string) => {
+    const res = await apiClient.get(`/invoices/${id}/combo/pdf`, {
+      responseType: 'blob', 
+    });
+    return res.data; 
+  },
+
   createRefundRequest: async (payload: RefundRequestPayload) => {
     return await apiClient.post('/refund-requests', payload);
   },
