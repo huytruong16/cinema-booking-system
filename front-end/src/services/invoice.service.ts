@@ -15,6 +15,7 @@ export interface CreateInvoiceDto {
 export interface InvoiceResponse {
   MaGiaoDich: string;
   GiaoDichUrl: string;
+  CodeHoaDon: string;
 }
 
 export interface InvoiceItem {
@@ -108,6 +109,13 @@ export const invoiceService = {
 
   printTicket: async (code: string) => {
     const res = await apiClient.get(`/invoices/${code}/ticket/pdf`, {
+      responseType: 'blob', 
+    });
+    return res.data; 
+  },
+
+  getComboPdf: async (id: string) => {
+    const res = await apiClient.get(`/invoices/${id}/combo/pdf`, {
       responseType: 'blob', 
     });
     return res.data; 

@@ -124,7 +124,7 @@ export function TicketDetail({ ticket }: TicketDetailProps) {
                 </div>
                 <div className="flex flex-col justify-center flex-1 text-right space-y-1">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Mã vé vào cổng</p>
-                    <p className="text-xl font-mono font-bold text-white tracking-wider">{ticket.id.split('-')[1]}</p>
+                    <p className="text-xl font-mono font-bold text-white tracking-wider">{ticket.id.split('-')[1] || ticket.id}</p>
                     <p className="text-[10px] text-zinc-400 leading-tight">
                         Đưa mã này cho nhân viên soát vé.
                     </p>
