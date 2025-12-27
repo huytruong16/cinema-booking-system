@@ -104,7 +104,7 @@ export class AuthService {
 
     await this.redisService.setEx(`otp:${email}`, 300, hashOtp);
     await this.redisService.setEx(`otp_attempts:${email}`, 300, '0');
-    await this.mailService.sendOTPEmail(
+    void this.mailService.sendOTPEmail(
       email,
       'Xác minh tài khoản',
       `${otp}`,
@@ -175,7 +175,7 @@ export class AuthService {
 
     await this.redisService.setEx(`reset_otp:${email}`, 300, hashOtp);
     await this.redisService.setEx(`reset_attempts:${email}`, 300, '0');
-    this.mailService.sendOTPEmail(
+    void this.mailService.sendOTPEmail(
       email,
       'Đặt lại mật khẩu',
       `${otp}`,
