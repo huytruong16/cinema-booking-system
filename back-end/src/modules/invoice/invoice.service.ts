@@ -393,6 +393,7 @@ export class InvoiceService {
     if (userId) {
       user = await prisma.nGUOIDUNGPHANMEM.findUnique({
         where: { MaNguoiDung: userId },
+        include: { NhanViens: true },
       });
     }
 
@@ -521,7 +522,7 @@ export class InvoiceService {
           LinkId: paymentData ? paymentData.paymentLinkId : '',
           GiaoDichUrl: paymentData ? paymentData.checkoutUrl : '',
           MaNhanVien:
-            user && user.VaiTro === RoleEnum.NHANVIEN ? user.MaNguoiDung : null,
+            user && user.VaiTro === RoleEnum.NHANVIEN ? user.NhanViens[0].MaNhanVien : null,
           NoiDung: paymentData ? paymentData.description : null,
         },
       });
