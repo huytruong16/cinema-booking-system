@@ -71,7 +71,7 @@ export class ShowtimeService {
     if (filters.DenNgay) {
       whereConditions.ThoiGianBatDau = {
         ...whereConditions.ThoiGianBatDau,
-        lte: new Date(filters.DenNgay),
+        lte: new Date(new Date(filters.DenNgay).getTime() + 24 * 60 * 60 * 1000),
       };
     }
   }
