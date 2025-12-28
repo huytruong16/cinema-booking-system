@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 import { GetTicketsDto } from './dtos/get-tickets.dto';
@@ -47,7 +51,7 @@ export class TicketsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pdfService: PdfService,
-  ) { }
+  ) {}
 
   async getTickets(userId: string, role: string, filters?: GetTicketsDto) {
     const [data, pagination] = await this.prisma.xprisma.vE
@@ -91,7 +95,10 @@ export class TicketsService {
     if (ticket.TrangThaiVe === TicketStatusEnum.DAHOAN)
       throw new BadRequestException('Vé đã được hoàn');
 
-    if (ticket.TrangThaiVe === TicketStatusEnum.CHOHOANTIEN || ticket.TrangThaiVe === TicketStatusEnum.CHUAHOANTIEN)
+    if (
+      ticket.TrangThaiVe === TicketStatusEnum.CHOHOANTIEN ||
+      ticket.TrangThaiVe === TicketStatusEnum.CHUAHOANTIEN
+    )
       throw new BadRequestException('Vé đang trong quá trình hoàn tiền');
 
     if (ticket.TrangThaiVe === TicketStatusEnum.DAHETHAN)
@@ -103,7 +110,7 @@ export class TicketsService {
       include: ticketIncludes,
     });
 
-    return { 'message': 'Checkin thành công' };
+    return { message: 'Checkin thành công' };
   }
 
   async getTicketById(userId: string, role: string, id: string) {

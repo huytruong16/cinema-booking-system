@@ -29,7 +29,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
 export class RefundRequestController {
-  constructor(private readonly refundRequestService: RefundRequestService) { }
+  constructor(private readonly refundRequestService: RefundRequestService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách yêu cầu hoàn vé' })
@@ -45,8 +45,15 @@ export class RefundRequestController {
     @Req() req,
     @Body() createRefundRequestDto: CreateRefundRequestDto,
   ) {
-    if (req.user.vaitro === RoleEnum.KHACHHANG && (!createRefundRequestDto.MaNganHang || !createRefundRequestDto.SoTaiKhoan || !createRefundRequestDto.ChuTaiKhoan)) {
-      throw new BadRequestException('Khách hàng phải cung cấp thông tin ngân hàng để hoàn vé');
+    if (
+      req.user.vaitro === RoleEnum.KHACHHANG &&
+      (!createRefundRequestDto.MaNganHang ||
+        !createRefundRequestDto.SoTaiKhoan ||
+        !createRefundRequestDto.ChuTaiKhoan)
+    ) {
+      throw new BadRequestException(
+        'Khách hàng phải cung cấp thông tin ngân hàng để hoàn vé',
+      );
     }
     return this.refundRequestService.createNewRefundRequest(
       req.user.id,

@@ -29,7 +29,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Loại ghế')
 @Controller('seat-types')
 export class SeatTypeController {
-  constructor(private readonly seatTypeService: SeatTypeService) { }
+  constructor(private readonly seatTypeService: SeatTypeService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các loại ghế' })

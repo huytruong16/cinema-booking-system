@@ -36,7 +36,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Suất chiếu')
 @Controller('showtimes')
 export class ShowtimeController {
-  constructor(private readonly showtimeService: ShowtimeService) { }
+  constructor(private readonly showtimeService: ShowtimeService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách suất chiếu với bộ lọc' })

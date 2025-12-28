@@ -19,7 +19,7 @@ export class FilmService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
-  ) { }
+  ) {}
   async getAllFilms(filters?: FilterFilmDto) {
     const whereConditions: any = { DeletedAt: null };
 
@@ -70,7 +70,7 @@ export class FilmService {
           },
           PhimTheLoais: {
             where: { TheLoai: { DeletedAt: null } },
-            select: { TheLoai: true }
+            select: { TheLoai: true },
           },
           NhanPhim: true,
         },
@@ -388,8 +388,8 @@ export class FilmService {
                 select: {
                   TheLoai: {
                     select: { TenTheLoai: true },
-                  }
-                }
+                  },
+                },
               },
             },
           },
@@ -420,7 +420,7 @@ export class FilmService {
         },
         PhimTheLoais: {
           where: { TheLoai: { DeletedAt: null } },
-          select: { TheLoai: true }
+          select: { TheLoai: true },
         },
       },
     });

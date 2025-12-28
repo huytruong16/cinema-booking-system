@@ -32,7 +32,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiBearerAuth()
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) { }
+  constructor(private readonly invoiceService: InvoiceService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các hóa đơn' })

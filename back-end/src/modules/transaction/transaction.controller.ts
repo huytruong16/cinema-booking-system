@@ -32,14 +32,18 @@ import { RoleEnum } from 'src/libs/common/enums';
 @Controller('transactions')
 @ApiTags('Giao dịch')
 export class TransactionController {
-  constructor(private readonly transactionService: TransactionService) { }
+  constructor(private readonly transactionService: TransactionService) {}
 
   @Get()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy danh sách các giao dịch' })
   async getAllTransaction(@Req() req, @Query() filters: GetTransactionDto) {
-    return await this.transactionService.getAllTransactions(req.user.id, req.user.vaitro, filters);
+    return await this.transactionService.getAllTransactions(
+      req.user.id,
+      req.user.vaitro,
+      filters,
+    );
   }
 
   @ApiExcludeEndpoint()
@@ -110,6 +114,10 @@ export class TransactionController {
     if (!isUUID(transactionId, '4')) {
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     }
-    return this.transactionService.getTransactionById(req.user.id, req.user.vaitro, transactionId);
+    return this.transactionService.getTransactionById(
+      req.user.id,
+      req.user.vaitro,
+      transactionId,
+    );
   }
 }
