@@ -359,7 +359,7 @@ function MovieReport({ data }: { data: TopMovie[] }) {
 
     const chartConfig = {
         revenue: { label: "Doanh thu" },
-        ...Object.fromEntries(chartData.map((m, i) => [m.name, { label: m.name, color: `hsl(var(--chart-${(i % 5) + 1}))` }]))
+        ...Object.fromEntries(chartData.map((m, i) => [m.name, { label: m.name, color: `var(--chart-${(i % 5) + 1})` }]))
     };
 
     return (
@@ -388,7 +388,7 @@ function MovieReport({ data }: { data: TopMovie[] }) {
                             {chartData.map((entry, index) => (
                                 <Cell 
                                     key={`cell-${index}`} 
-                                    fill={`hsl(var(--chart-${(index % 5) + 1}))`} 
+                                    fill={`var(--chart-${(index % 5) + 1})`} 
                                 />
                             ))}
                         </Pie>

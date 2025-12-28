@@ -26,19 +26,47 @@ export interface GetTopStaffParams {
   range: 'day' | 'week' | 'month' | 'year' | 'all';
   limit?: number;
 }
+interface RawSummaryResponse {
+    LoaiThongKe: string;
+    NgayBatDau: string;
+    NgayKetThuc: string;
+    TongDoanhThu: number;
+    DoanhThuVe: number;
+    SoVeDaBan: number;
+    TiLeLapDay: number;
+    DoanhThuCombo: number;
+    SoSanh: {
+        DoanhThuVe: number;
+        SoVeDaBan: number;
+    }
+}
+
+interface RawRevenueChartItem {
+    Ngay: string;
+    DoanhThuVe: number;
+    DoanhThuCombo: number;
+}
 
 export const statisticsService = {
 
   getSummary: async (params: GetSummaryParams): Promise<StatisticsSummary> => {
-    const res = await apiClient.get<StatisticsSummary>('/statistics/summary', { params });
-    return res.data;
+    const res = await apiClient.get<RawSummaryResponse>('/statistics/summary', { params });
+    const raw = res.data;
+    return {
+        totalRevenue: raw.TongDoanhThu,
+        totalTickets: raw.SoVeDaBan,
+        growth: raw.SoSanh?.DoanhThuVe || 0
+    };
   },
 
   getRevenueChart: async (
     params: GetRevenueChartParams
   ): Promise<RevenueChartData[]> => {
-    const res = await apiClient.get<RevenueChartData[]>('/statistics/revenue-chart', { params });
-    return res.data;
+    const res = await apiClient.get<RawRevenueChartItem[]>('/statistics/revenue-chart', { params });
+    return res.data.map(item => ({
+        date: item.Ngay,
+        revenue: item.DoanhThuVe + item.DoanhThuCombo
+    }));
   },
 
   getTopMovies: async (
