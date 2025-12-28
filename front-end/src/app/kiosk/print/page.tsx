@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Ticket, Printer, Search, ArrowLeft, CheckCircle2, QrCode, Camera } from 'lucide-react';
+import { Ticket, Printer, Search, ArrowLeft, CheckCircle2, QrCode, Camera, Keyboard, Delete } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -22,6 +22,7 @@ export default function KioskPrintPage() {
   const [bookingCode, setBookingCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
   const [ticketData, setTicketData] = useState<Blob | null>(null);
   const [comboData, setComboData] = useState<Blob | null>(null);
   
@@ -172,11 +173,20 @@ export default function KioskPrintPage() {
                     <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-primary transition-colors h-5 w-5" />
                     <Input 
                       placeholder="Ví dụ: MVX-12345" 
-                      className="pl-10 h-14 text-lg bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
+                      className="pl-10 pr-12 h-14 text-lg bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                       value={bookingCode}
                       onChange={(e) => setBookingCode(e.target.value)}
                       autoFocus
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      onClick={() => setShowKeypad(true)}
+                    >
+                      <Keyboard className="h-5 w-5" />
+                    </Button>
                   </div>
                   <p className="text-xs text-zinc-400 text-center">
                     Mã đặt vé đã được gửi đến email của bạn
@@ -306,6 +316,61 @@ export default function KioskPrintPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showKeypad && (
+        <VirtualKeypad
+          value={bookingCode}
+          onInput={(key) => setBookingCode(prev => prev + key)}
+          onDelete={() => setBookingCode(prev => prev.slice(0, -1))}
+          onClear={() => setBookingCode('')}
+          onClose={() => setShowKeypad(false)}
+        />
+      )}
     </div>
   );
 }
+
+const VirtualKeypad = ({ value, onInput, onDelete, onClear, onClose }: { value: string, onInput: (val: string) => void, onDelete: () => void, onClear: () => void, onClose: () => void }) => {
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'];
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-10 duration-200" onClick={onClose}>
+      <div className="w-full max-w-md bg-zinc-900 border-t border-zinc-800 p-4 pb-8 rounded-t-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-white">Bàn phím số</h3>
+            <Button variant="ghost" size="sm" onClick={onClose} className="text-zinc-400 hover:text-white">Đóng</Button>
+        </div>
+
+        <div className="mb-4 p-4 bg-zinc-950 rounded-lg border border-zinc-800 text-center min-h-[4.5rem] flex items-center justify-center">
+            <span className="text-3xl font-bold text-white tracking-widest">
+                {value || <span className="text-zinc-600 text-xl font-normal">Nhập mã...</span>}
+            </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {keys.map((key) => (
+            <Button
+              key={key}
+              variant={key === 'C' ? 'destructive' : key === '⌫' ? 'secondary' : 'outline'}
+              className={`h-16 text-2xl font-medium ${
+                key === 'C' ? 'bg-red-900/20 text-red-400 border-red-900/50 hover:bg-red-900/40' : 
+                key === '⌫' ? 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700' : 
+                'bg-zinc-950/50 border-zinc-800 text-white hover:bg-zinc-800 hover:border-primary/50 hover:text-primary'
+              }`}
+              onClick={() => {
+                if (key === 'C') onClear();
+                else if (key === '⌫') onDelete();
+                else onInput(key);
+              }}
+            >
+              {key === '⌫' ? <Delete className="h-6 w-6" /> : key}
+            </Button>
+          ))}
+        </div>
+        <Button className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground mt-4" onClick={onClose}>
+            Hoàn tất
+        </Button>
+      </div>
+    </div>
+  );
+};

@@ -13,12 +13,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Ticket, 
-  Armchair, 
+  Ticket,
+  Armchair,
   ShoppingCart,
-  Percent, 
+  Percent,
   UserCog,
-  Book, 
+  Book,
   Database,
   Tags,
   Type,
@@ -29,7 +29,8 @@ import {
   Receipt,
   DollarSign,
   ShieldCheck,
-  QrCode
+  QrCode,
+  ScreenShare
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,16 +41,17 @@ type NavItem = {
   label: string;
   href: string;
   icon: React.ElementType;
-  permissions?: string[]; 
+  permissions?: string[];
   adminOnly?: boolean;
 };
 
 const operationalNavItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid, permissions: [] }, 
-  { id: "pos", label: "Bán & Soát vé (POS)", href: "/admin/pos", icon: Ticket, permissions: ["BANVE", "SOATVE"] }, 
+  { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid, permissions: [] },
+  { id: "kiosk", label: "Kiosk", href: "/kiosk", icon: ScreenShare, permissions: [] },
+  { id: "pos", label: "Bán Vé", href: "/admin/pos", icon: Ticket, permissions: ["BANVE", "SOATVE"] },
   { id: "checkin", label: "Soát vé", href: "/admin/check-in", icon: QrCode, permissions: ["SOATVE"] },
   { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt, permissions: ["QLHOANVE"] },
-  { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign, permissions: ["QLHOADON"] }, 
+  { id: "invoice", label: "Quản lý hóa đơn", href: "/admin/invoice-management", icon: DollarSign, permissions: ["QLHOADON"] },
 ];
 
 const contentManagementNavItems: NavItem[] = [
@@ -105,52 +107,52 @@ const NavItemLink = ({ item, active, open, onClick, className }: {
 };
 
 const NavGroup = ({ label, icon: Icon, items, active, open, onClick, isExpanded, onToggleExpand }: {
-    label: string,
-    icon: any,
-    items: NavItem[],
-    active: string,
-    open: boolean,
-    onClick: (id: string) => void,
-    isExpanded: boolean,
-    onToggleExpand: () => void
+  label: string,
+  icon: any,
+  items: NavItem[],
+  active: string,
+  open: boolean,
+  onClick: (id: string) => void,
+  isExpanded: boolean,
+  onToggleExpand: () => void
 }) => {
-    const hasActiveChild = items.some(i => i.id === active);
+  const hasActiveChild = items.some(i => i.id === active);
 
-    return (
-        <li>
-            <button
-                onClick={onToggleExpand}
-                className={clsx(
-                    "flex items-center gap-3 w-full text-md rounded-md px-2 py-2 transition-colors duration-150 whitespace-nowrap justify-between group",
-                    hasActiveChild ? "text-white bg-slate-800/50" : "text-slate-200 hover:bg-slate-800"
-                )}
-                title={!open ? label : undefined}
-            >
-                <div className="flex items-center gap-3 overflow-hidden">
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    {open && <span className="truncate font-medium">{label}</span>}
-                </div>
-                {open && (
-                    <ChevronDown className={clsx("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
-                )}
-            </button>
+  return (
+    <li>
+      <button
+        onClick={onToggleExpand}
+        className={clsx(
+          "flex items-center gap-3 w-full text-md rounded-md px-2 py-2 transition-colors duration-150 whitespace-nowrap justify-between group",
+          hasActiveChild ? "text-white bg-slate-800/50" : "text-slate-200 hover:bg-slate-800"
+        )}
+        title={!open ? label : undefined}
+      >
+        <div className="flex items-center gap-3 overflow-hidden">
+          <Icon className="h-5 w-5 flex-shrink-0" />
+          {open && <span className="truncate font-medium">{label}</span>}
+        </div>
+        {open && (
+          <ChevronDown className={clsx("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+        )}
+      </button>
 
-            {open && isExpanded && (
-                <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
-                    {items.map(item => (
-                        <NavItemLink 
-                            key={item.id} 
-                            item={item} 
-                            active={active} 
-                            open={open} 
-                            onClick={onClick} 
-                            className="text-sm py-1.5"
-                        />
-                    ))}
-                </ul>
-            )}
-        </li>
-    );
+      {open && isExpanded && (
+        <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
+          {items.map(item => (
+            <NavItemLink
+              key={item.id}
+              item={item}
+              active={active}
+              open={open}
+              onClick={onClick}
+              className="text-sm py-1.5"
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
 }
 
 interface AdminSidebarProps {
@@ -177,14 +179,14 @@ export default function AdminSidebar({
 
   const [internalOpen, setInternalOpen] = useState<boolean>(defaultOpen);
   const open = typeof openProp === "boolean" ? openProp : internalOpen;
- 
+
   const [isMasterDataExpanded, setIsMasterDataExpanded] = useState(false);
 
   const [active, setActive] = useState<string>(defaultActive);
   const pathname = usePathname();
 
   const { user, logout, hasPermission } = useAuth();
-  const role = user?.role; 
+  const role = user?.role;
 
   const checkMenuPermission = (item: NavItem) => {
     if (role === "ADMIN") return true;
@@ -193,29 +195,29 @@ export default function AdminSidebar({
     return item.permissions.some(p => hasPermission(p));
   };
 
-  const visibleOperationalNavItems = useMemo(() => 
-    operationalNavItems.filter(checkMenuPermission), 
-  [role, user?.permissions]);
+  const visibleOperationalNavItems = useMemo(() =>
+    operationalNavItems.filter(checkMenuPermission),
+    [role, user?.permissions]);
 
-  const visibleContentManagementNavItems = useMemo(() => 
-    contentManagementNavItems.filter(checkMenuPermission), 
-  [role, user?.permissions]);
-  
-  const visibleMasterDataNavItems = useMemo(() => 
-    masterDataNavItems.filter(checkMenuPermission), 
-  [role, user?.permissions]); 
-  
-  const visibleSystemManagementNavItems = useMemo(() => 
-    systemManagementNavItems.filter(checkMenuPermission), 
-  [role, user?.permissions]);
+  const visibleContentManagementNavItems = useMemo(() =>
+    contentManagementNavItems.filter(checkMenuPermission),
+    [role, user?.permissions]);
+
+  const visibleMasterDataNavItems = useMemo(() =>
+    masterDataNavItems.filter(checkMenuPermission),
+    [role, user?.permissions]);
+
+  const visibleSystemManagementNavItems = useMemo(() =>
+    systemManagementNavItems.filter(checkMenuPermission),
+    [role, user?.permissions]);
 
   useEffect(() => {
     if (!pathname) return;
-    
+
     const allVisibleNavItems = [
-      ...visibleOperationalNavItems, 
-      ...visibleContentManagementNavItems, 
-      ...visibleMasterDataNavItems, 
+      ...visibleOperationalNavItems,
+      ...visibleContentManagementNavItems,
+      ...visibleMasterDataNavItems,
       ...visibleSystemManagementNavItems
     ];
 
@@ -223,23 +225,23 @@ export default function AdminSidebar({
       if (n.href === "/admin") return pathname === "/admin" || pathname === "/admin/";
       return pathname.startsWith(n.href);
     });
-    
+
     if (matched) {
-        setActive(matched.id);
-        if (visibleMasterDataNavItems.some(i => i.id === matched.id)) {
-            setIsMasterDataExpanded(true);
-        }
+      setActive(matched.id);
+      if (visibleMasterDataNavItems.some(i => i.id === matched.id)) {
+        setIsMasterDataExpanded(true);
+      }
     }
-  }, [pathname, visibleOperationalNavItems, visibleContentManagementNavItems, visibleMasterDataNavItems, visibleSystemManagementNavItems]); 
+  }, [pathname, visibleOperationalNavItems, visibleContentManagementNavItems, visibleMasterDataNavItems, visibleSystemManagementNavItems]);
 
   const [showLabels, setShowLabels] = useState<boolean>(open);
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
     if (open) {
-      t = setTimeout(() => setShowLabels(true), 160); 
+      t = setTimeout(() => setShowLabels(true), 160);
     } else {
       setShowLabels(false);
-      setIsMasterDataExpanded(false); 
+      setIsMasterDataExpanded(false);
     }
     return () => t && clearTimeout(t);
   }, [open]);
@@ -267,7 +269,7 @@ export default function AdminSidebar({
   };
 
   const currentUserName = user?.username || userName;
-  const currentUserAvatar = (user as any)?.avatarUrl || avatarUrl; 
+  const currentUserAvatar = (user as any)?.avatarUrl || avatarUrl;
   const userFallback = currentUserName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   const roleDisplayName = role === "ADMIN" ? "Administrator" : (role === "NHANVIEN" ? "Nhân viên" : "Guest");
 
@@ -298,7 +300,7 @@ export default function AdminSidebar({
       {/* Navigation */}
       <nav className="mt-6 flex-1 overflow-y-auto no-scrollbar">
         <ul className="flex flex-col gap-1">
-        
+
           {showLabels && <li className="px-2 py-2 text-xs font-semibold text-slate-400 uppercase">Nghiệp vụ</li>}
           {visibleOperationalNavItems.map((item) => (
             <NavItemLink key={item.id} item={item} active={active} open={showLabels} onClick={handleSelect} />
@@ -316,27 +318,27 @@ export default function AdminSidebar({
 
           {/* Khu vực Danh mục chung */}
           {visibleMasterDataNavItems.length > 0 && (
-             <>
-                {showLabels && <li className="px-2 py-2 text-xs font-semibold text-slate-400 uppercase mt-3">Danh mục</li>}
-                {!showLabels && <div className="my-2 h-px bg-slate-700" />}
-                <NavGroup 
-                    label="Danh mục chung" 
-                    icon={Database} 
-                    items={visibleMasterDataNavItems}
-                    active={active}
-                    open={showLabels}
-                    onClick={handleSelect}
-                    isExpanded={isMasterDataExpanded}
-                    onToggleExpand={() => {
-                        if (!showLabels) {
-                            handleToggle(); 
-                            setTimeout(() => setIsMasterDataExpanded(true), 200);
-                        } else {
-                            setIsMasterDataExpanded(!isMasterDataExpanded);
-                        }
-                    }}
-                />
-             </>
+            <>
+              {showLabels && <li className="px-2 py-2 text-xs font-semibold text-slate-400 uppercase mt-3">Danh mục</li>}
+              {!showLabels && <div className="my-2 h-px bg-slate-700" />}
+              <NavGroup
+                label="Danh mục chung"
+                icon={Database}
+                items={visibleMasterDataNavItems}
+                active={active}
+                open={showLabels}
+                onClick={handleSelect}
+                isExpanded={isMasterDataExpanded}
+                onToggleExpand={() => {
+                  if (!showLabels) {
+                    handleToggle();
+                    setTimeout(() => setIsMasterDataExpanded(true), 200);
+                  } else {
+                    setIsMasterDataExpanded(!isMasterDataExpanded);
+                  }
+                }}
+              />
+            </>
           )}
 
           {visibleSystemManagementNavItems.length > 0 && (
