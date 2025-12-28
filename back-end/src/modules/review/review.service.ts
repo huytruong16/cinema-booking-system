@@ -4,7 +4,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
 export class ReviewService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async createReview(userId: string, dto: CreateReviewDto) {
     const { MaPhim, NoiDung, Diem } = dto;

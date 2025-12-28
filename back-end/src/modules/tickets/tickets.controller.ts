@@ -28,7 +28,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Vé')
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) { }
+  constructor(private readonly ticketsService: TicketsService) {}
 
   @Post('checkin/:code')
   @ApiBearerAuth()

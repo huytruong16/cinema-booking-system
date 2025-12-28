@@ -528,6 +528,7 @@ enum quyen {
   QLKHUYENMAI
   QLNGUOIDUNG
   BCTHONGKE
+  KIOSK
 }
 
 enum vaitro {

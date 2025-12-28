@@ -32,7 +32,12 @@ export class MailService {
       CinemaRoom: string;
       ShowTime: string;
       Tickets: { Code: string; SeatCode: string; Price: string }[];
-      Combos: { Name: string; Quantity: number; Price: string; Total: string }[];
+      Combos: {
+        Name: string;
+        Quantity: number;
+        Price: string;
+        Total: string;
+      }[];
       RefundAmount: string;
       DiscountAmount?: string;
       CancellationReason: string;
@@ -41,7 +46,14 @@ export class MailService {
     const smtpConfig = this.configService.get('smtp');
 
     const htmlTemplate = readFileSync(
-      join(__dirname, '..', '..', '..', 'templates', 'email-showtime-cancel.hbs'),
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'templates',
+        'email-showtime-cancel.hbs',
+      ),
       'utf-8',
     );
 
@@ -118,7 +130,7 @@ export class MailService {
       .replace('{{{invoice_table}}}', invoiceTableHtml)
       .replace('{{refund_amount}}', data.RefundAmount)
       .replace('{{discount_amount}}', data.DiscountAmount || '')
-      .replace('{{cancellation_reason}}', data.CancellationReason)
+      .replace('{{cancellation_reason}}', data.CancellationReason);
 
     this.transporter.sendMail({
       from: `"Movix Support" <${smtpConfig.from}>`,
@@ -178,11 +190,7 @@ export class MailService {
     });
   }
 
-  sendInvoiceEmail(
-    to: string,
-    subject: string,
-    invoiceData: InvoiceMailDto,
-  ) {
+  sendInvoiceEmail(to: string, subject: string, invoiceData: InvoiceMailDto) {
     const smtpConfig = this.configService.get('smtp');
 
     const htmlTemplate = readFileSync(

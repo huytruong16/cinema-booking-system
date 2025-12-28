@@ -10,4 +10,4 @@ import { MailModule } from '../mail/mail.module';
   providers: [ShowtimeService],
   exports: [ShowtimeService],
 })
-export class ShowtimeModule { }
+export class ShowtimeModule {}

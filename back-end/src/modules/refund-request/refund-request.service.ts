@@ -27,7 +27,7 @@ export class RefundRequestService {
     readonly prisma: PrismaService,
     @Inject(REQUEST) private readonly request: any,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
   async getAllRefundRequests(filters: GetRefundRequestDto) {
     const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE
       .paginate({
@@ -221,10 +221,7 @@ export class RefundRequestService {
     return refundRequest;
   }
 
-  async updateRefundRequestInfo(
-    id: string,
-    payload: any,
-  ): Promise<any> {
+  async updateRefundRequestInfo(id: string, payload: any): Promise<any> {
     const userRole = this.request?.user?.vaitro;
     const userId = this.request?.user?.id;
 
@@ -234,9 +231,9 @@ export class RefundRequestService {
       where: {
         MaYeuCau: id,
         DeletedAt: null,
-        ...(userRole === RoleEnum.KHACHHANG &&
-          { HoaDon: { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } } }
-        )
+        ...(userRole === RoleEnum.KHACHHANG && {
+          HoaDon: { KhachHang: { NguoiDungPhanMem: { MaNguoiDung: userId } } },
+        }),
       },
       include: {
         HoaDon: {
