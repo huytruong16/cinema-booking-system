@@ -47,6 +47,34 @@ interface RawRevenueChartItem {
     DoanhThuCombo: number;
 }
 
+interface RawTopStaffItem {
+    NhanVien: {
+        MaNhanVien: string;
+        NguoiDungPhanMem: {
+            HoTen: string;
+        };
+    };
+    DoanhThu: number;
+    SoLuotGiaoDich: number;
+}
+
+interface RawRoomStatus {
+    PhongChieu: {
+        MaPhongChieu: string;
+        TenPhongChieu: string;
+    };
+    TrangThai: string;
+    GheDaDat?: number;
+    TongGhe?: number;
+    SuatChieuHienTai?: {
+        MaSuatChieu: string;
+        MaPhim: string;
+        TenPhim: string;
+        ThoiGianBatDau: string;
+        ThoiGianKetThuc: string;
+    };
+}
+
 export const statisticsService = {
 
   getSummary: async (params: GetSummaryParams): Promise<StatisticsSummary> => {
@@ -79,12 +107,32 @@ export const statisticsService = {
   getTopStaff: async (
     params: GetTopStaffParams
   ): Promise<TopStaff[]> => {
-    const res = await apiClient.get<TopStaff[]>('/statistics/top-staff', { params });
-    return res.data;
+    const res = await apiClient.get<RawTopStaffItem[]>('/statistics/top-staff', { params });
+    return res.data.map(item => ({
+        staffId: item.NhanVien.MaNhanVien,
+        name: item.NhanVien.NguoiDungPhanMem.HoTen,
+        totalRevenue: item.DoanhThu,
+        totalTickets: item.SoLuotGiaoDich
+    }));
   },
 
   getRoomStatus: async (): Promise<RoomStatus[]> => {
-    const res = await apiClient.get<RoomStatus[]>('/statistics/room-status');
-    return res.data;
+    const res = await apiClient.get<RawRoomStatus[]>('/statistics/room-status');
+    return res.data.map(item => {
+        let status: 'TRONG' | 'DANG_CHIEU' | 'SAP_CHIEU' = 'TRONG';
+        if (item.TrangThai === 'DANGCHIEU') status = 'DANG_CHIEU';
+        else if (item.TrangThai === 'SAPCHIEU') status = 'SAP_CHIEU';
+        
+        return {
+            PhongChieu: item.PhongChieu,
+            TrangThai: status,
+            GheDaDat: item.GheDaDat,
+            TongGhe: item.TongGhe,
+            SuatChieuTiepTheo: item.SuatChieuHienTai ? {
+                ...item.SuatChieuHienTai,
+                SoPhutConLai: 0 
+            } : undefined
+        };
+    });
   },
 };

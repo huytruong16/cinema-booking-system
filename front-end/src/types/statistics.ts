@@ -38,7 +38,7 @@ export interface TopMovie {
 }
 
 export interface TopStaff {
-  staffId: number;
+  staffId: string;
   name: string;
   totalRevenue: number;
   totalTickets: number;
