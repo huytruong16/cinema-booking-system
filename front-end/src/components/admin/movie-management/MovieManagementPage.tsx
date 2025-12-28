@@ -272,6 +272,31 @@ function FilmCard({
 }) {
   const { hasPermission } = useAuth();
 
+  // Calculate status on frontend to ensure accuracy
+  const getCalculatedStatus = (f: BackendFilm) => {
+    const now = new Date();
+    const start = f.NgayBatDauChieu ? new Date(f.NgayBatDauChieu) : null;
+    const end = f.NgayKetThucChieu ? new Date(f.NgayKetThucChieu) : null;
+
+    if (!start) return "SAPCHIEU";
+    
+    // Reset time part for accurate date comparison
+    const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : null;
+
+    if (nowDate < startDate) return "SAPCHIEU";
+    if (endDate && nowDate > endDate) return "NGUNGCHIEU";
+    return "DANGCHIEU";
+  };
+
+  const displayStatus = getCalculatedStatus(film);
+  const statusLabels: Record<string, string> = {
+    SAPCHIEU: "Sắp chiếu",
+    DANGCHIEU: "Đang chiếu",
+    NGUNGCHIEU: "Ngưng chiếu"
+  };
+
   return (
     <Card className="bg-[#1C1C1C] border-slate-800 overflow-hidden flex flex-col h-full group hover:border-primary/50 transition-colors">
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
@@ -289,11 +314,15 @@ function FilmCard({
         <div className="absolute top-2 right-2">
           <Badge
             variant={
-              film.TrangThaiPhim === "DANGCHIEU" ? "default" : "secondary"
+              displayStatus === "DANGCHIEU" ? "default" : "secondary"
             }
-            className="text-[10px]"
+            className={cn(
+              "text-[10px]",
+              displayStatus === "SAPCHIEU" && "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30",
+              displayStatus === "NGUNGCHIEU" && "bg-slate-700 text-slate-400"
+            )}
           >
-            {film.TrangThaiPhim}
+            {statusLabels[displayStatus] || displayStatus}
           </Badge>
         </div>
       </div>
@@ -332,13 +361,13 @@ function FilmCard({
           </span>
         </div>
 
-        <div className="mt-auto pt-4 flex gap-2">
+        <div className="mt-auto pt-4 flex flex-wrap gap-2">
           {hasPermission("QLPHIM") && (
             <Button
               size="sm"
               variant="outline"
               onClick={onEdit}
-              className="bg-transparent border-slate-700 hover:bg-slate-800 w-full"
+              className="bg-transparent border-slate-700 hover:bg-slate-800 flex-1 min-w-[80px]"
             >
               <Edit className="size-3 mr-2" /> Sửa
             </Button>
@@ -348,7 +377,7 @@ function FilmCard({
               size="sm"
               variant="outline"
               onClick={onDelete}
-              className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 w-full"
+              className="bg-transparent border-slate-700 text-red-500 hover:text-red-500 hover:bg-red-500/10 flex-1 min-w-[80px]"
             >
               <Trash2 className="size-3 mr-2" /> Xóa
             </Button>

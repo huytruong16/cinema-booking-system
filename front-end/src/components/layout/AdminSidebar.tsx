@@ -47,7 +47,7 @@ type NavItem = {
 
 const operationalNavItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/admin", icon: LayoutGrid, permissions: [] },
-  { id: "kiosk", label: "Kiosk", href: "/kiosk", icon: ScreenShare, permissions: [] },
+  { id: "kiosk", label: "Kiosk", href: "/kiosk", icon: ScreenShare, permissions: ["KIOSK"] },
   { id: "pos", label: "Bán Vé", href: "/admin/pos", icon: Ticket, permissions: ["BANVE", "SOATVE"] },
   { id: "checkin", label: "Soát vé", href: "/admin/check-in", icon: QrCode, permissions: ["SOATVE"] },
   { id: "invoices", label: "Quản lý hoàn vé", href: "/admin/refund-management", icon: Receipt, permissions: ["QLHOANVE"] },

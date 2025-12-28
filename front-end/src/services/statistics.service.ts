@@ -83,7 +83,9 @@ export const statisticsService = {
     return {
         totalRevenue: raw.TongDoanhThu,
         totalTickets: raw.SoVeDaBan,
-        growth: raw.SoSanh?.DoanhThuVe || 0
+        growth: raw.SoSanh?.DoanhThuVe || 0,
+        comboRevenue: raw.DoanhThuCombo,
+        occupancyRate: raw.TiLeLapDay
     };
   },
 
@@ -93,7 +95,9 @@ export const statisticsService = {
     const res = await apiClient.get<RawRevenueChartItem[]>('/statistics/revenue-chart', { params });
     return res.data.map(item => ({
         date: item.Ngay,
-        revenue: item.DoanhThuVe + item.DoanhThuCombo
+        revenue: item.DoanhThuVe + item.DoanhThuCombo,
+        ticketRevenue: item.DoanhThuVe,
+        comboRevenue: item.DoanhThuCombo
     }));
   },
 

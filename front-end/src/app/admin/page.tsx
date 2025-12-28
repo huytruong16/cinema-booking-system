@@ -47,8 +47,8 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { statisticsService } from "@/services/statistics.service";
+import { StatisticsSummary } from "@/types/statistics";
 import {
-  DashboardSummary,
   RevenueChartData,
   TopMovie,
   TopStaff,
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>("day");
 
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summary, setSummary] = useState<StatisticsSummary | null>(null);
   const [revenueChart, setRevenueChart] = useState<RevenueChartData[]>([]);
   const [topMovies, setTopMovies] = useState<TopMovie[]>([]);
   const [topStaff, setTopStaff] = useState<TopStaff[]>([]);
@@ -242,25 +242,25 @@ export default function AdminDashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Tổng Doanh Thu"
-            value={summary ? formatCurrency(summary.TongDoanhThu || 0) : "..."}
+            value={summary ? formatCurrency(summary.totalRevenue || 0) : "..."}
             icon={DollarSign}
             subText={viewMode === "day" ? "Hôm nay" : `Trong ${viewMode} này`}
           />
           <StatsCard
             title="Vé Đã Bán"
-            value={summary ? `${summary.SoVeDaBan || 0}` : "..."}
+            value={summary ? `${summary.totalTickets || 0}` : "..."}
             icon={CreditCard}
             subText={viewMode === "day" ? "Hôm nay" : `Trong ${viewMode} này`}
           />
           <StatsCard
             title="Doanh Thu Combo"
-            value={summary ? formatCurrency(summary.DoanhThuCombo || 0) : "..."}
+            value={summary ? formatCurrency(summary.comboRevenue || 0) : "..."}
             icon={Activity}
             subText="Dịch vụ ăn uống"
           />
           <StatsCard
             title="Tỉ Lệ Lấp Đầy"
-            value={summary ? `${summary.TiLeLapDay || 0}%` : "..."}
+            value={summary ? `${summary.occupancyRate || 0}%` : "..."}
             icon={Users}
             subText="Hiệu suất phòng chiếu"
           />
@@ -307,20 +307,29 @@ export default function AdminDashboard() {
                         </linearGradient>
                       </defs>
                       <XAxis
-                        dataKey="Ngay"
+                        dataKey="date"
                         stroke="#888888"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
+                        tickFormatter={(value) => {
+                           // Format date if needed, e.g. "28/12"
+                           // Assuming value is ISO string or similar, might need formatting
+                           // But let's stick to simple key change first.
+                           // The service returns "Ngay" from backend which is likely a string.
+                           return value;
+                        }}
                       />
                       <YAxis
                         stroke="#888888"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) =>
-                          `${(value / 1000000).toFixed(0)}M`
-                        }
+                        tickFormatter={(value) => {
+                          if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+                          if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                          return value;
+                        }}
                       />
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -333,10 +342,11 @@ export default function AdminDashboard() {
                           borderColor: "#374151",
                         }}
                         formatter={(value: number) => formatCurrency(value)}
+                        labelFormatter={(label) => `Ngày: ${label}`}
                       />
                       <Area
                         type="monotone"
-                        dataKey="DoanhThuVe"
+                        dataKey="ticketRevenue"
                         stroke="#8884d8"
                         fillOpacity={1}
                         fill="url(#colorRevenue)"
@@ -344,7 +354,7 @@ export default function AdminDashboard() {
                       />
                       <Area
                         type="monotone"
-                        dataKey="DoanhThuCombo"
+                        dataKey="comboRevenue"
                         stroke="#82ca9d"
                         fillOpacity={1}
                         fill="#82ca9d"

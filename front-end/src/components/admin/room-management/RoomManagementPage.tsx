@@ -109,6 +109,11 @@ const getSeatColorClass = (typeName: string = ""): string => {
   return "bg-slate-700 border-slate-500 text-slate-300 hover:bg-slate-600";
 };
 
+const isCoupleSeat = (typeName: string = ""): boolean => {
+  const lower = typeName.toLowerCase();
+  return lower.includes("đôi") || lower.includes("doi");
+};
+
 const parseBackendToMap = (room: PhongChieu): SeatMapData => {
   const defaultMap = { rows: ["A", "B", "C", "D", "E"], cols: 10, seats: {} };
 
@@ -643,11 +648,65 @@ function SeatMapEditorDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    setSeatMapData(initialMapData);
+    
+    if (initialMapData.rows.length > 0) {
+      setRowInput(`${initialMapData.rows[0]}-${initialMapData.rows[initialMapData.rows.length - 1]}`);
+    } else {
+      setRowInput("A-E");
+    }
+    
+    setColInput(initialMapData.cols > 0 ? initialMapData.cols.toString() : "10");
+  }, [initialMapData]);
+
+  useEffect(() => {
     if (seatTypes.length > 0 && selectedTool === "disabled") {
       setSelectedTool(seatTypes[0].MaLoaiGhe);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seatTypes]);
+
+  const seatLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    seatMapData.rows.forEach((row) => {
+      let labelCounter = 1;
+      let pendingCouple = false;
+      
+      for (let col = 1; col <= seatMapData.cols; col++) {
+        const key = `${row}-${col}`;
+        const typeId = seatMapData.seats[key];
+        if (!typeId || typeId === "disabled") {
+           if (pendingCouple) {
+             labelCounter++;
+             pendingCouple = false;
+           }
+           continue;
+        }
+
+        const typeObj = seatTypes.find((t: any) => t.MaLoaiGhe === typeId);
+        const isCouple = typeObj ? isCoupleSeat(typeObj.LoaiGhe) : false;
+
+        if (isCouple) {
+          if (pendingCouple) {
+            labels[key] = labelCounter.toString().padStart(2, "0");
+            labelCounter++;
+            pendingCouple = false;
+          } else {
+            labels[key] = labelCounter.toString().padStart(2, "0");
+            pendingCouple = true;
+          }
+        } else {
+          if (pendingCouple) {
+            labelCounter++;
+            pendingCouple = false;
+          }
+          labels[key] = labelCounter.toString().padStart(2, "0");
+          labelCounter++;
+        }
+      }
+    });
+    return labels;
+  }, [seatMapData, seatTypes]);
 
   const parseRowRange = (range: string): string[] => {
     const [start, end] = range.split("-").map((s) => s.trim().toUpperCase());
@@ -691,21 +750,47 @@ function SeatMapEditorDialog({
       seatMapData.rows.forEach((r) => {
         const colArr: string[] = [];
         let seatLabelCounter = 1;
+        let pendingCouple = false;
 
         for (let i = 1; i <= seatMapData.cols; i++) {
           const key = `${r}-${i}`;
           const typeId = seatMapData.seats[key];
 
           if (typeId && typeId !== "disabled") {
-            const label = seatLabelCounter.toString().padStart(2, "0");
+            const typeObj = seatTypes.find((t: any) => t.MaLoaiGhe === typeId);
+            const isCouple = typeObj ? isCoupleSeat(typeObj.LoaiGhe) : false;
+            
+            let label = "";
+            
+            if (isCouple) {
+              if (pendingCouple) {
+                label = seatLabelCounter.toString().padStart(2, "0");
+                seatLabelCounter++;
+                pendingCouple = false;
+              } else {
+                label = seatLabelCounter.toString().padStart(2, "0");
+                pendingCouple = true;
+              }
+            } else {
+              if (pendingCouple) {
+                seatLabelCounter++;
+                pendingCouple = false;
+              }
+              label = seatLabelCounter.toString().padStart(2, "0");
+              seatLabelCounter++;
+            }
+
             colArr.push(label);
             danhSachGheArr.push({
               Hang: r,
               Cot: label,
               MaLoaiGhe: typeId,
             });
-            seatLabelCounter++;
           } else {
+            if (pendingCouple) {
+                seatLabelCounter++;
+                pendingCouple = false;
+            }
             colArr.push("");
           }
         }
@@ -872,6 +957,7 @@ function SeatMapEditorDialog({
                       const typeObj = seatTypes.find(
                         (t: any) => t.MaLoaiGhe === currentTypeId
                       );
+                      const label = seatLabels[seatId];
 
                       return (
                         <button
@@ -900,7 +986,7 @@ function SeatMapEditorDialog({
                           }`}
                         >
                           {isSeat ? (
-                            col
+                            label
                           ) : (
                             <span className="opacity-0 hover:opacity-100 text-[8px]">
                               {col}

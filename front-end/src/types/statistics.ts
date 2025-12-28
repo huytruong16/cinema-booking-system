@@ -20,11 +20,15 @@ export interface StatisticsSummary {
   totalRevenue: number;
   totalTickets: number;
   growth: number;
+  comboRevenue: number;
+  occupancyRate: number;
 }
 
 export interface RevenueChartData {
   date: string;
   revenue: number;
+  ticketRevenue: number;
+  comboRevenue: number;
 }
 
 export interface TopMovie {

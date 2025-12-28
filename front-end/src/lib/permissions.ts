@@ -17,7 +17,8 @@ export type Quyen =
   | "QLCOMBO"
   | "QLKHUYENMAI"
   | "QLNGUOIDUNG"
-  | "BCTHONGKE";
+  | "BCTHONGKE"
+  | "KIOSK";
 
 export interface PermissionGroup {
   id: string;
@@ -46,6 +47,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         code: "SOATVE",
         label: "Soát vé (Check-in)",
         desc: "Quét mã QR vé vào rạp",
+      },
+      {
+        code: "KIOSK",
+        label: "Truy cập Kiosk",
+        desc: "Chế độ máy bán vé tự động",
       },
     ],
   },

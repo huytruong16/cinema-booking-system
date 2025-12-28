@@ -35,11 +35,10 @@ export default function AdminTopbar({
 }: AdminTopbarProps) {
   const [open, setOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
-  const { user, logout } = useAuth(); // Lấy user và hàm logout từ context
+  const { user, logout } = useAuth();
   const router = useRouter();
 
-  // Ưu tiên hiển thị thông tin từ AuthContext nếu có, ngược lại dùng props
-  const displayName = user?.hoTen || userName;
+  const displayName = user?.username || userName;
   const displayAvatar = user?.avatarUrl || avatarUrl;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -67,7 +66,6 @@ export default function AdminTopbar({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* User Dropdown Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
@@ -96,15 +94,6 @@ export default function AdminTopbar({
               <Home className="mr-2 h-4 w-4" />
               <span>Về trang chủ</span>
             </DropdownMenuItem>
-
-            {/* <DropdownMenuItem 
-              onClick={() => router.push('/account/profile')}
-              className="cursor-pointer focus:bg-slate-800 focus:text-white"
-            >
-              <User className="mr-2 h-4 w-4" />
-              <span>Hồ sơ cá nhân</span>
-            </DropdownMenuItem> */}
-            
             <DropdownMenuSeparator className="bg-slate-800" />
             
             <DropdownMenuItem 
