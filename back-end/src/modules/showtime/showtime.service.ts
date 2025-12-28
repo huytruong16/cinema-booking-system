@@ -81,7 +81,9 @@ export class ShowtimeService {
     if (filters.DenNgay) {
       whereConditions.ThoiGianBatDau = {
         ...whereConditions.ThoiGianBatDau,
-        lte: new Date(new Date(filters.DenNgay).getTime() + 24 * 60 * 60 * 1000),
+        lte: new Date(
+          new Date(filters.DenNgay).getTime() + 24 * 60 * 60 * 1000,
+        ),
       };
     }
   }
@@ -670,12 +672,7 @@ export class ShowtimeService {
           DiscountAmount: discountAmount,
           CancellationReason: LyDoHuy ?? 'Suất chiếu bị hủy',
         });
-<<<<<<< Updated upstream
-      } catch {
-      }
-=======
       } catch {}
->>>>>>> Stashed changes
     }
   }
 }

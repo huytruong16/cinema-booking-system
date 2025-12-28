@@ -9,7 +9,7 @@ import { UpdateScreeningRoomDto } from './dtos/update-screening-room.dto';
 
 @Injectable()
 export class ScreeningRoomService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   private getSeatsIncludeQuery(): any {
     return {
@@ -189,10 +189,7 @@ export class ScreeningRoomService {
     }
   }
 
-  async updateScreeningRoom(
-    id: string,
-    updateDto: UpdateScreeningRoomDto,
-  ) {
+  async updateScreeningRoom(id: string, updateDto: UpdateScreeningRoomDto) {
     const prisma = this.prisma;
 
     const screeningRoom = await prisma.pHONGCHIEU.findFirst({
@@ -200,9 +197,7 @@ export class ScreeningRoomService {
     });
 
     if (!screeningRoom) {
-      throw new NotFoundException(
-        `Phòng chiếu với ID ${id} không tồn tại`,
-      );
+      throw new NotFoundException(`Phòng chiếu với ID ${id} không tồn tại`);
     }
 
     if (
@@ -222,7 +217,7 @@ export class ScreeningRoomService {
       }
     }
 
-    let validatedSeats: {
+    const validatedSeats: {
       MaGheLoaiGhe: string;
     }[] = [];
 

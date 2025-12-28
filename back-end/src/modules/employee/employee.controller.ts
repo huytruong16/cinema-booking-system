@@ -27,7 +27,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) { }
+  constructor(private readonly employeeService: EmployeeService) {}
 
   @Get()
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)

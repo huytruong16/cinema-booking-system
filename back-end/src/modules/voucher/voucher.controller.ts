@@ -30,7 +30,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Mã giảm giá')
 @Controller('vouchers')
 export class VoucherController {
-  constructor(private readonly voucherService: VoucherService) { }
+  constructor(private readonly voucherService: VoucherService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các voucher' })

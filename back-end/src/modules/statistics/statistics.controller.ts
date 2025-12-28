@@ -26,7 +26,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
 @Controller('statistics')
 export class StatisticsController {
-  constructor(private readonly statisticsService: StatisticsService) { }
+  constructor(private readonly statisticsService: StatisticsService) {}
 
   @Get('room-status')
   @ApiOperation({
