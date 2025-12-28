@@ -12,6 +12,7 @@ export enum PermissionEnum {
   QLKHUYENMAI = 'QLKHUYENMAI',
   QLNGUOIDUNG = 'QLNGUOIDUNG',
   BCTHONGKE = 'BCTHONGKE',
+  KIOSK = 'KIOSK',
 }
 
 export default PermissionEnum;

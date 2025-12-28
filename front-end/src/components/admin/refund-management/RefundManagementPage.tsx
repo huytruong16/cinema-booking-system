@@ -459,6 +459,7 @@ function RefundDetailDialog({
   const [mode, setMode] = useState<"VIEW" | "APPROVE" | "REJECT">("VIEW");
   const [transactionCode, setTransactionCode] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
