@@ -4,7 +4,6 @@ import { RoomStatusDto } from './dtos/room-status.dto';
 import {
   ScreeningRoomStatusEnum,
   SeatStatusEnum,
-  ShowtimeStatusEnum,
   StaffStatusEnum,
   TicketStatusEnum,
   TransactionStatusEnum,
@@ -129,65 +128,6 @@ export class StatisticsService {
     }
 
     return roomStatusList;
-  }
-
-  async updateShowtimeStatuses(): Promise<void> {
-    const now = new Date();
-
-    const upcomingShowtimes = await this.prisma.sUATCHIEU.findMany({
-      where: {
-        TrangThai: ShowtimeStatusEnum.CHUACHIEU,
-        ThoiGianBatDau: {
-          lte: new Date(now.getTime() + 30 * 60 * 1000),
-          gt: now,
-        },
-        DeletedAt: null,
-      },
-    });
-
-    for (const showtime of upcomingShowtimes) {
-      await this.prisma.sUATCHIEU.update({
-        where: { MaSuatChieu: showtime.MaSuatChieu },
-        data: { TrangThai: ShowtimeStatusEnum.SAPCHIEU },
-      });
-    }
-
-    const currentShowtimes = await this.prisma.sUATCHIEU.findMany({
-      where: {
-        TrangThai: ShowtimeStatusEnum.SAPCHIEU,
-        ThoiGianBatDau: {
-          lte: now,
-        },
-        ThoiGianKetThuc: {
-          gt: now,
-        },
-        DeletedAt: null,
-      },
-    });
-
-    for (const showtime of currentShowtimes) {
-      await this.prisma.sUATCHIEU.update({
-        where: { MaSuatChieu: showtime.MaSuatChieu },
-        data: { TrangThai: ShowtimeStatusEnum.DANGCHIEU },
-      });
-    }
-
-    const completedShowtimes = await this.prisma.sUATCHIEU.findMany({
-      where: {
-        TrangThai: ShowtimeStatusEnum.DANGCHIEU,
-        ThoiGianKetThuc: {
-          lt: now,
-        },
-        DeletedAt: null,
-      },
-    });
-
-    for (const showtime of completedShowtimes) {
-      await this.prisma.sUATCHIEU.update({
-        where: { MaSuatChieu: showtime.MaSuatChieu },
-        data: { TrangThai: ShowtimeStatusEnum.DACHIEU },
-      });
-    }
   }
 
   async getSummary(filter: GetSummaryQueryDto): Promise<SummaryDto> {

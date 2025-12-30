@@ -6,13 +6,6 @@ import { StatisticsService } from './statistics.service';
 export class StatisticsCronService {
   constructor(private readonly statisticsService: StatisticsService) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
-  async handleUpdateShowtimeStatus() {
-    try {
-      await this.statisticsService.updateShowtimeStatuses();
-    } catch {}
-  }
-
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDailyRevenueFill() {
     try {
