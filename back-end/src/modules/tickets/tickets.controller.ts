@@ -37,6 +37,8 @@ export class TicketsController {
   @ApiOperation({ summary: 'Checkin vé bằng mã cho nhân viên soát vé' })
   @ApiParam({ name: 'code', description: 'Mã vé', required: true })
   async checkin(@Param('code') code: string) {
+    if (!/^\d{9}$/.test(code))
+      throw new BadRequestException('Mã vé phải là chuỗi 9 ký tự số');
     return await this.ticketsService.checkinTicketByCode(code);
   }
 
@@ -45,6 +47,8 @@ export class TicketsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy danh sách các vé' })
   async findAll(@Req() req, @Query() filters: GetTicketsDto) {
+    if (!isUUID(req.user.id, '4'))
+      throw new BadRequestException('ID người dùng không hợp lệ');
     return await this.ticketsService.getTickets(
       req.user.id,
       req.user.vaitro,
@@ -60,6 +64,8 @@ export class TicketsController {
   async findOne(@Req() req, @Param('id') id: string) {
     if (!isUUID(id, '4'))
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    if (!isUUID(req.user.id, '4'))
+      throw new BadRequestException('ID người dùng không hợp lệ');
     const ticket = await this.ticketsService.getTicketById(
       req.user.id,
       req.user.vaitro,
@@ -81,6 +87,8 @@ export class TicketsController {
     @Param('code') code: string,
     @Res() res: express.Response,
   ) {
+    if (!/^\d{9}$/.test(code))
+      throw new BadRequestException('Mã vé phải là chuỗi 9 ký tự số');
     const buffer = await this.ticketsService.generateTicketsPdf([code]);
 
     res.set({
