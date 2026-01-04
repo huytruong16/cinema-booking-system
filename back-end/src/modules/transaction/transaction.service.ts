@@ -23,6 +23,7 @@ import { UpdateRefundTransactionStatusDto } from './dto/update-refund-transactio
 import { RefundRequestService } from '../refund-request/refund-request.service';
 import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 import { GetTransactionDto } from './dto/get-transaction.dto';
+import { isUUID } from 'class-validator';
 
 @Injectable({ scope: Scope.REQUEST })
 export class TransactionService {
@@ -109,6 +110,9 @@ export class TransactionService {
     role: string,
     filters?: GetTransactionDto,
   ) {
+    if (!isUUID(userId, '4')) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
     const [data, pagination] = await this.prisma.xprisma.gIAODICH
       .paginate({
         where: {
@@ -127,6 +131,12 @@ export class TransactionService {
   }
 
   async getTransactionById(userId: string, role: string, id: string) {
+    if (!isUUID(userId, '4')) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    if (!isUUID(id, '4')) {
+      throw new BadRequestException('Transaction ID không hợp lệ');
+    }
     const transaction = await this.prisma.gIAODICH.findUnique({
       where: {
         MaGiaoDich: id,
@@ -283,6 +293,9 @@ export class TransactionService {
     transactionId: string,
     request: UpdateTransactionMethodDto,
   ) {
+    if (!isUUID(transactionId, '4')) {
+      throw new BadRequestException('Transaction ID không hợp lệ');
+    }
     const transactionMethod = request.PhuongThuc;
 
     const transaction = await this.prisma.gIAODICH.findFirst({
@@ -338,6 +351,10 @@ export class TransactionService {
 
   async createRefundTransaction(payload: CreateRefundTransactionDto) {
     const { MaYeuCau, PhuongThuc } = payload;
+
+    if (!isUUID(MaYeuCau, '4')) {
+      throw new BadRequestException('Mã yêu cầu hoàn vé không hợp lệ');
+    }
 
     if (
       this.request?.user?.vaitro !== RoleEnum.NHANVIEN &&
@@ -413,6 +430,9 @@ export class TransactionService {
     transactionId: string,
     request: UpdateRefundTransactionStatusDto,
   ) {
+    if (!isUUID(transactionId, '4')) {
+      throw new BadRequestException('Transaction ID không hợp lệ');
+    }
     const transaction = await this.prisma.gIAODICH.findFirst({
       where: {
         MaGiaoDich: transactionId,

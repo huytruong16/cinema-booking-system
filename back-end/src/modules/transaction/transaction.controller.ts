@@ -39,6 +39,9 @@ export class TransactionController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy danh sách các giao dịch' })
   async getAllTransaction(@Req() req, @Query() filters: GetTransactionDto) {
+    if (!isUUID(req.user.id, '4')) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
     return await this.transactionService.getAllTransactions(
       req.user.id,
       req.user.vaitro,

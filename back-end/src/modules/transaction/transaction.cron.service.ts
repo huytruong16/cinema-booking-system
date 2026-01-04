@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { isUUID } from 'class-validator';
 import { SeatStatusEnum, TransactionStatusEnum } from 'src/libs/common/enums';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 
@@ -45,6 +46,9 @@ export class TransactionCronService {
   }
 
   private async processTransaction(transaction: any) {
+    if (!isUUID(transaction.MaGiaoDich, '4')) {
+      throw new Error(`Invalid Transaction ID: ${transaction.MaGiaoDich}`);
+    }
     await this.rollbackTransaction(transaction.MaGiaoDich);
     await this.rollbackTicket(transaction.HoaDon);
     await this.rollbackInvoiceCombo(transaction.HoaDon.MaHoaDon);
