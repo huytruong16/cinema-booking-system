@@ -342,7 +342,7 @@ async function seed() {
 }
 
 if (require.main === module) {
-  seed();
+  void seed();
 }
 
 export default seed;

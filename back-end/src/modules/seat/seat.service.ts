@@ -167,7 +167,7 @@ export class SeatService {
       const timeoutMs = holdMinutes * 60 * 1000;
 
       setTimeout(() => {
-        (async () => {
+        void (async () => {
           try {
             const current = await prisma.gHE_SUATCHIEU.findFirst({
               where: { MaGheSuatChieu: id },
