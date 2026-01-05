@@ -9,6 +9,7 @@ import {
   Delete,
   BadRequestException,
   UseGuards,
+  Req
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { VoucherService } from './voucher.service';
@@ -30,12 +31,59 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Mã giảm giá')
 @Controller('vouchers')
 export class VoucherController {
-  constructor(private readonly voucherService: VoucherService) {}
+  constructor(private readonly voucherService: VoucherService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các voucher' })
   async getAllVouchers() {
     return this.voucherService.getAllVouchers();
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.KHACHHANG)
+  @ApiOperation({ summary: 'Lấy danh sách voucher của khách hàng đang đăng nhập' })
+  @ApiResponse({ status: 200, description: 'Danh sách voucher của khách hàng' })
+  async getMyVouchers(@Req() req: any) {
+    const customerId = req.user.customerId;
+
+    if (!isUUID(customerId, '4')) {
+      throw new BadRequestException('Không xác định được khách hàng');
+    }
+
+    return this.voucherService.getVoucherForUser(customerId);
+  }
+
+  @Post('save/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.KHACHHANG)
+  @ApiOperation({ summary: 'Khách hàng lưu voucher về tài khoản' })
+  @ApiParam({
+    name: 'id',
+    description: 'Mã voucher cần lưu',
+    required: true,
+  })
+  @ApiResponse({ status: 201, description: 'Lưu voucher thành công' })
+  async saveVoucherForUser(
+    @Req() req: any,
+    @Param('id') id: string,
+  ) {
+    const customerId = req.user.customerId;
+
+    if (!isUUID(customerId, '4')) {
+      throw new BadRequestException('Không xác định được khách hàng');
+    }
+
+    if (!isUUID(id, '4')) {
+      throw new BadRequestException('id phải là UUID v4 hợp lệ');
+    }
+
+    return this.voucherService.saveVoucherForUser(
+      customerId,
+      id,
+    );
   }
 
   @Get(':id')

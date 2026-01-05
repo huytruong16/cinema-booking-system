@@ -27,12 +27,15 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async login(dto: LoginDto) {
     const { email, matkhau } = dto;
     const user = await this.prisma.nGUOIDUNGPHANMEM.findUnique({
       where: { Email: email },
+      include: {
+        KhachHangs: true,
+      },
     });
 
     if (!user || !(await bcryptUtil.comparePassword(matkhau, user.MatKhau))) {
@@ -43,10 +46,25 @@ export class AuthService {
       throw new ForbiddenException('Tài khoản chưa xác minh email.');
     }
 
+    let maKhachHang: string | null = null;
+
+    if (user.VaiTro === 'KHACHHANG') {
+      const customer = user.KhachHangs?.[0];
+
+      if (!customer) {
+        throw new ForbiddenException(
+          'Tài khoản khách hàng chưa được khởi tạo đầy đủ',
+        );
+      }
+
+      maKhachHang = customer.MaKhachHang;
+    }
+
     const payload = {
       id: user.MaNguoiDung,
       email: user.Email,
       vaitro: user.VaiTro,
+      customerId: maKhachHang
     };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(
