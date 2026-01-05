@@ -127,7 +127,7 @@ export class TicketsService {
   }
 
   async updateTicketStatus(id: string, status: TicketStatusEnum) {
-    return this.prisma.vE.update({
+    return await this.prisma.vE.update({
       where: { MaVe: id },
       data: { TrangThaiVe: status },
     });

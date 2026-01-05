@@ -301,7 +301,7 @@ export class ShowtimeService {
   }
 
   async createShowtime(payload: CreateShowtimeDto) {
-    return this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx) => {
       const phienBan = await tx.pHIENBANPHIM.findFirst({
         where: {
           MaPhienBanPhim: payload.MaPhienBanPhim,
@@ -363,7 +363,7 @@ export class ShowtimeService {
   }
 
   async updateShowtime(id: string, updateDto: UpdateShowtimeDto) {
-    return this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx) => {
       const showtime = await tx.sUATCHIEU.findFirst({
         where: { MaSuatChieu: id, DeletedAt: null },
       });

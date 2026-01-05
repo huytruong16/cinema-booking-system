@@ -41,7 +41,7 @@ export class UserGroupController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN lấy danh sách nhóm người dùng' })
   async getAllGroups() {
-    return this.userGroupService.getAllGroups();
+    return await this.userGroupService.getAllGroups();
   }
 
   @Patch('permissions')
@@ -54,7 +54,7 @@ export class UserGroupController {
     type: UpdateGroupPermissionsDto,
   })
   async updateGroupPermissions(@Body() dto: UpdateGroupPermissionsDto) {
-    return this.userGroupService.updateGroupPermissions(dto);
+    return await this.userGroupService.updateGroupPermissions(dto);
   }
 
   @Get(':id')

@@ -305,7 +305,7 @@ export class ScreeningRoomService {
   }
 
   async removeScreeningRoom(id: string) {
-    return this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx) => {
       const phong = await tx.pHONGCHIEU.findFirst({
         where: {
           MaPhongChieu: id,

@@ -5,7 +5,7 @@ import DiscountStatusEnum from 'src/libs/common/enums/discount-status.enum';
 
 @Injectable()
 export class VoucherService {
-  constructor(readonly prisma: PrismaService) { }
+  constructor(readonly prisma: PrismaService) {}
 
   async getAllVouchers() {
     return await this.prisma.kHUYENMAI.findMany({
@@ -42,10 +42,7 @@ export class VoucherService {
     });
   }
 
-  async saveVoucherForUser(
-    userId: string,
-    voucherId: string,
-  ) {
+  async saveVoucherForUser(userId: string, voucherId: string) {
     const now = new Date();
 
     const voucher = await this.prisma.kHUYENMAI.findFirst({
@@ -59,7 +56,9 @@ export class VoucherService {
     });
 
     if (!voucher) {
-      throw new NotFoundException('Khuyến mãi không tồn tại hoặc không còn hiệu lực');
+      throw new NotFoundException(
+        'Khuyến mãi không tồn tại hoặc không còn hiệu lực',
+      );
     }
 
     const existed = await this.prisma.kHUYENMAI_KHACHHANG.findFirst({
@@ -83,7 +82,7 @@ export class VoucherService {
       },
     });
 
-    return { message: "Lưu khuyến mãi thành công" }
+    return { message: 'Lưu khuyến mãi thành công' };
   }
 
   async getVoucherById(id: string) {

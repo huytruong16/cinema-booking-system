@@ -24,7 +24,7 @@ export class TransactionCronService {
   }
 
   private async findExpiredTransactions(threshold: Date) {
-    return this.prisma.gIAODICH.findMany({
+    return await this.prisma.gIAODICH.findMany({
       where: {
         UpdatedAt: { lte: threshold },
         TrangThai: TransactionStatusEnum.DANGCHO,

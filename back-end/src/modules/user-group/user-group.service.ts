@@ -15,7 +15,7 @@ import { GetUsersInGroupDto } from './dtos/get-users-in-group.dto';
 export class UserGroupService {
   constructor(private readonly prisma: PrismaService) {}
   async getAllGroups() {
-    return this.prisma.nHOMNGUOIDUNG.findMany({
+    return await this.prisma.nHOMNGUOIDUNG.findMany({
       where: { DeletedAt: null },
       orderBy: { CreatedAt: 'desc' },
       include: {

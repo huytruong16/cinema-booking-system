@@ -27,7 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   async login(dto: LoginDto) {
     const { email, matkhau } = dto;
@@ -64,7 +64,7 @@ export class AuthService {
       id: user.MaNguoiDung,
       email: user.Email,
       vaitro: user.VaiTro,
-      customerId: maKhachHang
+      customerId: maKhachHang,
     };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(
