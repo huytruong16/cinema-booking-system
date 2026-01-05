@@ -74,7 +74,7 @@ export class ScreeningRoomController {
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     }
 
-    return this.screeningRoomService.updateScreeningRoom(
+    return await this.screeningRoomService.updateScreeningRoom(
       id,
       updateScreeningRoomDto,
     );
@@ -91,6 +91,6 @@ export class ScreeningRoomController {
       throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
     }
 
-    return this.screeningRoomService.removeScreeningRoom(id);
+    return await this.screeningRoomService.removeScreeningRoom(id);
   }
 }

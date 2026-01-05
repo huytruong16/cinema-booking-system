@@ -124,7 +124,7 @@ export class ShowtimeController {
     description: 'Tạo suất chiếu thành công',
   })
   async create(@Body() dto: CreateShowtimeDto) {
-    return this.showtimeService.createShowtime(dto);
+    return await this.showtimeService.createShowtime(dto);
   }
 
   @Patch(':id')

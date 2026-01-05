@@ -9,7 +9,7 @@ import {
   Delete,
   BadRequestException,
   UseGuards,
-  Req
+  Req,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { VoucherService } from './voucher.service';
@@ -31,7 +31,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Mã giảm giá')
 @Controller('vouchers')
 export class VoucherController {
-  constructor(private readonly voucherService: VoucherService) { }
+  constructor(private readonly voucherService: VoucherService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các voucher' })
@@ -43,7 +43,9 @@ export class VoucherController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleEnum.KHACHHANG)
-  @ApiOperation({ summary: 'Lấy danh sách voucher của khách hàng đang đăng nhập' })
+  @ApiOperation({
+    summary: 'Lấy danh sách voucher của khách hàng đang đăng nhập',
+  })
   @ApiResponse({ status: 200, description: 'Danh sách voucher của khách hàng' })
   async getMyVouchers(@Req() req: any) {
     const customerId = req.user.customerId;
@@ -66,10 +68,7 @@ export class VoucherController {
     required: true,
   })
   @ApiResponse({ status: 201, description: 'Lưu voucher thành công' })
-  async saveVoucherForUser(
-    @Req() req: any,
-    @Param('id') id: string,
-  ) {
+  async saveVoucherForUser(@Req() req: any, @Param('id') id: string) {
     const customerId = req.user.customerId;
 
     if (!isUUID(customerId, '4')) {
@@ -80,10 +79,7 @@ export class VoucherController {
       throw new BadRequestException('id phải là UUID v4 hợp lệ');
     }
 
-    return this.voucherService.saveVoucherForUser(
-      customerId,
-      id,
-    );
+    return this.voucherService.saveVoucherForUser(customerId, id);
   }
 
   @Get(':id')

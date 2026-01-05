@@ -748,10 +748,8 @@ export class InvoiceService {
       }
 
       const seatPrices = gheSuatChieus.map((g) => {
-        const base = Number((g.SuatChieu as any).PhienBanPhim.GiaVe);
-        const heSo = Number(
-          (g.GhePhongChieu as any).GheLoaiGhe.LoaiGhe.HeSoGiaGhe,
-        );
+        const base = Number(g.SuatChieu.PhienBanPhim.GiaVe);
+        const heSo = Number(g.GhePhongChieu.GheLoaiGhe.LoaiGhe.HeSoGiaGhe);
         const price = base * heSo;
         total += price;
         return { id: g.MaGheSuatChieu, price };
