@@ -55,6 +55,7 @@ export class MovieVersionDto {
 
 export class MovieDto {
   TenHienThi: string;
+  PosterUrl?: string;
   DinhDang: {
     TenDinhDang: string;
   };

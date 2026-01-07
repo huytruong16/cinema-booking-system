@@ -207,6 +207,9 @@ export class MailService {
     );
 
     const movieName = invoiceData.Showtime.PhienBanPhim.Phim.TenHienThi;
+    const moviePoster =
+      invoiceData.Showtime.PhienBanPhim.Phim.PosterUrl ||
+      'https://via.placeholder.com/150x200?text=No+Image';
     const movieRating =
       invoiceData.Showtime.PhienBanPhim.Phim.NhanPhim.TenNhanPhim;
     const movieLanguage =
@@ -282,10 +285,11 @@ export class MailService {
 
     const htmlContent = htmlTemplate
       .replace('{{movie_name}}', displayMovieName)
+      .replace('{{movie_poster}}', moviePoster)
       .replace('{{cinema_room}}', roomName)
       .replace('{{show_time}}', showTime)
       .replace('{{show_date}}', showDate)
-      .replace('{{booking_code}}', bookingCode)
+      .replace(new RegExp('{{booking_code}}', 'g'), bookingCode)
       .replace('{{booking_date}}', bookingDate)
       .replace('{{total_amount}}', totalAmount)
       .replace('{{{invoice_items_rows}}}', rowsHtml);

@@ -26,6 +26,7 @@ import GetInvoiceResponseDto from './dtos/get-invoice-response.dto';
 import { TicketsService } from '../tickets/tickets.service';
 
 import { PdfService } from '../pdf/pdf.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class InvoiceService {
@@ -35,6 +36,7 @@ export class InvoiceService {
     private readonly configService: ConfigService,
     private readonly ticketsService: TicketsService,
     private readonly pdfService: PdfService,
+    private readonly mailService: MailService,
     @Inject(REQUEST) private readonly request: any,
   ) {}
 

@@ -75,6 +75,8 @@ export class TransactionService {
             TenHienThi:
               invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim
                 .TenHienThi,
+            PosterUrl:
+              invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.PosterUrl,
             NhanPhim: {
               TenNhanPhim:
                 invoice.Ves[0].GheSuatChieu.SuatChieu.PhienBanPhim.Phim.NhanPhim
