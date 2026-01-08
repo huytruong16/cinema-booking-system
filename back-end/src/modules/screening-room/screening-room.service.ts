@@ -217,61 +217,63 @@ export class ScreeningRoomService {
       }
     }
 
-    const validatedSeats: {
-      MaGheLoaiGhe: string;
-    }[] = [];
+    let validatedSeats: { MaGheLoaiGhe: string }[] = [];
 
     if (updateDto.DanhSachGhe && updateDto.DanhSachGhe.length > 0) {
-      for (const seat of updateDto.DanhSachGhe) {
-        const { Hang, Cot, MaLoaiGhe } = seat;
+      const seatKeys = updateDto.DanhSachGhe.map((s) => ({
+        Hang: s.Hang,
+        Cot: s.Cot,
+      }));
 
-        const ghe = await prisma.gHE.findFirst({
-          where: { Hang, Cot, DeletedAt: null },
-          select: { MaGhe: true },
-        });
+      const ghes = await prisma.gHE.findMany({
+        where: { OR: seatKeys, DeletedAt: null },
+        select: { MaGhe: true, Hang: true, Cot: true },
+      });
 
-        if (!ghe) {
-          throw new BadRequestException(
-            `Ghế tại hàng ${Hang} cột ${Cot} không tồn tại`,
-          );
-        }
-
-        const gheLoai = await prisma.gHE_LOAIGHE.findFirst({
-          where: {
-            MaGhe: ghe.MaGhe,
-            MaLoaiGhe,
-            DeletedAt: null,
-          },
-          select: { MaGheLoaiGhe: true },
-        });
-
-        if (!gheLoai) {
-          throw new BadRequestException(
-            `Ghế ${Hang}${Cot} không có loại ghế được chọn`,
-          );
-        }
-
-        validatedSeats.push({
-          MaGheLoaiGhe: gheLoai.MaGheLoaiGhe,
-        });
+      if (ghes.length !== seatKeys.length) {
+        const missing = seatKeys.filter(
+          (sk) => !ghes.some((g) => g.Hang === sk.Hang && g.Cot === sk.Cot),
+        );
+        throw new BadRequestException(
+          `Ghế không tồn tại: ${missing.map((m) => `${m.Hang}${m.Cot}`).join(', ')}`,
+        );
       }
+
+      const gheLoaiKeys = updateDto.DanhSachGhe.map((s) => ({
+        MaGhe: ghes.find((g) => g.Hang === s.Hang && g.Cot === s.Cot)!.MaGhe,
+        MaLoaiGhe: s.MaLoaiGhe,
+      }));
+
+      const gheLoais = await prisma.gHE_LOAIGHE.findMany({
+        where: { OR: gheLoaiKeys, DeletedAt: null },
+        select: { MaGheLoaiGhe: true, MaGhe: true, MaLoaiGhe: true },
+      });
+
+      if (gheLoais.length !== gheLoaiKeys.length) {
+        const missing = gheLoaiKeys.filter(
+          (k) =>
+            !gheLoais.some(
+              (gl) => gl.MaGhe === k.MaGhe && gl.MaLoaiGhe === k.MaLoaiGhe,
+            ),
+        );
+        throw new BadRequestException(
+          `Ghế không có loại hợp lệ: ${missing.map((m) => `${m.MaGhe}-${m.MaLoaiGhe}`).join(', ')}`,
+        );
+      }
+
+      validatedSeats = gheLoais.map((gl) => ({
+        MaGheLoaiGhe: gl.MaGheLoaiGhe,
+      }));
     }
 
-    const updateData: any = {
-      UpdatedAt: new Date(),
-    };
+    const updateData: any = { UpdatedAt: new Date() };
 
-    if (updateDto.TenPhongChieu !== undefined) {
+    if (updateDto.TenPhongChieu !== undefined)
       updateData.TenPhongChieu = updateDto.TenPhongChieu;
-    }
-
-    if (updateDto.SoDoPhongChieu !== undefined) {
+    if (updateDto.SoDoPhongChieu !== undefined)
       updateData.SoDoGhe = updateDto.SoDoPhongChieu;
-    }
-
-    if (updateDto.TrangThai !== undefined) {
+    if (updateDto.TrangThai !== undefined)
       updateData.TrangThai = updateDto.TrangThai;
-    }
 
     await prisma.$transaction(async (tx) => {
       await tx.pHONGCHIEU.update({
@@ -281,13 +283,8 @@ export class ScreeningRoomService {
 
       if (validatedSeats.length > 0) {
         await tx.gHE_PHONGCHIEU.updateMany({
-          where: {
-            MaPhongChieu: id,
-            DeletedAt: null,
-          },
-          data: {
-            DeletedAt: new Date(),
-          },
+          where: { MaPhongChieu: id, DeletedAt: null },
+          data: { DeletedAt: new Date() },
         });
 
         await tx.gHE_PHONGCHIEU.createMany({
@@ -299,9 +296,7 @@ export class ScreeningRoomService {
       }
     });
 
-    return {
-      message: 'Cập nhật phòng chiếu thành công',
-    };
+    return { message: 'Cập nhật phòng chiếu thành công' };
   }
 
   async removeScreeningRoom(id: string) {
