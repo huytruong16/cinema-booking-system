@@ -27,7 +27,7 @@ export class RefundRequestService {
     readonly prisma: PrismaService,
     @Inject(REQUEST) private readonly request: any,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
   async getAllRefundRequests(filters: GetRefundRequestDto) {
     const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE
       .paginate({
@@ -311,6 +311,15 @@ export class RefundRequestService {
           select: {
             Email: true,
             Code: true,
+            HoaDonKhuyenMais: {
+              select: {
+                KhuyenMaiKH: {
+                  select: {
+                    MaKhuyenMaiKH: true,
+                  },
+                },
+              }
+            },
             KhachHang: {
               select: {
                 NguoiDungPhanMem: {
@@ -484,6 +493,16 @@ export class RefundRequestService {
               },
               data: {
                 TrangThai: SeatStatusEnum.CONTRONG,
+                UpdatedAt: new Date(),
+              },
+            });
+          }
+
+          for (const voucherId of refundRequest!.HoaDon.HoaDonKhuyenMais.map(e => e.KhuyenMaiKH.MaKhuyenMaiKH)) {
+            await prisma.kHUYENMAI_KHACHHANG.update({
+              where: { MaKhuyenMaiKH: voucherId },
+              data: {
+                DaSuDung: false,
                 UpdatedAt: new Date(),
               },
             });
