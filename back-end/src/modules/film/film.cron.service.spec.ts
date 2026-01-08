@@ -4,68 +4,107 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FilmStatusEnum } from 'src/libs/common/enums';
 
 describe('FilmCronService', () => {
-    let service: FilmCronService;
-    let prisma: PrismaService;
+  let service: FilmCronService;
 
-    const mockPrismaService = {
-        pHIM: {
-            updateMany: jest.fn(),
+  const mockPrismaService = {
+    pHIM: {
+      updateMany: jest.fn(),
+    },
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        FilmCronService,
+        { provide: PrismaService, useValue: mockPrismaService },
+      ],
+    }).compile();
+
+    service = module.get<FilmCronService>(FilmCronService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('handleCron', () => {
+    it('should update film status to DANGCHIEU for films currently showing', async () => {
+      mockPrismaService.pHIM.updateMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 3 });
+
+      await service.handleCron();
+
+      expect(mockPrismaService.pHIM.updateMany).toHaveBeenNthCalledWith(1, {
+        where: {
+          DeletedAt: null,
+          NgayBatDauChieu: { lte: expect.any(Date) },
+          NgayKetThucChieu: { gte: expect.any(Date) },
+          TrangThaiPhim: { not: FilmStatusEnum.DANGCHIEU },
         },
-    };
-
-    beforeEach(async () => {
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                FilmCronService,
-                {
-                    provide: PrismaService,
-                    useValue: mockPrismaService,
-                },
-            ],
-        }).compile();
-
-        service = module.get<FilmCronService>(FilmCronService);
-        prisma = module.get<PrismaService>(PrismaService);
-
-        jest.clearAllMocks();
+        data: {
+          TrangThaiPhim: FilmStatusEnum.DANGCHIEU,
+        },
+      });
     });
 
-    it('nên được định nghĩa', () => {
-        expect(service).toBeDefined();
+    it('should update film status to SAPCHIEU for upcoming films', async () => {
+      mockPrismaService.pHIM.updateMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 3 });
+
+      await service.handleCron();
+
+      expect(mockPrismaService.pHIM.updateMany).toHaveBeenNthCalledWith(2, {
+        where: {
+          DeletedAt: null,
+          NgayBatDauChieu: { gt: expect.any(Date) },
+          TrangThaiPhim: { not: FilmStatusEnum.SAPCHIEU },
+        },
+        data: {
+          TrangThaiPhim: FilmStatusEnum.SAPCHIEU,
+        },
+      });
     });
 
-    it('cập nhật trạng thái phim đúng theo thời gian', async () => {
-        mockPrismaService.pHIM.updateMany.mockResolvedValue({ count: 1 });
+    it('should update film status to NGUNGCHIEU for films that have ended', async () => {
+      mockPrismaService.pHIM.updateMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 3 });
 
-        await service.handleCron();
+      await service.handleCron();
 
-        expect(prisma.pHIM.updateMany).toHaveBeenCalledTimes(3);
-
-        expect(prisma.pHIM.updateMany).toHaveBeenNthCalledWith(
-            1,
-            expect.objectContaining({
-                data: {
-                    TrangThaiPhim: FilmStatusEnum.DANGCHIEU,
-                },
-            }),
-        );
-
-        expect(prisma.pHIM.updateMany).toHaveBeenNthCalledWith(
-            2,
-            expect.objectContaining({
-                data: {
-                    TrangThaiPhim: FilmStatusEnum.SAPCHIEU,
-                },
-            }),
-        );
-
-        expect(prisma.pHIM.updateMany).toHaveBeenNthCalledWith(
-            3,
-            expect.objectContaining({
-                data: {
-                    TrangThaiPhim: FilmStatusEnum.NGUNGCHIEU,
-                },
-            }),
-        );
+      expect(mockPrismaService.pHIM.updateMany).toHaveBeenNthCalledWith(3, {
+        where: {
+          DeletedAt: null,
+          NgayKetThucChieu: { lt: expect.any(Date) },
+          TrangThaiPhim: { not: FilmStatusEnum.NGUNGCHIEU },
+        },
+        data: {
+          TrangThaiPhim: FilmStatusEnum.NGUNGCHIEU,
+        },
+      });
     });
+
+    it('should call updateMany three times', async () => {
+      mockPrismaService.pHIM.updateMany
+        .mockResolvedValueOnce({ count: 2 })
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 3 });
+
+      await service.handleCron();
+
+      expect(mockPrismaService.pHIM.updateMany).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle errors gracefully', async () => {
+      const error = new Error('Database connection failed');
+      mockPrismaService.pHIM.updateMany.mockRejectedValueOnce(error);
+
+      await expect(service.handleCron()).rejects.toThrow(error);
+    });
+  });
 });
