@@ -263,47 +263,104 @@ export default function RoomManagementPage() {
     soDoPhongChieu: any,
     danhSachGhe: any[]
   ) => {
-    const toastId = toast.loading("Đang xử lý dữ liệu...");
+    const toastId = toast.loading("Đang phân tích dữ liệu ghế...");
 
     try {
+      const existingSeatsMap = new Map<string, { MaGhe: string; MaLoaiGhe: string }>();
+      if (Array.isArray(room.GhePhongChieus)) {
+         room.GhePhongChieus.forEach((gp: any) => {
+             const g = gp.GheLoaiGhe?.Ghe;
+             const gl = gp.GheLoaiGhe;
+             if (g && g.Hang && g.Cot && g.MaGhe) {
+                 existingSeatsMap.set(`${g.Hang}-${g.Cot}`, {
+                     MaGhe: g.MaGhe,
+                     MaLoaiGhe: gl?.MaLoaiGhe
+                 });
+             }
+         });
+      }
+
       const uniqueSeatsMap = new Map();
       danhSachGhe.forEach((s) => {
-        uniqueSeatsMap.set(`${s.Hang}-${s.Cot}`, { Hang: s.Hang, Cot: s.Cot });
+        uniqueSeatsMap.set(`${s.Hang}-${s.Cot}`, {
+          Hang: s.Hang,
+          Cot: s.Cot,
+          MaLoaiGhe: s.MaLoaiGhe,
+        });
       });
-      const physicalSeatsPayload = Array.from(uniqueSeatsMap.values());
+      const uniqueSeatsList = Array.from(uniqueSeatsMap.values());
 
+      const physicalSeatsPayload: any[] = [];
+      const locallyKnownSeats: any[] = [];
+
+      uniqueSeatsList.forEach((s: any) => {
+          const key = `${s.Hang}-${s.Cot}`;
+          const existing = existingSeatsMap.get(key);
+          if (existing) {
+              locallyKnownSeats.push({
+                  Hang: s.Hang,
+                  Cot: s.Cot,
+                  MaGhe: existing.MaGhe
+              });
+          } else {
+              physicalSeatsPayload.push({
+                  Hang: s.Hang,
+                  Cot: s.Cot
+              });
+          }
+      });
+
+      let newSeatsCreated: any[] = [];
       if (physicalSeatsPayload.length > 0) {
-        await seatService.createBatch(physicalSeatsPayload);
+        toast.loading(`Đang tạo ghế mới...`, { id: toastId });
+        console.log(`Creating ${physicalSeatsPayload.length} new physical seats...`);
+        const response = await seatService.createBatch(physicalSeatsPayload);
+        if (Array.isArray(response)) {
+          newSeatsCreated = response;
+        } else if ((response as any)?.data) {
+          newSeatsCreated = (response as any).data;
+        }
       }
 
-      const allBaseSeatsResponse = await seatService.getAllBase();
-      let allBaseSeats: any[] = [];
-      if (Array.isArray(allBaseSeatsResponse)) {
-        allBaseSeats = allBaseSeatsResponse;
-      } else if ((allBaseSeatsResponse as any)?.data) {
-        allBaseSeats = (allBaseSeatsResponse as any).data;
-      }
+      const allBaseSeats = [...locallyKnownSeats, ...newSeatsCreated];
 
       const seatTypePayload: any[] = [];
-      danhSachGhe.forEach((frontendSeat) => {
+      uniqueSeatsList.forEach((frontendSeat: any) => {
+        const key = `${frontendSeat.Hang}-${frontendSeat.Cot}`;
         const matchedSeat = allBaseSeats.find(
           (s: any) =>
             String(s.Hang) === String(frontendSeat.Hang) &&
             String(s.Cot) === String(frontendSeat.Cot)
         );
+
         if (matchedSeat && matchedSeat.MaGhe && frontendSeat.MaLoaiGhe) {
-          seatTypePayload.push({
-            MaGhe: matchedSeat.MaGhe,
-            MaLoaiGhe: frontendSeat.MaLoaiGhe,
-          });
+           const existing = existingSeatsMap.get(key);
+           if (!existing || existing.MaLoaiGhe !== frontendSeat.MaLoaiGhe) {
+                seatTypePayload.push({
+                    MaGhe: matchedSeat.MaGhe,
+                    MaLoaiGhe: frontendSeat.MaLoaiGhe,
+                });
+           }
         }
       });
 
       if (seatTypePayload.length > 0) {
-        await seatService.createSeatTypeBatch(seatTypePayload);
+        const CHUNK_SIZE = 10; 
+        const total = seatTypePayload.length;
+        let processed = 0;
+
+        for (let i = 0; i < total; i += CHUNK_SIZE) {
+            const chunk = seatTypePayload.slice(i, i + CHUNK_SIZE);
+            toast.loading(`Đang cập nhật loại ghế (${Math.min(processed + chunk.length, total)}/${total})...`, { id: toastId });
+            console.log(`Sending seat-type chunk:`, chunk.length, `items`);
+            await seatService.createSeatTypeBatch(chunk);
+            processed += chunk.length;
+        }
+      } else {
+        console.log("No seat types changed.");
       }
 
-      const cleanDanhSachGhe = danhSachGhe.map(({ Hang, Cot, MaLoaiGhe }) => ({
+      const cleanDanhSachGhe = uniqueSeatsList.map(({ Hang, Cot, MaLoaiGhe }: any) => ({
         Hang,
         Cot,
         MaLoaiGhe,
@@ -326,6 +383,7 @@ export default function RoomManagementPage() {
 
       console.log("Payload Final:", payload);
 
+      toast.loading("Đang lưu cấu trúc phòng...", { id: toastId });
       await roomService.update(room.MaPhongChieu, payload);
 
       toast.dismiss(toastId);
@@ -380,7 +438,6 @@ export default function RoomManagementPage() {
         </div>
       </div>
 
-      {/* LIST */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-primary size-8" />
@@ -431,7 +488,6 @@ export default function RoomManagementPage() {
         refreshData={fetchData}
       />
 
-      {/* DELETE CONFIRM */}
       <AlertDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
@@ -996,7 +1052,6 @@ function SeatMapEditorDialog({
                       );
                     })}
 
-                    {/* Label Phải */}
                     <div className="w-8 text-center text-sm font-bold text-slate-500 tabular-nums">
                       {row}
                     </div>
@@ -1004,13 +1059,12 @@ function SeatMapEditorDialog({
                 ))}
               </div>
 
-              {/* Chú thích */}
-              <div className="mt-16 flex gap-6 text-xs text-slate-500">
+              <div className="mt-16 flex flex-wrap justify-center gap-6 px-10 text-xs text-slate-500 max-w-4xl">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded bg-[#1a1a1a] border border-slate-800"></div>
                   Lối đi (Trống)
                 </div>
-                {seatTypes.slice(0, 5).map((t: any) => (
+                {seatTypes.map((t: any) => (
                   <div key={t.MaLoaiGhe} className="flex items-center gap-2">
                     <div
                       className={cn(

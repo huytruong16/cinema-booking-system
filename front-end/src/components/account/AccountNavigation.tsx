@@ -17,7 +17,6 @@ import { useAuth } from "@/contexts/AuthContext";
 const navItems = [
   { href: "/account/profile", label: "Tài khoản", icon: User },
   { href: "/account/tickets", label: "Vé của tôi", icon: Ticket },
-  { href: "/account/notifications", label: "Thông báo", icon: Bell },
 ];
 
 export function AccountNavigation() {
