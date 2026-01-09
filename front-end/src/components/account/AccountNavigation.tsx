@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Heart, List, History, Bell, User, LogOut , Ticket} from "lucide-react";
+import { Heart, List, History, Bell, User, LogOut , Ticket, Lock} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -18,6 +18,7 @@ const navItems = [
   { href: "/account/profile", label: "Tài khoản", icon: User },
   { href: "/account/tickets", label: "Vé của tôi", icon: Ticket },
   { href: "/account/notifications", label: "Thông báo", icon: Bell },
+  { href: "/account/change-password", label: "Đổi mật khẩu", icon: Lock },
 ];
 
 export function AccountNavigation() {

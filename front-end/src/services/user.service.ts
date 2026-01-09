@@ -52,8 +52,8 @@ export const updateMyProfile = async (
   }
 };
 
-export const changePassword = async (data: { oldPassword: string, newPassword: string }) => {
-  const response = await apiClient.post('/auth/change-password', data);
+export const changePassword = async (data: { MatKhauCu: string, MatKhauMoi: string }) => {
+  const response = await apiClient.post('/users/change-password', data);
   return response.data;
 };
 
