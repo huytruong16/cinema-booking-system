@@ -7,28 +7,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ArrowLeft, CheckCircle2, XCircle, Loader2, QrCode, Clock, Film, Utensils } from 'lucide-react';
+import { Ticket, ArrowLeft, CheckCircle2, XCircle, Loader2, QrCode, Clock, Film, Utensils, Tag, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { voucherService, Voucher } from '@/services/voucher.service';
+import { promotionService } from '@/services/promotion.service';
+import { voucherService } from '@/services/voucher.service';
 import { invoiceService } from '@/services/invoice.service';
 import { transactionService } from '@/services/transaction.service';
+import { UserPromotion } from '@/types/promotion';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function PaymentContent() {
   const router = useRouter();
+  const { isLoggedIn } = useAuth();
   const [bookingData, setBookingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<Voucher | null>(null);
-  const [promoError, setPromoError] = useState("");
+
+  const [myVouchers, setMyVouchers] = useState<UserPromotion[]>([]);
+  const [selectedVouchers, setSelectedVouchers] = useState<UserPromotion[]>([]);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [inputCode, setInputCode] = useState("");
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showWaitingModal, setShowWaitingModal] = useState(false);
@@ -55,6 +65,22 @@ function PaymentContent() {
     const timer = setTimeout(loadData, 100);
     return () => clearTimeout(timer);
   }, [router]);
+
+  const refreshVouchers = async () => {
+    if (isLoggedIn) {
+      try {
+        const data = await promotionService.getMyPromotions();
+        const available = data.filter(v => v.status === 'ACTIVE' && !v.isUsed);
+        setMyVouchers(available);
+      } catch (error) {
+        console.error("Failed to load vouchers", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    refreshVouchers();
+  }, [isLoggedIn]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -119,7 +145,7 @@ function PaymentContent() {
           MaCombo: c.id,
           SoLuong: c.quantity
         })) : [],
-        MaVouchers: appliedPromo ? [appliedPromo.MaKhuyenMai] : []
+        MaVouchers: selectedVouchers.map(v => v.userPromotionId)
       };
 
       console.log("Sending payment payload:", payload);
@@ -127,6 +153,7 @@ function PaymentContent() {
       const res: any = await invoiceService.create(payload);
       
       if (res.GiaoDichUrl) {
+        setTransactionId(res.MaGiaoDich);
         window.location.href = res.GiaoDichUrl;
         setShowWaitingModal(true);
         setWaitingCountdown(600);
@@ -143,71 +170,83 @@ function PaymentContent() {
     }
   };
 
-  const handleApplyPromo = async () => {
-    setPromoError("");
-    if (!promoCode.trim()) return;
-
+  const handleSaveCode = async () => {
+    if (!inputCode.trim()) return;
+    setIsCheckingCode(true);
     try {
-      const promo = await voucherService.getByCode(promoCode);
-      
-      if (!promo) {
-        setPromoError("Mã không hợp lệ.");
-        setAppliedPromo(null);
-        return;
-      }
-
-      // Validate voucher
-      const now = new Date();
-      if (promo.TrangThai !== 'CONHOATDONG') {
-        setPromoError("Mã khuyến mãi không còn hoạt động.");
-        setAppliedPromo(null);
-        return;
-      }
-      if (new Date(promo.NgayKetThuc) < now) {
-        setPromoError("Mã khuyến mãi đã hết hạn.");
-        setAppliedPromo(null);
-        return;
-      }
-      if (new Date(promo.NgayBatDau) > now) {
-        setPromoError("Mã khuyến mãi chưa bắt đầu.");
-        setAppliedPromo(null);
-        return;
-      }
-      if (promo.SoLuongSuDung >= promo.SoLuongMa) {
-        setPromoError("Mã khuyến mãi đã hết lượt sử dụng.");
-        setAppliedPromo(null);
-        return;
-      }
-      if (bookingData && bookingData.totalPrice < promo.GiaTriDonToiThieu) {
-        setPromoError(`Đơn tối thiểu ${promo.GiaTriDonToiThieu.toLocaleString('vi-VN')}đ.`);
-        setAppliedPromo(null);
-        return;
-      }
-
-      setAppliedPromo(promo);
-      toast.success("Áp dụng mã thành công!");
-    } catch (error) {
-      console.error("Lỗi áp dụng mã:", error);
-      setPromoError("Mã không hợp lệ hoặc có lỗi xảy ra.");
-      setAppliedPromo(null);
+        const voucher = await voucherService.getByCode(inputCode);
+        if (voucher) {
+             const exists = myVouchers.find(v => v.id === voucher.MaKhuyenMai);
+             if (exists) {
+                 toast.info("Bạn đã lưu voucher này rồi.");
+                 return;
+             }
+             await promotionService.savePromotion(voucher.MaKhuyenMai);
+             toast.success("Lưu voucher thành công!");
+             setInputCode("");
+             await refreshVouchers();
+        } else {
+            toast.error("Mã khuyến mãi không tồn tại.");
+        }
+    } catch (error: any) {
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        toast.error((error as any).response?.data?.message || "Lỗi khi lưu mã.");
+    } finally {
+        setIsCheckingCode(false);
     }
   };
 
-  const finalPrice = useMemo(() => {
-    if (!bookingData) return 0;
-    let discount = 0;
-    if (appliedPromo) {
-      if (appliedPromo.LoaiGiamGia === 'PHANTRAM') {
-        discount = (bookingData.totalPrice * appliedPromo.GiaTri) / 100;
-        if (appliedPromo.GiaTriGiamToiDa) discount = Math.min(discount, appliedPromo.GiaTriGiamToiDa);
-      } else {
-        discount = appliedPromo.GiaTri;
-      }
-    }
-    return Math.max(0, bookingData.totalPrice - discount);
-  }, [bookingData, appliedPromo]);
+  const toggleVoucher = (voucher: UserPromotion) => {
+    const isSelected = selectedVouchers.find(v => v.userPromotionId === voucher.userPromotionId);
+    if (isSelected) {
+        setSelectedVouchers(prev => prev.filter(v => v.userPromotionId !== voucher.userPromotionId));
+    } else {
+        const ticketTotal = bookingData.seats.reduce((t: number, s: any) => t + s.price, 0);
+        const comboTotal = bookingData.combos.reduce((t: number, c: any) => t + (c.price * c.quantity), 0);
+        
+        const baseAmount = voucher.targetType === 'VE' ? ticketTotal : comboTotal;
+        if (baseAmount < voucher.minOrderValue) {
+            toast.error(`Đơn hàng chưa đủ điều kiện tối thiểu (${voucher.minOrderValue.toLocaleString('vi-VN')}đ) cho voucher này.`);
+            return;
+        }
 
-  const discountAmount = bookingData ? bookingData.totalPrice - finalPrice : 0;
+        setSelectedVouchers(prev => [...prev, voucher]);
+    }
+  };
+
+  const { ticketTotal, comboTotal, finalPrice, discountAmount } = useMemo(() => {
+    if (!bookingData) return { ticketTotal: 0, comboTotal: 0, finalPrice: 0, discountAmount: 0 };
+
+    const tTotal = bookingData.seats.reduce((t: number, s: any) => t + s.price, 0);
+    const cTotal = bookingData.combos ? bookingData.combos.reduce((t: number, c: any) => t + (c.price * c.quantity), 0) : 0;
+    
+    let totalDiscount = 0;
+
+    selectedVouchers.forEach(v => {
+        let discount = 0;
+        const base = v.targetType === 'VE' ? tTotal : cTotal;
+        
+        if (base >= v.minOrderValue) {
+            if (v.discountType === 'PERCENTAGE') {
+                discount = (base * v.value) / 100;
+                if (v.maxDiscount) discount = Math.min(discount, v.maxDiscount);
+            } else {
+                discount = v.value;
+            }
+        }
+        totalDiscount += discount;
+    });
+
+    const totalPrice = tTotal + cTotal;
+    const final = Math.max(0, totalPrice - totalDiscount);
+
+    return {
+        ticketTotal: tTotal,
+        comboTotal: cTotal,
+        finalPrice: final,
+        discountAmount: totalPrice - final
+    };
+  }, [bookingData, selectedVouchers]);
 
   if (isLoading) {
     return (
@@ -313,32 +352,33 @@ function PaymentContent() {
             </Card>
 
             <Card className="bg-[#1C1C1C] border-zinc-800">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-white flex items-center gap-2 text-base">
-                  <Ticket className="h-4 w-4 text-primary" /> Mã khuyến mãi
+                  <Tag className="h-4 w-4 text-primary" /> Vé khuyến mãi
                 </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setIsVoucherModalOpen(true)} className="bg-transparent border-zinc-700 hover:bg-zinc-800 text-primary hover:text-primary">
+                    <Plus className="h-3 w-3 mr-1"/> Chọn Voucher
+                </Button>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-3">
-                  <Input 
-                    placeholder="Nhập mã giảm giá" 
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    className="bg-zinc-900 border-zinc-700 text-white uppercase"
-                  />
-                  <Button onClick={handleApplyPromo} disabled={!promoCode} className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700">
-                    Áp dụng
-                  </Button>
-                </div>
-                {promoError && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><XCircle className="h-3 w-3"/> {promoError}</p>}
-                {appliedPromo && (
-                  <div className="mt-3 bg-green-900/20 border border-green-500/30 rounded-md p-3 flex justify-between items-center">
-                    <div className="text-green-400 text-sm flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4"/> 
-                      <span>Đã giảm: <strong>{discountAmount.toLocaleString('vi-VN')}đ</strong> ({appliedPromo.Code})</span>
+                {selectedVouchers.length > 0 ? (
+                    <div className="space-y-2">
+                        {selectedVouchers.map(v => (
+                             <div key={v.userPromotionId} className="bg-green-900/10 border border-green-500/20 rounded-lg p-3 flex justify-between items-center group">
+                                <div>
+                                    <div className="font-bold text-green-500 text-sm flex items-center gap-2">
+                                        <CheckCircle2 className="h-3 w-3"/> {v.code}
+                                    </div>
+                                    <div className="text-xs text-zinc-400 mt-0.5">{v.description}</div>
+                                </div>
+                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400" onClick={() => toggleVoucher(v)}>
+                                    <XCircle className="h-4 w-4"/>
+                                </Button>
+                             </div>
+                        ))}
                     </div>
-                    <Button variant="ghost" size="sm" className="h-6 text-zinc-400 hover:text-white" onClick={() => { setAppliedPromo(null); setPromoCode(""); }}>Xóa</Button>
-                  </div>
+                ) : (
+                    <div className="text-sm text-zinc-500 italic py-2">Chưa áp dụng khuyến mãi nào.</div>
                 )}
               </CardContent>
             </Card>
@@ -365,14 +405,14 @@ function PaymentContent() {
                     <CardContent className="space-y-3">
                         <div className="flex justify-between text-sm text-zinc-400">
                             <span>Tổng tiền vé</span>
-                            <span className="text-white">{bookingData.seats.reduce((t: number, s: any) => t + s.price, 0).toLocaleString('vi-VN')}đ</span>
+                            <span className="text-white">{ticketTotal.toLocaleString('vi-VN')}đ</span>
                         </div>
                         <div className="flex justify-between text-sm text-zinc-400">
                             <span>Tổng tiền Combo</span>
-                            <span className="text-white">{bookingData.combos.reduce((t: number, c: any) => t + (c.price * c.quantity), 0).toLocaleString('vi-VN')}đ</span>
+                            <span className="text-white">{comboTotal.toLocaleString('vi-VN')}đ</span>
                         </div>
                         
-                        {appliedPromo && (
+                        {discountAmount > 0 && (
                             <div className="flex justify-between text-sm text-green-500">
                                 <span>Giảm giá</span>
                                 <span>- {discountAmount.toLocaleString('vi-VN')}đ</span>
@@ -407,6 +447,74 @@ function PaymentContent() {
           </div>
 
         </div>
+        {/* Voucher Selection Modal */}
+        <Dialog open={isVoucherModalOpen} onOpenChange={setIsVoucherModalOpen}>
+            <DialogContent className="bg-[#1C1C1C] border-zinc-800 text-white sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Chọn Voucher</DialogTitle>
+                    <DialogDescription>Chọn mã khuyến mãi từ ví của bạn</DialogDescription>
+                </DialogHeader>
+
+                <div className="flex gap-2 mb-4">
+                     <Input 
+                        placeholder="Nhập mã code để lưu..." 
+                        className="bg-zinc-900 border-zinc-700" 
+                        value={inputCode}
+                        onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                     />
+                     <Button onClick={handleSaveCode} disabled={isCheckingCode || !inputCode} className="shrink-0 bg-zinc-800 hover:bg-zinc-700">
+                         {isCheckingCode ? <Loader2 className="h-4 w-4 animate-spin"/> : "Lưu"}
+                     </Button>
+                </div>
+
+                <ScrollArea className="h-[300px] -mr-4 pr-4">
+                    <div className="space-y-3">
+                         {myVouchers.length === 0 && (
+                             <div className="text-center text-zinc-500 py-8">Bạn chưa có voucher nào khả dụng.</div>
+                         )}
+                         {myVouchers.map(v => {
+                            const isSelected = !!selectedVouchers.find(sv => sv.userPromotionId === v.userPromotionId);
+                            // Valid check for display
+                            const baseAmount = v.targetType === 'VE' ? ticketTotal : comboTotal;
+                            const disable = baseAmount < v.minOrderValue;
+
+                            return (
+                                <div key={v.userPromotionId} 
+                                    className={cn(
+                                        "p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-colors",
+                                        isSelected ? "bg-primary/10 border-primary/50" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700",
+                                        disable && "opacity-50 cursor-not-allowed"
+                                    )}
+                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                    onClick={() => !disable && toggleVoucher(v)}
+                                >
+                                    <div className="h-10 w-10 shrink-0 rounded bg-zinc-800 flex items-center justify-center font-bold text-xs text-zinc-400">
+                                        {v.discountType === 'PERCENTAGE' ? '%' : '$'}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between">
+                                            <div className="font-bold truncate">{v.code}</div>
+                                            <div className={cn(
+                                                "h-5 w-5 rounded-full border flex items-center justify-center",
+                                                isSelected ? "bg-primary border-primary text-white" : "border-zinc-600"
+                                            )}>
+                                                {isSelected && <CheckCircle2 className="h-3 w-3" />}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-zinc-400 line-clamp-1">{v.description}</div>
+                                        <div className="text-[10px] text-zinc-500 mt-1">Đơn tối thiểu: {v.minOrderValue.toLocaleString('vi-VN')}đ • {v.targetType === 'VE' ? 'Vé' : 'Combo'}</div>
+                                    </div>
+                                </div>
+                            );
+                         })}
+                    </div>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button onClick={() => setIsVoucherModalOpen(false)} className="bg-primary hover:bg-primary/90 text-white w-full">Xong</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <Dialog open={showWaitingModal} onOpenChange={setShowWaitingModal}>
             <DialogContent className="bg-[#1C1C1C] border-zinc-800 text-white sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
                 <DialogHeader>

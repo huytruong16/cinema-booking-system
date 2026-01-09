@@ -15,3 +15,8 @@ export interface Promotion {
   status: "ACTIVE" | "INACTIVE"; 
   targetType: string;       
 }
+
+export interface UserPromotion extends Promotion {
+  userPromotionId: string; 
+  isUsed: boolean;         
+}

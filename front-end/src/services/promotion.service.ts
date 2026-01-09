@@ -1,5 +1,5 @@
 import api from "@/lib/apiClient";
-import { Promotion } from "@/types/promotion";
+import { Promotion, UserPromotion } from "@/types/promotion";
 
 export interface BackendPromotion {
   MaKhuyenMai: string;
@@ -16,6 +16,14 @@ export interface BackendPromotion {
   GiaTriGiamToiDa: string;
   TrangThai: string;       
   DoiTuongApDung: string;
+}
+
+export interface BackendUserPromotion {
+  MaKhuyenMaiKH: string;
+  MaKhachHang: string;
+  MaKhuyenMai: string;
+  DaSuDung: boolean;
+  KhuyenMai: BackendPromotion;
 }
 
 const mapToFrontendPromotion = (item: BackendPromotion): Promotion => {
@@ -46,6 +54,26 @@ export const promotionService = {
       console.error("Lỗi khi lấy danh sách khuyến mãi:", error);
       return [];
     }
+  },
+
+  getMyPromotions: async (): Promise<UserPromotion[]> => {
+    try {
+      const response = await api.get<BackendUserPromotion[]>('/vouchers/me');
+      return response.data
+        .filter(item => item.KhuyenMai)
+        .map(item => ({
+          ...mapToFrontendPromotion(item.KhuyenMai),
+          userPromotionId: item.MaKhuyenMaiKH,
+          isUsed: item.DaSuDung
+        }));
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách khuyến mãi của tôi:", error);
+      return [];
+    }
+  },
+
+  savePromotion: async (id: string): Promise<void> => {
+    await api.post(`/vouchers/save/${id}`);
   },
 
   copyCode: (code: string) => {
