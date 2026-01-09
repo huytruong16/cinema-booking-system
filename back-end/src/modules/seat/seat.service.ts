@@ -8,7 +8,7 @@ import { SeatCheckResponseDto } from './dtos/post-check-available.dto';
 
 @Injectable()
 export class SeatService {
-  constructor(readonly prisma: PrismaService) { }
+  constructor(readonly prisma: PrismaService) {}
 
   // ghế đã chia theo loại ghế
   async getAllSeats(query?: GetSeatsDto) {
@@ -65,30 +65,55 @@ export class SeatService {
   }
 
   async createSeats(seats: CreateSeatDto[]): Promise<any[]> {
-    const results: any[] = [];
-    for (const body of seats) {
-      const existingSeat = await this.prisma.gHE.findFirst({
-        where: {
-          Hang: body.Hang,
-          Cot: body.Cot,
-          DeletedAt: null,
-        },
-      });
+    const rows = [...new Set(seats.map((s) => s.Hang))];
+    const existingSeats = await this.prisma.gHE.findMany({
+      where: {
+        Hang: { in: rows },
+        DeletedAt: null,
+      },
+    });
 
-      if (existingSeat) {
-        results.push(await this.getBaseSeatById(existingSeat.MaGhe));
-        continue;
+    const existingSeatSet = new Set(
+      existingSeats.map((s) => `${s.Hang}-${s.Cot}`),
+    );
+    const toCreate: CreateSeatDto[] = [];
+    const processedKeys = new Set<string>();
+
+    for (const seat of seats) {
+      const key = `${seat.Hang}-${seat.Cot}`;
+      if (!processedKeys.has(key)) {
+        processedKeys.add(key);
+        if (!existingSeatSet.has(key)) {
+          toCreate.push(seat);
+        }
       }
-
-      const seat = await this.prisma.gHE.create({
-        data: {
-          Hang: body.Hang,
-          Cot: body.Cot,
-        },
-      });
-
-      results.push(await this.getBaseSeatById(seat.MaGhe));
     }
+
+    if (toCreate.length > 0) {
+      await this.prisma.gHE.createMany({
+        data: toCreate,
+        skipDuplicates: true,
+      });
+    }
+
+    const allSeats = await this.prisma.gHE.findMany({
+      where: {
+        Hang: { in: rows },
+        DeletedAt: null,
+      },
+    });
+
+    const seatMap = new Map(allSeats.map((s) => [`${s.Hang}-${s.Cot}`, s]));
+    const results: any[] = [];
+
+    for (const seat of seats) {
+      const key = `${seat.Hang}-${seat.Cot}`;
+      const found = seatMap.get(key);
+      if (found) {
+        results.push(found);
+      }
+    }
+
     return results;
   }
 
@@ -116,7 +141,7 @@ export class SeatService {
     });
 
     const existingSet = new Set(
-      existingRelations.map((r) => `${r.MaGhe}-${r.MaLoaiGhe}`)
+      existingRelations.map((r) => `${r.MaGhe}-${r.MaLoaiGhe}`),
     );
 
     const uniqueInputs = new Map<string, CreateSeatSeatTypeDto>();
@@ -131,9 +156,9 @@ export class SeatService {
 
     if (toCreate.length > 0) {
       await this.prisma.gHE_LOAIGHE.createMany({
-        data: toCreate.map(item => ({
+        data: toCreate.map((item) => ({
           MaGhe: item.MaGhe,
-          MaLoaiGhe: item.MaLoaiGhe
+          MaLoaiGhe: item.MaLoaiGhe,
         })),
         skipDuplicates: true,
       });
@@ -155,7 +180,7 @@ export class SeatService {
       if (!validMaGheSet.has(body.MaGhe)) continue;
 
       const match = finalRecords.find(
-        (r) => r.MaGhe === body.MaGhe && r.MaLoaiGhe === body.MaLoaiGhe
+        (r) => r.MaGhe === body.MaGhe && r.MaLoaiGhe === body.MaLoaiGhe,
       );
       if (match) {
         results.push(match);
@@ -216,7 +241,7 @@ export class SeatService {
                 },
               });
             }
-          } catch { }
+          } catch {}
         })();
       }, timeoutMs);
     }
