@@ -93,40 +93,73 @@ export class SeatService {
   }
 
   async createSeatSeatType(bodies: CreateSeatSeatTypeDto[]) {
+    const maGheList = [...new Set(bodies.map((b) => b.MaGhe))];
+
+    const validSeats = await this.prisma.gHE.findMany({
+      where: {
+        MaGhe: { in: maGheList },
+        DeletedAt: null,
+      },
+      select: { MaGhe: true },
+    });
+    const validMaGheSet = new Set(validSeats.map((s) => s.MaGhe));
+
+    const validBodies = bodies.filter((b) => validMaGheSet.has(b.MaGhe));
+    if (validBodies.length === 0) return [];
+
+    const existingRelations = await this.prisma.gHE_LOAIGHE.findMany({
+      where: {
+        MaGhe: { in: validBodies.map((b) => b.MaGhe) },
+        DeletedAt: null,
+      },
+      select: { MaGhe: true, MaLoaiGhe: true },
+    });
+
+    const existingSet = new Set(
+      existingRelations.map((r) => `${r.MaGhe}-${r.MaLoaiGhe}`)
+    );
+
+    const uniqueInputs = new Map<string, CreateSeatSeatTypeDto>();
+    for (const b of validBodies) {
+      const key = `${b.MaGhe}-${b.MaLoaiGhe}`;
+      if (!existingSet.has(key)) {
+        uniqueInputs.set(key, b);
+      }
+    }
+
+    const toCreate = Array.from(uniqueInputs.values());
+
+    if (toCreate.length > 0) {
+      await this.prisma.gHE_LOAIGHE.createMany({
+        data: toCreate.map(item => ({
+          MaGhe: item.MaGhe,
+          MaLoaiGhe: item.MaLoaiGhe
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const finalRecords = await this.prisma.gHE_LOAIGHE.findMany({
+      where: {
+        MaGhe: { in: maGheList },
+        DeletedAt: null,
+      },
+      include: {
+        Ghe: true,
+        LoaiGhe: true,
+      },
+    });
+
     const results: any[] = [];
     for (const body of bodies) {
-      const seat = await this.prisma.gHE.findFirst({
-        where: {
-          MaGhe: body.MaGhe,
-          DeletedAt: null,
-        },
-      });
+      if (!validMaGheSet.has(body.MaGhe)) continue;
 
-      if (!seat) {
-        continue;
+      const match = finalRecords.find(
+        (r) => r.MaGhe === body.MaGhe && r.MaLoaiGhe === body.MaLoaiGhe
+      );
+      if (match) {
+        results.push(match);
       }
-
-      const existingSeatSeatType = await this.prisma.gHE_LOAIGHE.findFirst({
-        where: {
-          MaGhe: body.MaGhe,
-          MaLoaiGhe: body.MaLoaiGhe,
-          DeletedAt: null,
-        },
-      });
-
-      if (existingSeatSeatType) {
-        results.push(await this.getSeatById(existingSeatSeatType.MaGheLoaiGhe));
-        continue;
-      }
-
-      const seatSeatType = await this.prisma.gHE_LOAIGHE.create({
-        data: {
-          MaGhe: body.MaGhe,
-          MaLoaiGhe: body.MaLoaiGhe,
-        },
-      });
-
-      results.push(await this.getSeatById(seatSeatType.MaGheLoaiGhe));
     }
 
     return results;

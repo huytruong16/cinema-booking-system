@@ -74,7 +74,7 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
     ? parseInt(film.PhienBanPhims[0].GiaVe) 
     : 0;
 
-  const tags = film.PhimTheLoais?.map((item) => item.TheLoai.TenTheLoai) || [];
+  const tags = Array.from(new Set(film.PhimTheLoais?.map((item) => item.TheLoai.TenTheLoai) || []));
 
   return {
     id: film.MaPhim,
