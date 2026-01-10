@@ -74,7 +74,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { PERMISSION_GROUPS } from "@/lib/permissions";
+import { PERMISSION_GROUPS, PermissionGroup, Quyen } from "@/lib/permissions";
 
 
 export default function RoleManagementPage() {
@@ -762,9 +762,9 @@ function RolePermissionDialog({
           p.code.toLowerCase().includes(lowerQuery)
       );
 
-      if (groupMatches) return group; 
+      if (groupMatches) return group;
       if (matchingPermissions.length > 0) {
-        return { ...group, permissions: matchingPermissions }; 
+        return { ...group, permissions: matchingPermissions };
       }
       return null;
     }).filter(Boolean) as PermissionGroup[];

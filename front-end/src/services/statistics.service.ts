@@ -8,7 +8,7 @@ import {
 } from '@/types/statistics';
 
 export interface GetSummaryParams {
-  range: 'day' | 'week' | 'month' | 'year' | 'all';
+  range: 'day' | 'week' | 'month' | 'year';
   date?: string;
 }
 
@@ -104,7 +104,13 @@ export const statisticsService = {
   getTopMovies: async (
     params: GetTopMovieParams
   ): Promise<TopMovie[]> => {
-    const res = await apiClient.get<TopMovie[]>('/statistics/top-movies', { params });
+    const queryParams: Record<string, string> = {
+      range: params.range,
+    };
+    if (params.limit !== undefined) {
+      queryParams.limit = String(params.limit);
+    }
+    const res = await apiClient.get<TopMovie[]>('/statistics/top-movies', { params: queryParams });
     return res.data;
   },
 
@@ -138,5 +144,55 @@ export const statisticsService = {
             } : undefined
         };
     });
+  },
+  exportRoomStatus: async (): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/room-status', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportSummary: async (params?: {
+    mode?: 'day' | 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/summary', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportRevenueChart: async (params: {
+    range: 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/revenue-chart', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportTopMovies: async (params?: {
+    range?: 'day' | 'week' | 'month' | 'year' | 'all';
+    limit?: number;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/top-movies', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportTopStaff: async (params: {
+    range: 'day' | 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/top-staff', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
   },
 };

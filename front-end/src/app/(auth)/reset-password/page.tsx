@@ -3,14 +3,14 @@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { authService } from "@/lib/api/authService"
 import { getErrorMessage } from "@/lib/error-helper"
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const email = searchParams.get("email")
@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
             await authService.resetPassword({ email, matkhauMoi: formData.password })
             setMessage("✅ Mật khẩu đã được đặt lại thành công! Đang chuyển hướng...")
             setTimeout(() => router.push("/login"), 2000)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             setMessage(getErrorMessage(err))
         } finally {
@@ -83,9 +83,9 @@ export default function ResetPasswordPage() {
                 {email && (
                     <>
                         <h2 className="text-2xl font-bold text-[#050A25] mb-5 text-center">Đặt lại mật khẩu</h2>
-                         <p className="text-center text-gray-600 mb-6">
-                           Nhập mật khẩu mới cho tài khoản:{" "}
-                           <span className="font-semibold text-[#2D55FB]">{email}</span>
+                        <p className="text-center text-gray-600 mb-6">
+                            Nhập mật khẩu mới cho tài khoản:{" "}
+                            <span className="font-semibold text-[#2D55FB]">{email}</span>
                         </p>
                         <form onSubmit={handleSubmitPassword} className="space-y-6">
                             <div className="relative">
@@ -130,5 +130,25 @@ export default function ResetPasswordPage() {
                 )}
             </div>
         </div>
+    )
+}
+
+function LoadingFallback() {
+    return (
+        <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+            <img src="/images/auth-background.jpg" alt="Background" className="absolute inset-0 w-full h-full object-cover blur-sm scale-105" />
+            <div className="absolute inset-0 bg-black/0" />
+            <div className="relative z-10 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 w-full max-w-md mx-auto flex items-center justify-center min-h-[200px]">
+                <Loader2 className="animate-spin size-8 text-[#2D55FB]" />
+            </div>
+        </div>
+    )
+}
+
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <ResetPasswordContent />
+        </Suspense>
     )
 }

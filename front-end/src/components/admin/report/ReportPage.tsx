@@ -31,23 +31,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { CalendarIcon, DollarSign, Ticket, ShoppingCart, Users, ArrowDown, ArrowUp, FileDown, AreaChart, PieChartIcon, LineChartIcon, UserCheck, MonitorPlay } from 'lucide-react';
+import { CalendarIcon, DollarSign, Ticket, ShoppingCart, Users, ArrowDown, ArrowUp, FileDown, AreaChart, PieChartIcon, LineChartIcon, UserCheck, MonitorPlay, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { DateRange } from "react-day-picker";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Tooltip as RechartsTooltip
 } from 'recharts';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { ButtonGroup } from '@/components/ui/button-group';
 import { Label } from '@/components/ui/label';
 import { statisticsService } from '@/services/statistics.service';
 import { RoomStatus, StatisticsSummary, RevenueChartData, TopMovie, TopStaff } from '@/types/statistics';
 import { useAuth } from "@/contexts/AuthContext";
 
 type ReportType = 'revenue' | 'movies' | 'staff' | 'room_status';
+type ViewMode = 'day' | 'week' | 'month' | 'year';
 
 const reportTypeOptions: { value: ReportType; label: string; icon: React.ElementType }[] = [
     { value: 'revenue', label: 'Báo cáo Doanh thu', icon: AreaChart },
@@ -56,13 +55,17 @@ const reportTypeOptions: { value: ReportType; label: string; icon: React.Element
     { value: 'room_status', label: 'Trạng thái phòng chiếu', icon: MonitorPlay },
 ];
 
+const viewModeOptions: { value: ViewMode; label: string }[] = [
+    { value: 'day', label: 'Theo ngày' },
+    { value: 'week', label: 'Theo tuần' },
+    { value: 'month', label: 'Theo tháng' },
+    { value: 'year', label: 'Theo năm' },
+];
+
 export default function ReportPage() {
   const [selectedReportType, setSelectedReportType] = useState<ReportType>('revenue');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
-  const [activePreset, setActivePreset] = useState<string>("month");
+  const [date, setDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
 
   const [summary, setSummary] = useState<StatisticsSummary | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueChartData[]>([]);
@@ -70,88 +73,153 @@ export default function ReportPage() {
   const [topStaff, setTopStaff] = useState<TopStaff[]>([]);
   const [roomStatus, setRoomStatus] = useState<RoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
       if (!hasPermission("BCTHONGKE")) return;
-      if (!dateRange?.from || !dateRange?.to) return;
 
       setLoading(true);
       try {
-        let range: 'day' | 'week' | 'month' | 'year' | 'all' = 'month';
-        if (activePreset === 'today') range = 'day';
-        else if (activePreset === 'week') range = 'week';
-        else if (activePreset === 'month') range = 'month';
-        else if (activePreset === 'year') range = 'year';
+        const dateStr = date.toISOString();
+        
+        const chartRange = viewMode === 'day' ? 'week' : viewMode;
+        
+        console.log('Fetching statistics with:', { range: viewMode, date: dateStr, reportType: selectedReportType });
 
-        // Always fetch summary
-        try {
-            const summaryData = await statisticsService.getSummary({ range });
-            setSummary(summaryData);
-        } catch (err) {
-            console.error("Failed to fetch summary:", err);
+        // Fetch all data in parallel like Dashboard
+        const [summaryRes, chartRes, moviesRes, staffRes, roomsRes] = await Promise.allSettled([
+          statisticsService.getSummary({ range: viewMode, date: dateStr }),
+          selectedReportType === 'revenue' 
+            ? statisticsService.getRevenueChart({ range: chartRange, date: dateStr })
+            : Promise.resolve([]),
+          selectedReportType === 'movies'
+            ? statisticsService.getTopMovies({ range: viewMode })
+            : Promise.resolve([]),
+          selectedReportType === 'staff'
+            ? statisticsService.getTopStaff({ range: viewMode })
+            : Promise.resolve([]),
+          selectedReportType === 'room_status'
+            ? statisticsService.getRoomStatus()
+            : Promise.resolve([]),
+        ]);
+
+        if (summaryRes.status === 'fulfilled') {
+          setSummary(summaryRes.value);
+        } else {
+          console.error("Failed to fetch summary:", summaryRes.reason);
         }
 
-        try {
-            if (selectedReportType === 'revenue') {
-              const revenueRange = (range === 'day') ? 'week' : range;
-              const data = await statisticsService.getRevenueChart({ range: revenueRange });
-              setRevenueData(data);
-            } else if (selectedReportType === 'movies') {
-              const data = await statisticsService.getTopMovies({ range });
-              setTopMovies(data);
-            } else if (selectedReportType === 'staff') {
-              const data = await statisticsService.getTopStaff({ range });
-              setTopStaff(data);
-            } else if (selectedReportType === 'room_status') {
-              const data = await statisticsService.getRoomStatus();
-              setRoomStatus(data);
-            }
-        } catch (err) {
-            console.error(`Failed to fetch ${selectedReportType} report:`, err);
+        if (chartRes.status === 'fulfilled' && selectedReportType === 'revenue') {
+          setRevenueData(chartRes.value);
         }
+
+        if (moviesRes.status === 'fulfilled' && selectedReportType === 'movies') {
+          setTopMovies(moviesRes.value);
+        }
+
+        if (staffRes.status === 'fulfilled' && selectedReportType === 'staff') {
+          setTopStaff(staffRes.value);
+        }
+
+        if (roomsRes.status === 'fulfilled' && selectedReportType === 'room_status') {
+          setRoomStatus(roomsRes.value);
+        }
+
       } catch (error: any) {
         console.error("Failed to fetch statistics:", error);
-        if (error.response) {
-            console.error("Error response data:", error.response.data);
-        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedReportType, activePreset]);
+  }, [selectedReportType, viewMode, date, hasPermission]);
 
-  const setPreset = (preset: string) => {
-      setActivePreset(preset);
-      const today = new Date();
-      switch(preset) {
-          case 'today': setDateRange({ from: today, to: today }); break;
-          case 'week': setDateRange({ from: startOfWeek(today, { locale: vi }), to: endOfWeek(today, { locale: vi }) }); break;
-          case 'month': setDateRange({ from: startOfMonth(today), to: endOfMonth(today) }); break;
-          case 'year': setDateRange({ from: startOfYear(today), to: endOfYear(today) }); break;
-      }
+
+  const getPeriodLabel = () => {
+    switch (viewMode) {
+      case 'day': return format(date, "dd/MM/yyyy", { locale: vi });
+      case 'week': return `Tuần chứa ngày ${format(date, "dd/MM/yyyy", { locale: vi })}`;
+      case 'month': return format(date, "MMMM yyyy", { locale: vi });
+      case 'year': return format(date, "yyyy", { locale: vi });
+    }
   };
 
-  const formattedDateRange = useMemo(() => {
-    if (!dateRange?.from) return "Chọn khoảng thời gian";
-    if (dateRange.to) {
-        return `${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`;
-    }
-    return format(dateRange.from, "dd/MM/yyyy");
-  }, [dateRange]);
+  const handleExport = async (type: 'excel' | 'pdf') => {
+      if (type === 'pdf') {
+          alert('Tính năng xuất PDF đang được phát triển.');
+          return;
+      }
 
-  const handleExport = (type: 'excel' | 'pdf') => {
-      alert(`Đang xuất file ${type} cho báo cáo: ${reportTypeOptions.find(r => r.value === selectedReportType)?.label}
-Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
-Đến: ${format(dateRange?.to || new Date(), "dd/MM/yyyy")}`);
+      setExporting(true);
+      
+      try {
+          let blob: Blob;
+          let fileName: string;
+          
+          const dateStr = date.toISOString();
+          
+          switch (selectedReportType) {
+              case 'revenue':
+                  const chartRange = viewMode === 'day' ? 'week' : viewMode as 'week' | 'month';
+                  blob = await statisticsService.exportRevenueChart({ 
+                      range: chartRange, 
+                      date: dateStr 
+                  });
+                  fileName = `bao-cao-doanh-thu_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  break;
+                  
+              case 'movies':
+                  blob = await statisticsService.exportTopMovies({ 
+                      range: viewMode
+                  });
+                  fileName = `bao-cao-top-phim_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  break;
+                  
+              case 'staff':
+                  blob = await statisticsService.exportTopStaff({ 
+                      range: viewMode,
+                      date: dateStr 
+                  });
+                  fileName = `bao-cao-nhan-vien_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  break;
+                  
+              case 'room_status':
+                  blob = await statisticsService.exportRoomStatus();
+                  fileName = `trang-thai-phong-chieu_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  break;
+                  
+              default:
+                  throw new Error('Loại báo cáo không hợp lệ');
+          }
+          
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          
+      } catch (error: any) {
+          console.error('Export failed:', error);
+          alert(`Xuất báo cáo thất bại: ${error?.response?.data?.message || error.message || 'Lỗi không xác định'}`);
+      } finally {
+          setExporting(false);
+      }
   };
 
   const renderReportContent = () => {
       if (loading) {
-          return <div className="flex items-center justify-center h-64 text-slate-400">Đang tải dữ liệu...</div>;
+          return (
+            <div className="flex items-center justify-center h-64 text-slate-400">
+              <Loader2 className="size-8 animate-spin mr-2" />
+              Đang tải dữ liệu...
+            </div>
+          );
       }
 
       switch (selectedReportType) {
@@ -185,15 +253,18 @@ Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
       
       {/* 1. Header & Bộ lọc chính */}
       <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg">
-        <CardHeader>
+        <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-slate-100">Tùy chọn Báo cáo</CardTitle>
+            <CardDescription className="text-slate-400">
+              Chọn loại báo cáo, khoảng thời gian và ngày cần xem
+            </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Chọn loại báo cáo */}
-            <div className="flex-1 space-y-2">
-                <Label>1. Chọn loại báo cáo</Label>
+            <div className="space-y-2">
+                <Label className="text-slate-300">Loại báo cáo</Label>
                 <Select value={selectedReportType} onValueChange={(v: ReportType) => setSelectedReportType(v)}>
-                    <SelectTrigger className="w-full bg-transparent border-slate-700 h-11">
+                    <SelectTrigger className="w-full bg-slate-900/50 border-slate-700 h-11">
                         <SelectValue placeholder="Chọn loại báo cáo..." />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
@@ -209,60 +280,77 @@ Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
                 </Select>
             </div>
             
-            {/* Chọn thời gian */}
-            <div className="flex-1 space-y-2">
-                <Label>2. Chọn khoảng thời gian</Label>
-                <div className="flex gap-2">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-transparent border-slate-700 hover:bg-slate-800 hover:text-white h-11")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {formattedDateRange}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white" align="start">
-                            <div className="flex p-2">
-                                <Button variant={activePreset === 'today' ? 'default' : 'ghost'} onClick={() => setPreset('today')} className="flex-1 justify-start">Hôm nay</Button>
-                                <Button variant={activePreset === 'week' ? 'default' : 'ghost'} onClick={() => setPreset('week')} className="flex-1 justify-start">Tuần này</Button>
-                                <Button variant={activePreset === 'month' ? 'default' : 'ghost'} onClick={() => setPreset('month')} className="flex-1 justify-start">Tháng này</Button>
-                                <Button variant={activePreset === 'year' ? 'default' : 'ghost'} onClick={() => setPreset('year')} className="flex-1 justify-start">Năm nay</Button>
-                            </div>
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={dateRange?.from}
-                                selected={dateRange}
-                                onSelect={setDateRange}
-                                numberOfMonths={2}
-                                locale={vi}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
+            {/* Chọn chế độ xem */}
+            <div className="space-y-2">
+                <Label className="text-slate-300">Khoảng thời gian</Label>
+                <Select value={viewMode} onValueChange={(v: ViewMode) => setViewMode(v)}>
+                    <SelectTrigger className="w-full bg-slate-900/50 border-slate-700 h-11">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1C1C1C] text-slate-100 border-slate-700">
+                        {viewModeOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value} className="cursor-pointer focus:bg-slate-700">
+                                {opt.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Chọn ngày */}
+            <div className="space-y-2">
+                <Label className="text-slate-300">Ngày tham chiếu</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className={cn(
+                            "w-full justify-start text-left font-normal bg-slate-900/50 border-slate-700 hover:bg-slate-800 hover:text-white h-11"
+                          )}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {format(date, "dd/MM/yyyy", { locale: vi })}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-[#1C1C1C] border-slate-700 text-white" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={(d) => d && setDate(d)}
+                            locale={vi}
+                            initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
             </div>
         </CardContent>
       </Card>
       
       {/* 2. Khu vực hiển thị Báo cáo & Nút Xuất File */}
       <Card className="bg-[#1C1C1C] border-slate-800 shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
                 <CardTitle className="text-lg font-semibold text-slate-100">
-                    Kết quả: {reportTypeOptions.find(r => r.value === selectedReportType)?.label}
+                    {reportTypeOptions.find(r => r.value === selectedReportType)?.label}
                 </CardTitle>
                 <CardDescription className="text-slate-400">
-                    Dữ liệu từ {formattedDateRange}
+                    {getPeriodLabel()}
                 </CardDescription>
             </div>
             {/* Nút Xuất Báo Cáo */}
             <div className="flex gap-2">
-                <Button variant="outline" className="bg-green-700/20 border-green-700 text-green-400 hover:bg-green-700/30 hover:text-green-400" onClick={() => handleExport('excel')}>
-                    <FileDown className="size-4 mr-2" />
-                    Xuất Excel
-                </Button>
-                <Button variant="outline" className="bg-red-700/20 border-red-700 text-red-400 hover:bg-red-700/30 hover:text-red-400" onClick={() => handleExport('pdf')}>
-                    <FileDown className="size-4 mr-2" />
-                    Xuất PDF
+                <Button 
+                    variant="outline" 
+                    className="bg-green-700/20 border-green-700 text-green-400 hover:bg-green-700/30 hover:text-green-400" 
+                    onClick={() => handleExport('excel')}
+                    disabled={exporting || loading}
+                >
+                    {exporting ? (
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                    ) : (
+                        <FileDown className="size-4 mr-2" />
+                    )}
+                    {exporting ? 'Đang xuất...' : 'Xuất Excel'}
                 </Button>
             </div>
         </CardHeader>
@@ -277,10 +365,16 @@ Từ: ${format(dateRange?.from || new Date(), "dd/MM/yyyy")}
 
 // Helper to safely format date
 const formatDateSafe = (dateStr: string) => {
+    if (!dateStr) return '';
+    if (/^\d{2}\/\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+    
+    // If it's an ISO date string, parse and format
     try {
         const date = new Date(dateStr);
         if (isNaN(date.getTime())) return dateStr;
-        return format(date, 'dd/MM/yyyy');
+        return format(date, 'dd/MM');
     } catch {
         return dateStr;
     }
@@ -305,7 +399,7 @@ function RevenueReport({ data, summary }: { data: RevenueChartData[], summary: S
                 <ChartContainer config={chartConfig} className="h-full w-full">
                     <BarChart data={safeData} margin={{ top: 10, right: 0, left: 20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} stroke="#888888" />
-                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatDateSafe(value).substring(0, 5)} />
+                        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => formatDateSafe(value)} />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}tr`} />
                         <ChartTooltip cursor={true} content={<ChartTooltipContent className="bg-[#0A0A0A] border-slate-800" indicator="dot" formatter={(value) => Number(value).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} />} />
                         <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
