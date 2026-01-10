@@ -95,10 +95,10 @@ export default function ReportPage() {
             ? statisticsService.getRevenueChart({ range: chartRange, date: dateStr })
             : Promise.resolve([]),
           selectedReportType === 'movies'
-            ? statisticsService.getTopMovies({ range: viewMode, date: dateStr })
+            ? statisticsService.getTopMovies({ range: viewMode })
             : Promise.resolve([]),
           selectedReportType === 'staff'
-            ? statisticsService.getTopStaff({ range: viewMode, date: dateStr })
+            ? statisticsService.getTopStaff({ range: viewMode })
             : Promise.resolve([]),
           selectedReportType === 'room_status'
             ? statisticsService.getRoomStatus()

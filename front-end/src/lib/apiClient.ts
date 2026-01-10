@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { InternalAxiosRequestConfig, AxiosError } from 'axios';
+import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const isServer = typeof window === 'undefined';
@@ -50,7 +50,7 @@ const handleForceLogout = () => {
 
 const handleRefreshToken = async (): Promise<string> => {
     const currentToken = !isServer ? localStorage.getItem('accessToken') : null;
-    
+
     if (!currentToken) {
         throw new Error("No token available");
     }
@@ -59,22 +59,22 @@ const handleRefreshToken = async (): Promise<string> => {
         console.log("Calling Refresh Token API...");
         const res = await axios.post<RefreshTokenResponse>(
             `${API_URL}/auth/refresh-token`,
-            {}, 
-            { 
-                withCredentials: true, 
+            {},
+            {
+                withCredentials: true,
                 headers: {
-                    Authorization: `Bearer ${currentToken}` 
+                    Authorization: `Bearer ${currentToken}`
                 }
             }
         );
-        
+
         const { accessToken } = res.data;
         console.log("Refresh successful, new token received.");
 
         if (!isServer) {
             localStorage.setItem('accessToken', accessToken);
         }
-        
+
         api.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
         return accessToken;
     } catch (error) {
@@ -85,13 +85,13 @@ const handleRefreshToken = async (): Promise<string> => {
 };
 
 api.interceptors.request.use(
-    async (config: InternalAxiosRequestConfig) => { 
+    async (config: any) => {
         if (isServer) return config;
 
         if (config.url?.includes('/auth/')) {
             if (config.url?.includes('/auth/refresh-token')) {
-               const token = localStorage.getItem('accessToken');
-               if (token) config.headers.Authorization = `Bearer ${token}`;
+                const token = localStorage.getItem('accessToken');
+                if (token) config.headers.Authorization = `Bearer ${token}`;
             }
             return config;
         }
@@ -102,17 +102,17 @@ api.interceptors.request.use(
             try {
                 const decoded: DecodedToken = jwtDecode(token);
                 const currentTime = Date.now() / 1000;
-                const timeBuffer = 8 * 60; 
+                const timeBuffer = 8 * 60;
 
                 if (decoded.exp < (currentTime + timeBuffer)) {
                     if (!isRefreshing) {
                         isRefreshing = true;
                         console.log("Token expiring soon. Attempting silent refresh...");
-                        
+
                         try {
                             const newToken = await handleRefreshToken();
                             processQueue(null, newToken);
-                            token = newToken; 
+                            token = newToken;
                         } catch (error) {
                             processQueue(error, null);
                             return Promise.reject(error);
@@ -146,26 +146,26 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
     (response) => response,
-    async (error: AxiosError) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    async (error: any) => {
+        const originalRequest = error.config as any & { _retry?: boolean };
         if (!error.response || !originalRequest) return Promise.reject(error);
 
         if (
-            (error.response.status === 401 || error.response.status === 403) && 
+            (error.response.status === 401 || error.response.status === 403) &&
             !originalRequest._retry &&
-            !originalRequest.url?.includes('/auth/') 
+            !originalRequest.url?.includes('/auth/')
         ) {
             if (isRefreshing) {
-                return new Promise(function(resolve, reject) {
+                return new Promise(function (resolve, reject) {
                     failedQueue.push({ resolve, reject });
                 })
-                .then((token) => {
-                    originalRequest.headers.Authorization = 'Bearer ' + token;
-                    return api(originalRequest);
-                })
-                .catch((err) => {
-                    return Promise.reject(err);
-                });
+                    .then((token) => {
+                        originalRequest.headers.Authorization = 'Bearer ' + token;
+                        return api(originalRequest);
+                    })
+                    .catch((err) => {
+                        return Promise.reject(err);
+                    });
             }
 
             originalRequest._retry = true;
@@ -176,10 +176,10 @@ api.interceptors.response.use(
                 processQueue(null, accessToken);
                 originalRequest.headers.Authorization = 'Bearer ' + accessToken;
                 return api(originalRequest);
-                } catch (refreshError) {
-                    processQueue(refreshError, null);
-                    return Promise.reject(refreshError);
-                } finally {
+            } catch (refreshError) {
+                processQueue(refreshError, null);
+                return Promise.reject(refreshError);
+            } finally {
                 isRefreshing = false;
             }
         }
@@ -212,7 +212,7 @@ if (!isServer) {
         } catch (error) {
             console.error("Error in auto-refresh interval", error);
         }
-    }, 60 * 1000); 
+    }, 60 * 1000);
 }
 
 export default api;

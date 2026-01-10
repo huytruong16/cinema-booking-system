@@ -205,9 +205,8 @@ export default function ShowtimeManagementPage() {
           flatList.push({
             MaPhimDinhDang: pv.MaPhienBanPhim,
             TenPhim: pv.Phim?.TenHienThi || "Unknown",
-            TenDinhDang: `${pv.DinhDang?.TenDinhDang || "2D"} ${
-              pv.NgonNgu?.TenNgonNgu || ""
-            }`.trim(),
+            TenDinhDang: `${pv.DinhDang?.TenDinhDang || "2D"} ${pv.NgonNgu?.TenNgonNgu || ""
+              }`.trim(),
             PosterUrl: pv.Phim?.PosterUrl,
             ThoiLuong: pv.Phim?.ThoiLuong,
           });
@@ -317,7 +316,7 @@ export default function ShowtimeManagementPage() {
       if (targetDateStr !== currentDateStr) {
         const res = await showtimeService.getAll({ NgayChieu: targetDateStr });
         const data = Array.isArray(res) ? res : (res as any).data || [];
-        showtimesToCheck = mapShowtimes(data, phongChieuList);
+        showtimesToCheck = mapShowtimes(data, phongChieuList, phimDinhDangList);
       }
 
       const hasConflict = showtimesToCheck.some((existing) => {
@@ -711,10 +710,10 @@ function ShowtimeDetailPanel({
                       </AlertDialogTitle>
                       <AlertDialogDescription className="text-slate-400">
                         Hành động này sẽ hủy suất chiếu và <strong>tự động tạo yêu cầu hoàn vé</strong> cho tất cả khách hàng đã đặt vé.
-                        <br/><br/>
+                        <br /><br />
                         Vui lòng nhập lý do hủy:
                       </AlertDialogDescription>
-                      <Input 
+                      <Input
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                         placeholder="Ví dụ: Phòng chiếu bảo trì, Lỗi kỹ thuật..."
