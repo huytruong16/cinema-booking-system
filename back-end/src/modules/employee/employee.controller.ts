@@ -7,6 +7,7 @@ import {
   Body,
   Patch,
   UseGuards,
+  Query
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import {
@@ -14,6 +15,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiQuery
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
@@ -21,19 +23,47 @@ import { UpdateEmployeeDto } from './dtos/update-employee.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
 import { RoleEnum } from 'src/libs/common/enums';
+import { FilterEmployeeDto } from './dtos/filter-employee.dto';
 
 @ApiTags('Nhân viên')
 @ApiBearerAuth()
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(private readonly employeeService: EmployeeService) { }
 
   @Get()
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
-  @ApiOperation({ summary: 'Lấy danh sách các nhân viên' })
-  async getAllEmployees() {
-    return this.employeeService.getAllEmployees();
+  @ApiOperation({
+    summary: 'Lấy danh sách nhân viên (có phân trang & filter)',
+  })
+  @ApiQuery({
+    name: 'TrangThai',
+    required: false,
+    enum: ['CONLAM', 'DANGHI'],
+  })
+  @ApiQuery({
+    name: 'fromNgayVaoLam',
+    required: false,
+    example: '2024-01-01',
+  })
+  @ApiQuery({
+    name: 'toNgayVaoLam',
+    required: false,
+    example: '2024-12-31',
+  })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    description: 'Cursor phân trang',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 10,
+  })
+  async getAllEmployees(@Query() query: FilterEmployeeDto) {
+    return this.employeeService.getAllEmployees(query);
   }
 
   @Get(':id')

@@ -22,6 +22,7 @@ export class CustomerService {
             CreatedAt: true,
             UpdatedAt: true,
             DeletedAt: true,
+            TrangThai: true
           },
         },
         HoaDons: false,
