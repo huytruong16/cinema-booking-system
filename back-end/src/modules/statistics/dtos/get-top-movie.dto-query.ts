@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsISO8601, IsNumber, IsOptional } from 'class-validator';
 
 export enum TopMovieRangeEnum {
   DAY = 'day',
@@ -23,4 +23,14 @@ export class GetTopMovieDto {
       'Khoảng thời gian phải là một trong các giá trị: day, week, month, year, all',
   })
   range: TopMovieRangeEnum = TopMovieRangeEnum.DAY;
+
+  @ApiPropertyOptional({
+    description: 'Ngày thuộc khoảng thời gian thống kê (YYYY-MM-DD)',
+  })
+  @IsOptional()
+  @IsISO8601(
+    {},
+    { message: 'date phải là chuỗi hợp lệ theo định dạng ISO8601' },
+  )
+  date?: string;
 }
