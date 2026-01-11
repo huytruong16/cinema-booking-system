@@ -27,7 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async login(dto: LoginDto) {
     const { email, matkhau } = dto;
@@ -44,6 +44,12 @@ export class AuthService {
 
     if (user.TrangThai === 'CHUAKICHHOAT') {
       throw new ForbiddenException('Tài khoản chưa xác minh email.');
+    }
+
+    if (user.TrangThai === 'KHONGHOATDONG') {
+      throw new ForbiddenException(
+        'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+      );
     }
 
     let maKhachHang: string | null = null;

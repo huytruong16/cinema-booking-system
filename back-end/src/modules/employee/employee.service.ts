@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateEmployeeDto } from './dtos/update-employee.dto';
+import { UserStatusEnum } from 'src/libs/common/enums';
 
 @Injectable()
 export class EmployeeService {
-  constructor(readonly prisma: PrismaService) {}
+  constructor(readonly prisma: PrismaService) { }
 
   async getAllEmployees() {
     return await this.prisma.nHANVIEN.findMany({
@@ -95,22 +96,37 @@ export class EmployeeService {
 
   async removeEmployee(id: string) {
     const employee = await this.prisma.nHANVIEN.findFirst({
-      where: { MaNhanVien: id, DeletedAt: null },
+      where: {
+        MaNhanVien: id,
+        DeletedAt: null,
+      },
+      include: {
+        NguoiDungPhanMem: true,
+      },
     });
 
     if (!employee) {
       throw new NotFoundException(`Nhân viên với ID ${id} không tồn tại`);
     }
 
-    await this.prisma.nHANVIEN.update({
-      where: { MaNhanVien: id },
-      data: {
-        DeletedAt: new Date(),
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.nHANVIEN.update({
+        where: { MaNhanVien: id },
+        data: {
+          DeletedAt: new Date()
+        },
+      }),
+
+      this.prisma.nGUOIDUNGPHANMEM.update({
+        where: { MaNguoiDung: employee.MaNguoiDung },
+        data: {
+          TrangThai: UserStatusEnum.KHONGHOATDONG,
+        },
+      }),
+    ]);
 
     return {
-      message: 'Xóa nhân viên thành công',
+      message: 'Xóa nhân viên và vô hiệu hóa tài khoản người dùng thành công',
     };
   }
 }
