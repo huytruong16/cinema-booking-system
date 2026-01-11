@@ -416,4 +416,86 @@ export class PdfService {
       doc.end();
     });
   }
+
+  async generateCustomPdf<T>(
+    title: string,
+    data: T[],
+    mapRow: (row: T) => Record<string, any>,
+  ): Promise<Buffer> {
+    return new Promise((resolve) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (chunk) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+      this.registerFonts(doc);
+
+      const logoPath = path.join(__dirname, '..', '..', 'images', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 40, { width: 40 });
+      }
+
+      doc.font('Arial-Bold').fontSize(18).text('MOVIX CINEMA', 100, 45);
+
+      doc
+        .font('Arial')
+        .fontSize(10)
+        .text(`Ngày xuất: ${new Date().toLocaleString('vi-VN')}`, {
+          align: 'right',
+        });
+
+      doc.moveDown(2);
+
+      doc.font('Arial-Bold').fontSize(16).text(title, { align: 'center' });
+
+      doc.moveDown(2);
+
+      if (!data.length) {
+        doc.font('Arial').fontSize(12).text('Không có dữ liệu');
+        doc.end();
+        return;
+      }
+
+      const rows = data.map(mapRow);
+      const headers = Object.keys(rows[0]);
+
+      const tableTop = doc.y;
+      const colWidth = (doc.page.width - 100) / headers.length;
+
+      doc.font('Arial-Bold').fontSize(10);
+      headers.forEach((h, i) => {
+        doc.text(h, 50 + i * colWidth, tableTop, {
+          width: colWidth,
+          align: 'left',
+        });
+      });
+
+      doc
+        .moveTo(50, tableTop + 14)
+        .lineTo(doc.page.width - 50, tableTop + 14)
+        .stroke();
+
+      let y = tableTop + 22;
+      doc.font('Arial').fontSize(10);
+
+      for (const row of rows) {
+        headers.forEach((h, i) => {
+          doc.text(String(row[h] ?? ''), 50 + i * colWidth, y, {
+            width: colWidth,
+            align: 'left',
+          });
+        });
+
+        y += 18;
+
+        if (y > doc.page.height - 50) {
+          doc.addPage();
+          y = 50;
+        }
+      }
+
+      doc.end();
+    });
+  }
 }
