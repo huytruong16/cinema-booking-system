@@ -646,7 +646,6 @@ export class StatisticsExportService {
     const ws = wb.addWorksheet('Room Status');
 
     ws.columns = [
-      { header: 'Mã phòng', key: 'ma', width: 15 },
       { header: 'Tên phòng', key: 'ten', width: 20 },
       { header: 'Trạng thái', key: 'trangThai', width: 15 },
       { header: 'Ghế đã đặt', key: 'gheDaDat', width: 15 },
@@ -656,7 +655,6 @@ export class StatisticsExportService {
 
     data.forEach((r) => {
       ws.addRow({
-        ma: r.PhongChieu.MaPhongChieu,
         ten: r.PhongChieu.TenPhongChieu,
         trangThai: r.TrangThai,
         gheDaDat: r.GheDaDat ?? '',
