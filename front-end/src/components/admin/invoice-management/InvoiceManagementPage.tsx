@@ -1279,7 +1279,6 @@ function CreateRefundDialog({
                 onChange={setSelectedBank}
                 banks={banks}
                 isLoading={isLoadingBanks}
-                disabled={isSubmitting}
               />
             </div>
 

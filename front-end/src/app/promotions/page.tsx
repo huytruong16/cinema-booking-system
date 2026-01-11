@@ -7,9 +7,10 @@ import type { Promotion } from '@/types/promotion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, Copy, CheckCheck, Percent, DollarSign } from 'lucide-react';
+import { Ticket, Copy, CheckCheck, Percent, DollarSign, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -72,6 +73,25 @@ export default function PromotionsPage() {
 
 function PromotionCard({ promo, onCopy }: { promo: Promotion, onCopy: (code: string) => void }) {
   const isPercent = promo.discountType === 'PERCENTAGE';
+  const { isLoggedIn } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!isLoggedIn) {
+      toast.error("Vui lòng đăng nhập để lưu mã!");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await promotionService.savePromotion(promo.id);
+      toast.success("Đã lưu mã vào ví của bạn!");
+    } catch (error: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((error as any).response?.data?.message || "Lỗi khi lưu mã khuyến mãi");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Card className="bg-[#1C1C1C] border-zinc-800 overflow-hidden flex flex-col h-full hover:border-red-500/50 transition-all group">
@@ -116,13 +136,21 @@ function PromotionCard({ promo, onCopy }: { promo: Promotion, onCopy: (code: str
         </div>
       </CardContent>
 
-      <CardFooter className="pt-2 pb-6">
+      <CardFooter className="pt-2 pb-6 grid grid-cols-2 gap-3">
         <Button 
-          className="w-full bg-zinc-800 hover:bg-red-600 hover:text-white text-zinc-300 transition-colors group-hover:border-red-500" 
           variant="outline"
+          className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-300"
           onClick={() => onCopy(promo.code)}
         >
-          <Copy className="w-4 h-4 mr-2" /> Sao chép mã
+          <Copy className="w-4 h-4 mr-2" /> Sao chép
+        </Button>
+        <Button 
+          className="bg-red-600 hover:bg-red-700 text-white border-none" 
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          Lưu ngay
         </Button>
       </CardFooter>
     </Card>

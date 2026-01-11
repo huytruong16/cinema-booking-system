@@ -208,7 +208,7 @@ function BookingPageContent() {
       format: `${showtime.PhienBanPhim.DinhDang.TenDinhDang} - ${showtime.PhienBanPhim.NgonNgu.TenNgonNgu}`,
       time: new Date(showtime.ThoiGianBatDau).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       date: new Date(showtime.ThoiGianBatDau).toLocaleDateString('vi-VN'),
-      roomName: showtime.PhongChieu.TenPhongChieu,
+      roomName: showtime.PhongChieu?.TenPhongChieu,
       seats: selectedSeats,
       combos: selectedCombosList,
       totalPrice,
@@ -314,7 +314,7 @@ function BookingPageContent() {
               <div className="flex items-center gap-3 text-xs text-zinc-400 mt-1">
                 <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'dd/MM/yyyy')}</span>
                 <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> {format(new Date(showtime.ThoiGianBatDau), 'HH:mm')}</span>
-                <span className="flex items-center"><MapPin className="w-3 h-3 mr-1" /> {showtime.PhongChieu.TenPhongChieu}</span>
+                <span className="flex items-center"><MapPin className="w-3 h-3 mr-1" /> {showtime.PhongChieu?.TenPhongChieu}</span>
               </div>
             </div>
           </div>
@@ -331,7 +331,7 @@ function BookingPageContent() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-8">
         <div className="lg:col-span-2 space-y-8">
           <BookingSeatMap
-            seatMap={showtime.PhongChieu.SoDoGhe}
+            seatMap={showtime.PhongChieu?.SoDoGhe ?? {}}
             bookedSeats={bookedSeats}
             seatMetaById={seatMetaById}
             basePrice={basePrice}

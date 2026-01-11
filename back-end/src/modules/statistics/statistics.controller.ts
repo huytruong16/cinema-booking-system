@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -6,7 +6,11 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { StatisticsService } from './statistics.service';
+import {
+  StatisticsService,
+  StatisticsExportService,
+  StatisticsPdfService,
+} from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import { SummaryDto } from './dtos/summary.dto';
 import { GetSummaryQueryDto } from './dtos/get-summary-query.dto';
@@ -26,7 +30,11 @@ import { RoleEnum } from 'src/libs/common/enums';
 @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
 @Controller('statistics')
 export class StatisticsController {
-  constructor(private readonly statisticsService: StatisticsService) {}
+  constructor(
+    private readonly statisticsService: StatisticsService,
+    private readonly statisticsExportService: StatisticsExportService,
+    private readonly statisticsPdfService: StatisticsPdfService,
+  ) {}
 
   @Get('room-status')
   @ApiOperation({
@@ -121,5 +129,203 @@ export class StatisticsController {
     @Query() query: GetTopStaffQueryDto,
   ): Promise<TopStaffDto[]> {
     return this.statisticsService.getTopStaff(query);
+  }
+
+  @Get('/export/room-status')
+  @ApiOperation({ summary: 'Xuất Excel trạng thái phòng chiếu' })
+  async exportRoomStatus(@Res() res: any) {
+    const buffer = await this.statisticsExportService.exportRoomStatus();
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=room-status.xlsx',
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/summary')
+  @ApiOperation({ summary: 'Xuất Excel tổng quan doanh thu' })
+  @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({
+    name: 'mode',
+    required: false,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  async exportSummary(@Query() query: GetSummaryQueryDto, @Res() res: any) {
+    const buffer = await this.statisticsExportService.exportSummary(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=summary.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/revenue-chart')
+  @ApiOperation({ summary: 'Xuất Excel doanh thu theo ngày' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['week', 'month'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportRevenueChart(
+    @Query() query: GetRevenueChartQueryDto,
+    @Res() res: any,
+  ) {
+    const buffer = await this.statisticsExportService.exportRevenueChart(query);
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=revenue-chart.xlsx',
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/top-movies')
+  @ApiOperation({ summary: 'Xuất Excel top phim doanh thu cao' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    enum: ['day', 'week', 'month', 'year', 'all'],
+  })
+  async exportTopMovies(@Query() query: GetTopMovieDto, @Res() res: any) {
+    const buffer = await this.statisticsExportService.exportTopMovies(query);
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=top-movies.xlsx',
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/top-staff')
+  @ApiOperation({ summary: 'Xuất Excel hiệu suất nhân viên' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportTopStaff(@Query() query: GetTopStaffQueryDto, @Res() res: any) {
+    const buffer = await this.statisticsExportService.exportTopStaff(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=top-staff.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/room-status')
+  @ApiOperation({ summary: 'Xuất PDF trạng thái phòng chiếu' })
+  async exportRoomStatusPdf(@Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateRoomStatusPdf();
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=room-status.pdf',
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/summary')
+  @ApiOperation({ summary: 'Xuất PDF tổng quan doanh thu' })
+  @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({
+    name: 'mode',
+    required: false,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  async exportSummaryPdf(@Query() query: GetSummaryQueryDto, @Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateSummaryPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=summary.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/revenue-chart')
+  @ApiOperation({ summary: 'Xuất PDF doanh thu theo ngày' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['week', 'month'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportRevenueChartPdf(
+    @Query() query: GetRevenueChartQueryDto,
+    @Res() res: any,
+  ) {
+    const buffer =
+      await this.statisticsPdfService.generateRevenueChartPdf(query);
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=revenue-chart.pdf',
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/top-movies')
+  @ApiOperation({ summary: 'Xuất PDF top phim doanh thu cao' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    enum: ['day', 'week', 'month', 'year', 'all'],
+  })
+  async exportTopMoviesPdf(@Query() query: GetTopMovieDto, @Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateTopMoviesPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=top-movies.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/top-staff')
+  @ApiOperation({ summary: 'Xuất PDF hiệu suất nhân viên' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportTopStaffPdf(
+    @Query() query: GetTopStaffQueryDto,
+    @Res() res: any,
+  ) {
+    const buffer = await this.statisticsPdfService.generateTopStaffPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=top-staff.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
   }
 }

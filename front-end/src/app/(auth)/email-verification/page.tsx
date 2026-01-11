@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -12,9 +12,10 @@ import {
     InputOTPSeparator,
 } from "@/components/ui/input-otp"
 import { authService } from "@/lib/api/authService"
-import {OTPVerificationDialog} from "@/components/auth/OTP-verification-dialog";
+import { OTPVerificationDialog } from "@/components/auth/OTP-verification-dialog";
+import { Loader2 } from "lucide-react"
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const searchParams = useSearchParams()
     const email = searchParams.get("email") || ""
     const [otp, setOtp] = useState("")
@@ -62,15 +63,39 @@ export default function VerifyEmailPage() {
                 </p>
 
                 <OTPVerificationDialog email={email}
-                                       onClose={() => setShowDialog(false)}
-                                       onVerified={() => {
-                    window.location.href = "/login"
-                }}/>
+                    onClose={() => setShowDialog(false)}
+                    onVerified={() => {
+                        window.location.href = "/login"
+                    }} />
 
                 {message && (
                     <p className="text-center text-sm mt-4 text-gray-700">{message}</p>
                 )}
             </div>
         </div>
+    )
+}
+
+function LoadingFallback() {
+    return (
+        <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+            <img
+                src="/images/auth-background.jpg"
+                alt="Background"
+                className="absolute inset-0 w-full h-full object-cover blur-sm scale-105"
+            />
+            <div className="absolute inset-0 bg-black/0" />
+            <div className="relative z-10 bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl p-6 w-full max-w-md mx-auto flex items-center justify-center min-h-[200px]">
+                <Loader2 className="animate-spin size-8 text-[#2D55FB]" />
+            </div>
+        </div>
+    )
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <VerifyEmailContent />
+        </Suspense>
     )
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import {
@@ -30,6 +30,8 @@ import {
   TopStaffRangeEnum,
 } from './dtos/get-top-staff-query.dto';
 import { TopStaffDto } from './dtos/top-staff.dto';
+import { Workbook } from 'exceljs';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class StatisticsService {
@@ -632,5 +634,196 @@ export class StatisticsService {
     }
 
     return;
+  }
+}
+
+@Injectable()
+export class StatisticsExportService {
+  constructor(private readonly statisticsService: StatisticsService) {}
+
+  async exportRoomStatus(): Promise<Buffer> {
+    const data = await this.statisticsService.getRoomStatus();
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Room Status');
+
+    ws.columns = [
+      { header: 'Tên phòng', key: 'ten', width: 20 },
+      { header: 'Trạng thái', key: 'trangThai', width: 15 },
+      { header: 'Ghế đã đặt', key: 'gheDaDat', width: 15 },
+      { header: 'Tổng ghế', key: 'tongGhe', width: 15 },
+      { header: 'Phim hiện tại', key: 'phim', width: 30 },
+    ];
+
+    data.forEach((r) => {
+      ws.addRow({
+        ten: r.PhongChieu.TenPhongChieu,
+        trangThai: r.TrangThai,
+        gheDaDat: r.GheDaDat ?? '',
+        tongGhe: r.TongGhe ?? '',
+        phim: r.SuatChieuHienTai?.TenPhim ?? '',
+      });
+    });
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  async exportSummary(query: GetSummaryQueryDto): Promise<Buffer> {
+    const s = await this.statisticsService.getSummary(query);
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Summary');
+
+    ws.columns = [
+      { header: 'Chỉ số', key: 'label', width: 30 },
+      { header: 'Giá trị', key: 'value', width: 25 },
+    ];
+
+    ws.addRows([
+      { label: 'Tổng doanh thu', value: s.TongDoanhThu },
+      { label: 'Doanh thu vé', value: s.DoanhThuVe },
+      { label: 'Doanh thu combo', value: s.DoanhThuCombo },
+      { label: 'Số vé đã bán', value: s.SoVeDaBan },
+      { label: 'Tỉ lệ lấp đầy (%)', value: s.TiLeLapDay },
+      { label: 'So sánh doanh thu (%)', value: s.SoSanh.DoanhThuVe },
+      { label: 'Chênh lệch số vé', value: s.SoSanh.SoVeDaBan },
+    ]);
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  async exportRevenueChart(query: GetRevenueChartQueryDto): Promise<Buffer> {
+    const data = await this.statisticsService.getRevenueChart(query);
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Revenue Chart');
+
+    ws.columns = [
+      { header: 'Ngày', key: 'ngay', width: 15 },
+      { header: 'Doanh thu vé', key: 've', width: 20 },
+      { header: 'Doanh thu combo', key: 'combo', width: 20 },
+    ];
+
+    data.forEach((d) => {
+      ws.addRow({
+        ngay: d.Ngay,
+        ve: d.DoanhThuVe,
+        combo: d.DoanhThuCombo,
+      });
+    });
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  async exportTopMovies(query: GetTopMovieDto): Promise<Buffer> {
+    const data = await this.statisticsService.getTopMovies(query);
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Top Movies');
+
+    ws.columns = [
+      { header: 'Tên phim', key: 'ten', width: 30 },
+      { header: 'Doanh thu', key: 'doanhThu', width: 20 },
+      { header: 'Số vé bán', key: 'soVe', width: 15 },
+    ];
+
+    data.forEach((m) => {
+      ws.addRow({
+        ten: m.Phim?.TenHienThi ?? '',
+        doanhThu: m.DoanhThu,
+        soVe: m.SoVeDaBan,
+      });
+    });
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  async exportTopStaff(query: GetTopStaffQueryDto): Promise<Buffer> {
+    const data = await this.statisticsService.getTopStaff(query);
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Top Staff');
+
+    ws.columns = [
+      { header: 'Nhân viên', key: 'ten', width: 30 },
+      { header: 'Doanh thu', key: 'doanhThu', width: 20 },
+      { header: 'Số giao dịch', key: 'soGd', width: 20 },
+    ];
+
+    data.forEach((s) => {
+      ws.addRow({
+        ten: s.NhanVien?.NguoiDungPhanMem.HoTen ?? '',
+        doanhThu: s.DoanhThu,
+        soGd: s.SoLuotGiaoDich,
+      });
+    });
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+}
+
+@Injectable()
+export class StatisticsPdfService {
+  constructor(
+    private readonly statisticsService: StatisticsService,
+    private readonly pdfService: PdfService,
+  ) {}
+
+  async generateRoomStatusPdf() {
+    const data = await this.statisticsService.getRoomStatus();
+    if (!data.length)
+      throw new NotFoundException('Không có dữ liệu phòng chiếu');
+
+    return this.pdfService.generateCustomPdf('Room Status', data, (row) => ({
+      'Tên phòng': row.PhongChieu.TenPhongChieu,
+      'Trạng thái': row.TrangThai,
+      'Ghế đã đặt': row.GheDaDat ?? '',
+      'Tổng ghế': row.TongGhe ?? '',
+      'Phim hiện tại': row.SuatChieuHienTai?.TenPhim ?? '',
+    }));
+  }
+
+  async generateSummaryPdf(query: GetSummaryQueryDto) {
+    const data = await this.statisticsService.getSummary(query);
+    if (!data) throw new NotFoundException('Không có dữ liệu tổng hợp');
+
+    return this.pdfService.generateCustomPdf('Summary', [data], (row) => ({
+      'Tổng doanh thu': row.TongDoanhThu,
+      'Doanh thu vé': row.DoanhThuVe,
+      'Doanh thu combo': row.DoanhThuCombo,
+      'Số vé đã bán': row.SoVeDaBan,
+      'Tỉ lệ lấp đầy (%)': row.TiLeLapDay,
+      'So sánh doanh thu (%)': row.SoSanh.DoanhThuVe,
+      'Chênh lệch số vé': row.SoSanh.SoVeDaBan,
+    }));
+  }
+
+  async generateRevenueChartPdf(query: GetRevenueChartQueryDto) {
+    const data = await this.statisticsService.getRevenueChart(query);
+    if (!data.length)
+      throw new NotFoundException('Không có dữ liệu biểu đồ doanh thu');
+
+    return this.pdfService.generateCustomPdf('Revenue Chart', data, (row) => ({
+      Ngày: row.Ngay,
+      'Doanh thu vé': row.DoanhThuVe,
+      'Doanh thu combo': row.DoanhThuCombo,
+    }));
+  }
+
+  async generateTopMoviesPdf(query: GetTopMovieDto) {
+    const data = await this.statisticsService.getTopMovies(query);
+    if (!data.length) throw new NotFoundException('Không có dữ liệu phim');
+
+    return this.pdfService.generateCustomPdf('Top Movies', data, (row) => ({
+      'Tên phim': row.Phim?.TenHienThi ?? '',
+      'Doanh thu': row.DoanhThu,
+      'Số vé bán': row.SoVeDaBan,
+    }));
+  }
+
+  async generateTopStaffPdf(query: GetTopStaffQueryDto) {
+    const data = await this.statisticsService.getTopStaff(query);
+    if (!data.length) throw new NotFoundException('Không có dữ liệu nhân viên');
+
+    return this.pdfService.generateCustomPdf('Top Staff', data, (row) => ({
+      'Nhân viên': row.NhanVien?.NguoiDungPhanMem.HoTen ?? '',
+      'Doanh thu': row.DoanhThu,
+      'Số giao dịch': row.SoLuotGiaoDich,
+    }));
   }
 }
