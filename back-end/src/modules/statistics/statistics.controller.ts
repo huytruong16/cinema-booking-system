@@ -9,6 +9,7 @@ import {
 import {
   StatisticsService,
   StatisticsExportService,
+  StatisticsPdfService,
 } from './statistics.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import { SummaryDto } from './dtos/summary.dto';
@@ -32,6 +33,7 @@ export class StatisticsController {
   constructor(
     private readonly statisticsService: StatisticsService,
     private readonly statisticsExportService: StatisticsExportService,
+    private readonly statisticsPdfService: StatisticsPdfService,
   ) {}
 
   @Get('room-status')
@@ -231,6 +233,98 @@ export class StatisticsController {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/room-status')
+  @ApiOperation({ summary: 'Xuất PDF trạng thái phòng chiếu' })
+  async exportRoomStatusPdf(@Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateRoomStatusPdf();
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=room-status.pdf',
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/summary')
+  @ApiOperation({ summary: 'Xuất PDF tổng quan doanh thu' })
+  @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({
+    name: 'mode',
+    required: false,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  async exportSummaryPdf(@Query() query: GetSummaryQueryDto, @Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateSummaryPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=summary.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/revenue-chart')
+  @ApiOperation({ summary: 'Xuất PDF doanh thu theo ngày' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['week', 'month'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportRevenueChartPdf(
+    @Query() query: GetRevenueChartQueryDto,
+    @Res() res: any,
+  ) {
+    const buffer =
+      await this.statisticsPdfService.generateRevenueChartPdf(query);
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=revenue-chart.pdf',
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/top-movies')
+  @ApiOperation({ summary: 'Xuất PDF top phim doanh thu cao' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    enum: ['day', 'week', 'month', 'year', 'all'],
+  })
+  async exportTopMoviesPdf(@Query() query: GetTopMovieDto, @Res() res: any) {
+    const buffer = await this.statisticsPdfService.generateTopMoviesPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=top-movies.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.send(buffer);
+  }
+
+  @Get('/export/pdf/top-staff')
+  @ApiOperation({ summary: 'Xuất PDF hiệu suất nhân viên' })
+  @ApiQuery({
+    name: 'range',
+    required: true,
+    enum: ['day', 'week', 'month', 'year'],
+  })
+  @ApiQuery({ name: 'date', required: false })
+  async exportTopStaffPdf(
+    @Query() query: GetTopStaffQueryDto,
+    @Res() res: any,
+  ) {
+    const buffer = await this.statisticsPdfService.generateTopStaffPdf(query);
+
+    res.setHeader('Content-Disposition', 'attachment; filename=top-staff.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
 
     res.send(buffer);
   }

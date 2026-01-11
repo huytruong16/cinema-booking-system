@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import {
@@ -31,10 +31,11 @@ import {
 } from './dtos/get-top-staff-query.dto';
 import { TopStaffDto } from './dtos/top-staff.dto';
 import { Workbook } from 'exceljs';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class StatisticsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getRoomStatus(): Promise<RoomStatusDto[]> {
     const now = new Date();
@@ -442,8 +443,8 @@ export class StatisticsService {
     const movieIds = ranked.map((r) => r.id);
     const movies = movieIds.length
       ? await this.prisma.pHIM.findMany({
-        where: { MaPhim: { in: movieIds }, DeletedAt: null },
-      })
+          where: { MaPhim: { in: movieIds }, DeletedAt: null },
+        })
       : [];
 
     const movieMap: Record<string, any> = {};
@@ -638,7 +639,7 @@ export class StatisticsService {
 
 @Injectable()
 export class StatisticsExportService {
-  constructor(private readonly statisticsService: StatisticsService) { }
+  constructor(private readonly statisticsService: StatisticsService) {}
 
   async exportRoomStatus(): Promise<Buffer> {
     const data = await this.statisticsService.getRoomStatus();
@@ -753,5 +754,76 @@ export class StatisticsExportService {
     });
 
     return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+}
+
+@Injectable()
+export class StatisticsPdfService {
+  constructor(
+    private readonly statisticsService: StatisticsService,
+    private readonly pdfService: PdfService,
+  ) {}
+
+  async generateRoomStatusPdf() {
+    const data = await this.statisticsService.getRoomStatus();
+    if (!data.length)
+      throw new NotFoundException('Không có dữ liệu phòng chiếu');
+
+    return this.pdfService.generateCustomPdf('Room Status', data, (row) => ({
+      'Tên phòng': row.PhongChieu.TenPhongChieu,
+      'Trạng thái': row.TrangThai,
+      'Ghế đã đặt': row.GheDaDat ?? '',
+      'Tổng ghế': row.TongGhe ?? '',
+      'Phim hiện tại': row.SuatChieuHienTai?.TenPhim ?? '',
+    }));
+  }
+
+  async generateSummaryPdf(query: GetSummaryQueryDto) {
+    const data = await this.statisticsService.getSummary(query);
+    if (!data) throw new NotFoundException('Không có dữ liệu tổng hợp');
+
+    return this.pdfService.generateCustomPdf('Summary', [data], (row) => ({
+      'Tổng doanh thu': row.TongDoanhThu,
+      'Doanh thu vé': row.DoanhThuVe,
+      'Doanh thu combo': row.DoanhThuCombo,
+      'Số vé đã bán': row.SoVeDaBan,
+      'Tỉ lệ lấp đầy (%)': row.TiLeLapDay,
+      'So sánh doanh thu (%)': row.SoSanh.DoanhThuVe,
+      'Chênh lệch số vé': row.SoSanh.SoVeDaBan,
+    }));
+  }
+
+  async generateRevenueChartPdf(query: GetRevenueChartQueryDto) {
+    const data = await this.statisticsService.getRevenueChart(query);
+    if (!data.length)
+      throw new NotFoundException('Không có dữ liệu biểu đồ doanh thu');
+
+    return this.pdfService.generateCustomPdf('Revenue Chart', data, (row) => ({
+      Ngày: row.Ngay,
+      'Doanh thu vé': row.DoanhThuVe,
+      'Doanh thu combo': row.DoanhThuCombo,
+    }));
+  }
+
+  async generateTopMoviesPdf(query: GetTopMovieDto) {
+    const data = await this.statisticsService.getTopMovies(query);
+    if (!data.length) throw new NotFoundException('Không có dữ liệu phim');
+
+    return this.pdfService.generateCustomPdf('Top Movies', data, (row) => ({
+      'Tên phim': row.Phim?.TenHienThi ?? '',
+      'Doanh thu': row.DoanhThu,
+      'Số vé bán': row.SoVeDaBan,
+    }));
+  }
+
+  async generateTopStaffPdf(query: GetTopStaffQueryDto) {
+    const data = await this.statisticsService.getTopStaff(query);
+    if (!data.length) throw new NotFoundException('Không có dữ liệu nhân viên');
+
+    return this.pdfService.generateCustomPdf('Top Staff', data, (row) => ({
+      'Nhân viên': row.NhanVien?.NguoiDungPhanMem.HoTen ?? '',
+      'Doanh thu': row.DoanhThu,
+      'Số giao dịch': row.SoLuotGiaoDich,
+    }));
   }
 }
