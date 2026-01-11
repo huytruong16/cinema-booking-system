@@ -27,7 +27,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   async login(dto: LoginDto) {
     const { email, matkhau } = dto;

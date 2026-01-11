@@ -3,11 +3,10 @@ import {
   Get,
   Param,
   BadRequestException,
-  Delete,
   Body,
   Patch,
   UseGuards,
-  Query
+  Query,
 } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import {
@@ -15,7 +14,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
@@ -31,7 +30,7 @@ import { UserStatusEnum } from 'src/libs/common/enums';
 @Controller('employees')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) { }
+  constructor(private readonly employeeService: EmployeeService) {}
 
   @Get()
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)

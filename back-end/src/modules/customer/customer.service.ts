@@ -6,7 +6,7 @@ import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class CustomerService {
-  constructor(readonly prisma: PrismaService) { }
+  constructor(readonly prisma: PrismaService) {}
 
   async getAllCustomers(filters?: FilterCustomerDto) {
     const whereConditions: any = {
@@ -31,33 +31,27 @@ export class CustomerService {
       };
     }
 
-    const [data, pagination] =
-      await this.prisma.xprisma.kHACHHANG
-        .paginate({
-          where: whereConditions,
-          orderBy: [
-            { CreatedAt: 'desc' },
-            { MaKhachHang: 'desc' },
-          ],
-          include: {
-            NguoiDungPhanMem: {
-              select: {
-                MaNguoiDung: true,
-                HoTen: true,
-                Email: true,
-                SoDienThoai: true,
-                VaiTro: true,
-                AvatarUrl: true,
-                TrangThai: true,
-                CreatedAt: true,
-                UpdatedAt: true,
-              },
+    const [data, pagination] = await this.prisma.xprisma.kHACHHANG
+      .paginate({
+        where: whereConditions,
+        orderBy: [{ CreatedAt: 'desc' }, { MaKhachHang: 'desc' }],
+        include: {
+          NguoiDungPhanMem: {
+            select: {
+              MaNguoiDung: true,
+              HoTen: true,
+              Email: true,
+              SoDienThoai: true,
+              VaiTro: true,
+              AvatarUrl: true,
+              TrangThai: true,
+              CreatedAt: true,
+              UpdatedAt: true,
             },
           },
-        })
-        .withCursor(
-          CursorUtils.getPrismaOptions(filters ?? {}, 'MaKhachHang'),
-        );
+        },
+      })
+      .withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaKhachHang'));
 
     return { data, pagination };
   }
@@ -116,14 +110,14 @@ export class CustomerService {
       this.prisma.kHACHHANG.update({
         where: { MaKhachHang: id },
         data: {
-          DeletedAt: new Date()
+          DeletedAt: new Date(),
         },
       }),
 
       this.prisma.nGUOIDUNGPHANMEM.update({
         where: { MaNguoiDung: customer.MaNguoiDung },
         data: {
-          TrangThai: UserStatusEnum.KHONGHOATDONG
+          TrangThai: UserStatusEnum.KHONGHOATDONG,
         },
       }),
     ]);

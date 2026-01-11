@@ -7,7 +7,7 @@ import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class EmployeeService {
-  constructor(readonly prisma: PrismaService) { }
+  constructor(readonly prisma: PrismaService) {}
 
   async getAllEmployees(filters?: FilterEmployeeDto) {
     const whereConditions: any = {
@@ -39,10 +39,7 @@ export class EmployeeService {
     const [data, pagination] = await this.prisma.xprisma.nHANVIEN
       .paginate({
         where: whereConditions,
-        orderBy: [
-          { CreatedAt: 'desc' },
-          { MaNhanVien: 'desc' },
-        ],
+        orderBy: [{ CreatedAt: 'desc' }, { MaNhanVien: 'desc' }],
         include: {
           NguoiDungPhanMem: {
             select: {
@@ -59,9 +56,7 @@ export class EmployeeService {
           },
         },
       })
-      .withCursor(
-        CursorUtils.getPrismaOptions(filters ?? {}, 'MaNhanVien'),
-      );
+      .withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaNhanVien'));
 
     return { data, pagination };
   }
@@ -150,7 +145,7 @@ export class EmployeeService {
       this.prisma.nHANVIEN.update({
         where: { MaNhanVien: id },
         data: {
-          DeletedAt: new Date()
+          DeletedAt: new Date(),
         },
       }),
 
