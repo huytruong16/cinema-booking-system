@@ -34,7 +34,6 @@ const formatDateDisplay = (dateString: string) => {
     return isValid(date) ? format(date, 'dd/MM/yyyy') : dateString;
 };
 
-// Generate next 14 days for date picker
 const generateAvailableDates = () => {
     const dates: string[] = [];
     const today = startOfDay(new Date());
@@ -145,7 +144,14 @@ export default function ShowtimesPage() {
     }, [showtimes, availableDates]);
 
     const filteredData = useMemo(() => {
+        const now = new Date();
+        
         return showtimes.filter(st => {
+            const startTime = parseISO(st.ThoiGianBatDau);
+            if (!isValid(startTime) || startTime <= now) {
+                return false;
+            }
+            
             const stDate = getDateString(st.ThoiGianBatDau);
             const matchDate = selectedDate ? stDate === selectedDate : true;
             
