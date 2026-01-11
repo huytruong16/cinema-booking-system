@@ -128,6 +128,8 @@ export interface Showtime {
 }
 
 export interface GetShowtimesParams {
+  cursor?: string;
+  limit?: number;
   MaPhim?: string;
   MaPhongChieu?: string;
   MaPhienBanPhim?: string;
@@ -136,7 +138,14 @@ export interface GetShowtimesParams {
   TrangThai?: string;
   TuNgay?: string;
   DenNgay?: string;
-  limit?: number;
+}
+
+export interface ShowtimesPaginatedResponse {
+  data: Showtime[];
+  pagination: {
+    nextCursor: string | null;
+    hasNextPage: boolean;
+  };
 }
 
 export interface SuatChieuSimple {

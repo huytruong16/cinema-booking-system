@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apiClient";
-import { Showtime, GetShowtimesParams, SeatType } from "@/types/showtime";
+import { Showtime, GetShowtimesParams, SeatType, ShowtimesPaginatedResponse } from "@/types/showtime";
 export interface CreateShowtimeDto {
   MaPhienBanPhim: string; 
   MaPhongChieu: string;
@@ -17,6 +17,28 @@ export const showtimeService = {
             });
             const data = response.data;
             return Array.isArray(data) ? data : data.data || [];
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách suất chiếu:", error);
+            throw error;
+        }
+    },
+
+    getShowtimesPaginated: async (params?: GetShowtimesParams): Promise<ShowtimesPaginatedResponse> => {
+        try {
+            const response = await api.get<ShowtimesPaginatedResponse>('/showtimes', {
+                params: params,
+            });
+            const data = response.data;
+            if (Array.isArray(data)) {
+                return {
+                    data: data,
+                    pagination: { nextCursor: null, hasNextPage: false }
+                };
+            }
+            return {
+                data: data.data || [],
+                pagination: data.pagination || { nextCursor: null, hasNextPage: false }
+            };
         } catch (error) {
             console.error("Lỗi khi lấy danh sách suất chiếu:", error);
             throw error;

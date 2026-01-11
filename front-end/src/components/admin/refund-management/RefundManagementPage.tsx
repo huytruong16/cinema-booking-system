@@ -208,8 +208,7 @@ export default function RefundManagementPage() {
     setIsDetailOpen(true);
     setDetailLoading(true);
     try {
-      const res = await refundService.getDetail(id);
-      const detailData = res.data as YeuCauHoanVeDetail;
+      const detailData = await refundService.getDetail(id) as unknown as YeuCauHoanVeDetail;
 
       const bankName =
         banks.find((b) => b.MaNganHang === detailData.MaNganHang)

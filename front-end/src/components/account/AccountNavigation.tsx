@@ -18,7 +18,6 @@ const navItems = [
   { href: "/account/profile", label: "Tài khoản", icon: User },
   { href: "/account/tickets", label: "Vé của tôi", icon: Ticket },
   { href: "/account/vouchers", label: "Ví Voucher", icon: Tag },
-  { href: "/account/notifications", label: "Thông báo", icon: Bell },
   { href: "/account/change-password", label: "Đổi mật khẩu", icon: Lock },
 ];
 

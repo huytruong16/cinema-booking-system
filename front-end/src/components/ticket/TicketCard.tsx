@@ -111,13 +111,19 @@ export function TicketCard({ ticket }: TicketProps) {
         <div className="flex flex-col md:flex-row">
           
           {/* Poster */}
-          <div className="relative w-full md:w-48 h-64 md:h-auto shrink-0">
-            <Image 
-              src={ticket.posterUrl} 
-              alt={ticket.movieTitle} 
-              fill 
-              className="object-cover"
-            />
+          <div className="relative w-full md:w-48 h-64 md:h-auto shrink-0 bg-zinc-800">
+            {ticket.posterUrl ? (
+              <Image 
+                src={ticket.posterUrl} 
+                alt={ticket.movieTitle} 
+                fill 
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-600">
+                <Ticket className="w-12 h-12" />
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 md:bg-gradient-to-r md:from-transparent md:to-zinc-900/50" />
             
             <div className="absolute top-2 left-2">
