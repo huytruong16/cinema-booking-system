@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserStatusEnum } from 'src/libs/common/enums';
 
 @Injectable()
 export class CustomerService {
-  constructor(readonly prisma: PrismaService) {}
+  constructor(readonly prisma: PrismaService) { }
 
   async getAllCustomers() {
     return await this.prisma.kHACHHANG.findMany({
@@ -66,22 +67,37 @@ export class CustomerService {
 
   async removeCustomer(id: string) {
     const customer = await this.prisma.kHACHHANG.findFirst({
-      where: { MaKhachHang: id, DeletedAt: null },
+      where: {
+        MaKhachHang: id,
+        DeletedAt: null,
+      },
+      include: {
+        NguoiDungPhanMem: true,
+      },
     });
 
     if (!customer) {
       throw new NotFoundException(`Khách hàng với ID ${id} không tồn tại`);
     }
 
-    await this.prisma.kHACHHANG.update({
-      where: { MaKhachHang: id },
-      data: {
-        DeletedAt: new Date(),
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.kHACHHANG.update({
+        where: { MaKhachHang: id },
+        data: {
+          DeletedAt: new Date()
+        },
+      }),
+
+      this.prisma.nGUOIDUNGPHANMEM.update({
+        where: { MaNguoiDung: customer.MaNguoiDung },
+        data: {
+          TrangThai: UserStatusEnum.KHONGHOATDONG
+        },
+      }),
+    ]);
 
     return {
-      message: 'Xóa khách hàng thành công',
+      message: 'Xóa khách hàng và vô hiệu hóa tài khoản người dùng thành công',
     };
   }
 }
