@@ -24,6 +24,7 @@ import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
 import { RoleEnum } from 'src/libs/common/enums';
 import { FilterEmployeeDto } from './dtos/filter-employee.dto';
+import { UserStatusEnum } from 'src/libs/common/enums';
 
 @ApiTags('Nhân viên')
 @ApiBearerAuth()
@@ -41,6 +42,12 @@ export class EmployeeController {
     name: 'TrangThai',
     required: false,
     enum: ['CONLAM', 'DANGHI'],
+  })
+  @ApiQuery({
+    name: 'TrangThaiNguoiDung',
+    required: false,
+    enum: UserStatusEnum,
+    description: 'Trạng thái tài khoản người dùng phần mềm',
   })
   @ApiQuery({
     name: 'fromNgayVaoLam',
@@ -93,17 +100,17 @@ export class EmployeeController {
     return this.employeeService.updateEmployee(id, updateDto);
   }
 
-  @Delete(':id')
-  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
-  @ApiOperation({
-    summary: 'Admin xoá mềm nhân viên',
-  })
-  @ApiParam({ name: 'id', description: 'Mã nhân viên', required: true })
-  async removeEmployee(@Param('id') id: string) {
-    if (!isUUID(id, '4')) {
-      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
-    }
+  // @Delete(':id')
+  // @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
+  // @ApiOperation({
+  //   summary: 'Admin xoá mềm nhân viên',
+  // })
+  // @ApiParam({ name: 'id', description: 'Mã nhân viên', required: true })
+  // async removeEmployee(@Param('id') id: string) {
+  //   if (!isUUID(id, '4')) {
+  //     throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+  //   }
 
-    return this.employeeService.removeEmployee(id);
-  }
+  //   return this.employeeService.removeEmployee(id);
+  // }
 }

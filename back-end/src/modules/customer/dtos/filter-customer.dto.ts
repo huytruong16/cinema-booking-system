@@ -1,19 +1,15 @@
-import { StaffStatusEnum, UserStatusEnum } from 'src/libs/common/enums';
-import { IsEnum, IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { UserStatusEnum } from 'src/libs/common/enums';
 
-export class FilterEmployeeDto {
+export class FilterCustomerDto {
     @IsOptional()
     @IsString()
-    fromNgayVaoLam?: string;
+    fromCreatedAt?: string;
 
     @IsOptional()
     @IsString()
-    toNgayVaoLam?: string;
-
-    @IsOptional()
-    @IsEnum(StaffStatusEnum)
-    TrangThai?: StaffStatusEnum;
+    toCreatedAt?: string;
 
     @IsOptional()
     @IsEnum(UserStatusEnum)

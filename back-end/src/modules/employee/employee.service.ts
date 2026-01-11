@@ -28,6 +28,12 @@ export class EmployeeService {
       if (filters.toNgayVaoLam) {
         whereConditions.NgayVaoLam.lte = new Date(filters.toNgayVaoLam);
       }
+
+      if (filters?.TrangThaiNguoiDung) {
+        whereConditions.NguoiDungPhanMem = {
+          TrangThai: filters.TrangThaiNguoiDung,
+        };
+      }
     }
 
     const [data, pagination] = await this.prisma.xprisma.nHANVIEN
