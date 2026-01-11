@@ -20,6 +20,7 @@ export interface GetRevenueChartParams {
 export interface GetTopMovieParams {
   range: 'day' | 'week' | 'month' | 'year' | 'all';
   limit?: number;
+  date?: string;
 }
 
 export interface GetTopStaffParams {
@@ -110,6 +111,9 @@ export const statisticsService = {
     if (params.limit !== undefined) {
       queryParams.limit = String(params.limit);
     }
+    if (params.date !== undefined) {
+      queryParams.date = params.date;
+    }
     const res = await apiClient.get<TopMovie[]>('/statistics/top-movies', { params: queryParams });
     return res.data;
   },
@@ -177,6 +181,7 @@ export const statisticsService = {
   exportTopMovies: async (params?: {
     range?: 'day' | 'week' | 'month' | 'year' | 'all';
     limit?: number;
+    date?: string;
   }): Promise<Blob> => {
     const res = await apiClient.get<Blob>('/statistics/export/top-movies', {
       params,
@@ -190,6 +195,58 @@ export const statisticsService = {
     date?: string;
   }): Promise<Blob> => {
     const res = await apiClient.get<Blob>('/statistics/export/top-staff', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportPdfRoomStatus: async (): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/pdf/room-status', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportPdfSummary: async (params?: {
+    mode?: 'day' | 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/pdf/summary', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportPdfRevenueChart: async (params: {
+    range: 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/pdf/revenue-chart', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportPdfTopMovies: async (params?: {
+    range?: 'day' | 'week' | 'month' | 'year' | 'all';
+    limit?: number;
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/pdf/top-movies', {
+      params,
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  exportPdfTopStaff: async (params: {
+    range: 'day' | 'week' | 'month' | 'year';
+    date?: string;
+  }): Promise<Blob> => {
+    const res = await apiClient.get<Blob>('/statistics/export/pdf/top-staff', {
       params,
       responseType: 'blob',
     });
