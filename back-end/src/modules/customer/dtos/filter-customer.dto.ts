@@ -3,25 +3,25 @@ import { Type } from 'class-transformer';
 import { UserStatusEnum } from 'src/libs/common/enums';
 
 export class FilterCustomerDto {
-    @IsOptional()
-    @IsString()
-    fromCreatedAt?: string;
+  @IsOptional()
+  @IsString()
+  fromCreatedAt?: string;
 
-    @IsOptional()
-    @IsString()
-    toCreatedAt?: string;
+  @IsOptional()
+  @IsString()
+  toCreatedAt?: string;
 
-    @IsOptional()
-    @IsEnum(UserStatusEnum)
-    TrangThaiNguoiDung?: UserStatusEnum;
+  @IsOptional()
+  @IsEnum(UserStatusEnum)
+  TrangThaiNguoiDung?: UserStatusEnum;
 
-    @IsOptional()
-    @IsString()
-    cursor?: string;
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsInt()
-    @Min(1)
-    limit?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number;
 }

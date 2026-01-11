@@ -34,7 +34,7 @@ import { AssignUserToGroupDto } from './dtos/assign-user-to-group.dto';
 @ApiTags('Người dùng')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @Get()
   @ApiBearerAuth()
@@ -242,5 +242,4 @@ export class UserController {
 
     return this.userService.unlockAccount(id);
   }
-
 }

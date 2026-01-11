@@ -2,10 +2,9 @@ import {
   Controller,
   Get,
   Param,
-  Delete,
   UseGuards,
   BadRequestException,
-  Query
+  Query,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import {
@@ -14,7 +13,7 @@ import {
   ApiParam,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery
+  ApiQuery,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
@@ -29,7 +28,7 @@ import { FilterCustomerDto } from './dtos/filter-customer.dto';
 @Controller('customers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) { }
+  constructor(private readonly customerService: CustomerService) {}
 
   @Get()
   @Roles(RoleEnum.ADMIN)
