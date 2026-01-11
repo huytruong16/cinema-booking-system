@@ -137,7 +137,6 @@ interface HoaDon {
   KhuyenMais: KhuyenMai[];
 }
 
-// --- HELPERS ---
 const getStatusColor = (status: string) => {
   switch (status) {
     case "THANHCONG":
@@ -164,7 +163,6 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-// Hàm hiển thị trạng thái vé tiếng Việt
 const getTicketStatusLabel = (status: TrangThaiVe) => {
   switch (status) {
     case "CHUASUDUNG":
@@ -175,14 +173,34 @@ const getTicketStatusLabel = (status: TrangThaiVe) => {
       return "Đã hết hạn";
     case "CHOHOANTIEN":
       return "Chờ hoàn tiền";
-    case "DAHOAN":
-      return "Đã hoàn";
     case "CHUAHOANTIEN":
       return "Chưa hoàn tiền";
+    case "DAHOAN":
+      return "Đã hoàn";
     default:
       return status;
   }
 };
+
+const getTicketStatusColor = (status: TrangThaiVe) => {
+  switch (status) {
+    case "CHUASUDUNG":
+      return "border-green-500 text-green-500";
+    case "DASUDUNG":
+      return "border-slate-500 text-slate-500";
+    case "DAHETHAN":
+      return "border-red-500/50 text-red-500/70";
+    case "CHOHOANTIEN":
+      return "border-yellow-500 text-yellow-500";
+    case "CHUAHOANTIEN":
+      return "border-orange-500 text-orange-500";
+    case "DAHOAN":
+      return "border-purple-500 text-purple-500";
+    default:
+      return "border-slate-600 text-slate-400";
+  }
+};
+
 
 const getPaymentMethodLabel = (method: string) => {
   const map: Record<string, string> = {
@@ -864,20 +882,11 @@ function InvoiceDetailDialog({
                                 <MapPin className="size-3 inline mr-1" />
                                 {ve.PhongChieu}
                               </p>
-                              {/* Hiển thị Badge trạng thái chính xác */}
                               <Badge
                                 variant="outline"
                                 className={cn(
                                   "mt-1 text-[10px] px-1.5 py-0 h-4 border",
-                                  ve.TrangThai === "CHUASUDUNG"
-                                    ? "border-green-500 text-green-500"
-                                    : ve.TrangThai === "DASUDUNG"
-                                    ? "border-slate-500 text-slate-500"
-                                    : ve.TrangThai === "CHOHOANTIEN"
-                                    ? "border-yellow-500 text-yellow-500"
-                                    : ve.TrangThai === "DAHOAN"
-                                    ? "border-red-500 text-red-500"
-                                    : ""
+                                  getTicketStatusColor(ve.TrangThai)
                                 )}
                               >
                                 {getTicketStatusLabel(ve.TrangThai)}
