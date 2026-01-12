@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,8 +10,10 @@ import { ShowtimeFilter } from '@/components/movies/ShowtimeFilter';
 import { showtimeService } from '@/services/showtime.service';
 import type { Showtime } from '@/types/showtime';
 import type { Movie } from '@/types/movie';
-import { Loader2, CalendarX } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { Loader2, CalendarX, ChevronDown } from 'lucide-react';
+import { format, parseISO, isValid, addDays, startOfDay } from 'date-fns';
+
+const ITEMS_PER_PAGE = 20;
 
 
 const formatShowtimeType = (showtime: Showtime) => {
@@ -32,54 +34,93 @@ const formatDateDisplay = (dateString: string) => {
     return isValid(date) ? format(date, 'dd/MM/yyyy') : dateString;
 };
 
+const generateAvailableDates = () => {
+    const dates: string[] = [];
+    const today = startOfDay(new Date());
+    for (let i = 0; i < 14; i++) {
+        dates.push(format(addDays(today, i), 'yyyy-MM-dd'));
+    }
+    return dates;
+};
+
 export default function ShowtimesPage() {
     const router = useRouter();
 
     const [showtimes, setShowtimes] = useState<Showtime[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [hasNextPage, setHasNextPage] = useState(false);
 
-    const [selectedDate, setSelectedDate] = useState<string>('');
+    const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
     const [selectedMovieId, setSelectedMovieId] = useState('all');
     const [selectedFormat, setSelectedFormat] = useState('all');
+    
+    const availableDates = useMemo(() => generateAvailableDates(), []);
 
+
+    const fetchShowtimes = useCallback(async (cursor?: string, append: boolean = false) => {
+        try {
+            if (append) {
+                setLoadingMore(true);
+            } else {
+                setLoading(true);
+                setShowtimes([]);
+            }
+
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const endDate = format(addDays(new Date(), 7), 'yyyy-MM-dd');
+            
+            const params: any = {
+                limit: ITEMS_PER_PAGE,
+                TuNgay: `${today}T00:00:00.000Z`,
+                DenNgay: `${endDate}T23:59:59.999Z`,
+            };
+
+            if (cursor) {
+                params.cursor = cursor;
+            }
+            if (selectedMovieId !== 'all') {
+                params.MaPhim = selectedMovieId;
+            }
+
+            const response = await showtimeService.getShowtimesPaginated(params);
+            
+            const activeShowtimes = response.data.filter(st =>
+                ['CHUACHIEU', 'DANGCHIEU', 'SAPCHIEU'].includes(st.TrangThai)
+            );
+            
+            if (append) {
+                setShowtimes(prev => [...prev, ...activeShowtimes]);
+            } else {
+                setShowtimes(activeShowtimes);
+            }
+            
+            setNextCursor(response.pagination.nextCursor);
+            setHasNextPage(response.pagination.hasNextPage);
+
+        } catch (err) {
+            console.error("Failed to fetch showtimes", err);
+            setError("Không thể tải lịch chiếu. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [selectedMovieId]); 
 
     useEffect(() => {
-        const fetchShowtimes = async () => {
-            try {
-                setLoading(true);
-                const data = await showtimeService.getShowtimes();
-                const activeShowtimes = data.filter(st =>
-                    ['CHUACHIEU', 'DANGCHIEU', 'SAPCHIEU'].includes(st.TrangThai)
-                );
-
-                setShowtimes(activeShowtimes);
-
-                if (activeShowtimes.length > 0) {
-                    const sortedDates = Array.from(new Set(
-                        activeShowtimes.map(st => getDateString(st.ThoiGianBatDau))
-                    )).sort();
-
-                    if (sortedDates.length > 0) {
-                        setSelectedDate(sortedDates[0]);
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to fetch showtimes", err);
-                setError("Không thể tải lịch chiếu. Vui lòng thử lại sau.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchShowtimes();
-    }, []);
+    }, [fetchShowtimes]);
+
+    const handleLoadMore = () => {
+        if (nextCursor && hasNextPage && !loadingMore) {
+            fetchShowtimes(nextCursor, true);
+        }
+    };
 
     const filterOptions = useMemo(() => {
-        const dates = Array.from(new Set(
-            showtimes.map(st => getDateString(st.ThoiGianBatDau))
-        )).filter(d => d).sort();
-
         const moviesMap = new Map<string, Movie>();
         showtimes.forEach(st => {
             const phim = st.PhienBanPhim?.Phim;
@@ -99,25 +140,27 @@ export default function ShowtimesPage() {
         const movies = Array.from(moviesMap.values());
         const formats = Array.from(new Set(showtimes.map(st => formatShowtimeType(st))));
 
-        return { dates, movies, formats };
-    }, [showtimes]);
+        return { dates: availableDates, movies, formats };
+    }, [showtimes, availableDates]);
 
     const filteredData = useMemo(() => {
+        const now = new Date();
+        
         return showtimes.filter(st => {
+            const startTime = parseISO(st.ThoiGianBatDau);
+            if (!isValid(startTime) || startTime <= now) {
+                return false;
+            }
+            
             const stDate = getDateString(st.ThoiGianBatDau);
             const matchDate = selectedDate ? stDate === selectedDate : true;
+            
 
-            const matchMovie = selectedMovieId !== 'all'
-                ? st.PhienBanPhim.Phim.MaPhim === selectedMovieId
-                : true;
-
-            const matchFormat = selectedFormat !== 'all'
-                ? formatShowtimeType(st) === selectedFormat
-                : true;
-
-            return matchDate && matchMovie && matchFormat;
+            const matchFormat = selectedFormat === 'all' || formatShowtimeType(st) === selectedFormat;
+            
+            return matchDate && matchFormat;
         });
-    }, [showtimes, selectedDate, selectedMovieId, selectedFormat]);
+    }, [showtimes, selectedDate, selectedFormat]);
 
 
     const groupedMovies = useMemo(() => {
@@ -168,6 +211,11 @@ export default function ShowtimesPage() {
         }));
     }, [filteredData]);
 
+    const handleResetFilters = () => {
+        setSelectedMovieId('all');
+        setSelectedFormat('all');
+    };
+
     const handleBookTicket = (movieId: string, showtimeId: string, time: string, formatLabel: string) => {
         const query = new URLSearchParams({
             movieId,
@@ -215,9 +263,11 @@ export default function ShowtimesPage() {
                     onDateChange={setSelectedDate}
                     onMovieChange={setSelectedMovieId}
                     onFormatChange={setSelectedFormat}
+                    onReset={handleResetFilters}
+                    resultCount={groupedMovies.length}
                 />
 
-                <div className="space-y-12">
+                <div className="space-y-8">
                     {groupedMovies.length > 0 ? (
                         groupedMovies.map(({ movie, formats }) => (
                             <div
@@ -300,6 +350,28 @@ export default function ShowtimesPage() {
                             <p className="text-muted-foreground mt-2">
                                 Không có suất chiếu nào được tìm thấy trong khoảng thời gian này.
                             </p>
+                        </div>
+                    )}
+                    {hasNextPage && (
+                        <div className="flex justify-center pt-8">
+                            <Button
+                                variant="outline"
+                                onClick={handleLoadMore}
+                                disabled={loadingMore}
+                                className="px-8 h-12"
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Đang tải...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronDown className="w-4 h-4 mr-2" />
+                                        Xem thêm suất chiếu
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     )}
                 </div>

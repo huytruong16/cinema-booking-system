@@ -346,10 +346,12 @@ export class StatisticsService {
   }
 
   async getTopMovies(query: GetTopMovieDto): Promise<TopMovieDto[]> {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const d = now.getDate();
+    const targetDate = query.date ? new Date(query.date) : new Date();
+    await this.generateDailyRevenueReport(targetDate.toISOString());
+
+    const y = targetDate.getFullYear();
+    const m = targetDate.getMonth();
+    const d = targetDate.getDate();
 
     let start: Date | undefined;
     let end: Date | undefined;
@@ -361,7 +363,7 @@ export class StatisticsService {
         break;
       }
       case TopMovieRangeEnum.WEEK: {
-        const dayOfWeek = now.getDay();
+        const dayOfWeek = targetDate.getDay();
         const offsetToMonday = (dayOfWeek + 6) % 7;
         const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
         start = monday;

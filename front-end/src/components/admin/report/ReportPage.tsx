@@ -73,7 +73,7 @@ export default function ReportPage() {
   const [topStaff, setTopStaff] = useState<TopStaff[]>([]);
   const [roomStatus, setRoomStatus] = useState<RoomStatus[]>([]);
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export default function ReportPage() {
 
       setLoading(true);
       try {
-        const dateStr = date.toISOString();
+        const dateStr = format(date, 'yyyy-MM-dd');
         
         const chartRange = viewMode === 'day' ? 'week' : viewMode;
         
@@ -95,7 +95,7 @@ export default function ReportPage() {
             ? statisticsService.getRevenueChart({ range: chartRange, date: dateStr })
             : Promise.resolve([]),
           selectedReportType === 'movies'
-            ? statisticsService.getTopMovies({ range: viewMode })
+            ? statisticsService.getTopMovies({ range: viewMode, date: dateStr })
             : Promise.resolve([]),
           selectedReportType === 'staff'
             ? statisticsService.getTopStaff({ range: viewMode })
@@ -148,47 +148,69 @@ export default function ReportPage() {
   };
 
   const handleExport = async (type: 'excel' | 'pdf') => {
-      if (type === 'pdf') {
-          alert('Tính năng xuất PDF đang được phát triển.');
-          return;
-      }
-
-      setExporting(true);
+      setExporting(type);
       
       try {
           let blob: Blob;
           let fileName: string;
           
-          const dateStr = date.toISOString();
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const fileExt = type === 'pdf' ? 'pdf' : 'xlsx';
           
           switch (selectedReportType) {
               case 'revenue':
-                  const chartRange = viewMode === 'day' ? 'week' : viewMode as 'week' | 'month';
-                  blob = await statisticsService.exportRevenueChart({ 
-                      range: chartRange, 
-                      date: dateStr 
-                  });
-                  fileName = `bao-cao-doanh-thu_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  const chartRange = viewMode === 'day' ? 'week' : viewMode as 'week' | 'month' | 'year';
+                  if (type === 'pdf') {
+                      blob = await statisticsService.exportPdfRevenueChart({ 
+                          range: chartRange, 
+                          date: dateStr 
+                      });
+                  } else {
+                      blob = await statisticsService.exportRevenueChart({ 
+                          range: chartRange, 
+                          date: dateStr 
+                      });
+                  }
+                  fileName = `bao-cao-doanh-thu_${format(date, 'yyyy-MM-dd')}.${fileExt}`;
                   break;
                   
               case 'movies':
-                  blob = await statisticsService.exportTopMovies({ 
-                      range: viewMode
-                  });
-                  fileName = `bao-cao-top-phim_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  if (type === 'pdf') {
+                      blob = await statisticsService.exportPdfTopMovies({ 
+                          range: viewMode,
+                          date: dateStr
+                      });
+                  } else {
+                      blob = await statisticsService.exportTopMovies({ 
+                          range: viewMode,
+                          date: dateStr
+                      });
+                  }
+                  fileName = `bao-cao-top-phim_${format(date, 'yyyy-MM-dd')}.${fileExt}`;
                   break;
                   
               case 'staff':
-                  blob = await statisticsService.exportTopStaff({ 
-                      range: viewMode,
-                      date: dateStr 
-                  });
-                  fileName = `bao-cao-nhan-vien_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  if (type === 'pdf') {
+                      blob = await statisticsService.exportPdfTopStaff({ 
+                          range: viewMode,
+                          date: dateStr 
+                      });
+                  } else {
+                      blob = await statisticsService.exportTopStaff({ 
+                          range: viewMode,
+                          date: dateStr 
+                      });
+                  }
+                  fileName = `bao-cao-nhan-vien_${format(date, 'yyyy-MM-dd')}.${fileExt}`;
                   break;
                   
               case 'room_status':
-                  blob = await statisticsService.exportRoomStatus();
-                  fileName = `trang-thai-phong-chieu_${format(date, 'yyyy-MM-dd')}.xlsx`;
+                  if (type === 'pdf') {
+                      blob = await statisticsService.exportPdfRoomStatus();
+                  } else {
+                      blob = await statisticsService.exportRoomStatus();
+                  }
+                  fileName = `trang-thai-phong-chieu_${format(date, 'yyyy-MM-dd')}.${fileExt}`;
                   break;
                   
               default:
@@ -208,7 +230,7 @@ export default function ReportPage() {
           console.error('Export failed:', error);
           alert(`Xuất báo cáo thất bại: ${error?.response?.data?.message || error.message || 'Lỗi không xác định'}`);
       } finally {
-          setExporting(false);
+          setExporting(null);
       }
   };
 
@@ -343,14 +365,27 @@ export default function ReportPage() {
                     variant="outline" 
                     className="bg-green-700/20 border-green-700 text-green-400 hover:bg-green-700/30 hover:text-green-400" 
                     onClick={() => handleExport('excel')}
-                    disabled={exporting || loading}
+                    disabled={exporting !== null || loading}
                 >
-                    {exporting ? (
+                    {exporting === 'excel' ? (
                         <Loader2 className="size-4 mr-2 animate-spin" />
                     ) : (
                         <FileDown className="size-4 mr-2" />
                     )}
-                    {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                    {exporting === 'excel' ? 'Đang xuất...' : 'Xuất Excel'}
+                </Button>
+                <Button 
+                    variant="outline" 
+                    className="bg-red-700/20 border-red-700 text-red-400 hover:bg-red-700/30 hover:text-red-400" 
+                    onClick={() => handleExport('pdf')}
+                    disabled={exporting !== null || loading}
+                >
+                    {exporting === 'pdf' ? (
+                        <Loader2 className="size-4 mr-2 animate-spin" />
+                    ) : (
+                        <FileDown className="size-4 mr-2" />
+                    )}
+                    {exporting === 'pdf' ? 'Đang xuất...' : 'Xuất PDF'}
                 </Button>
             </div>
         </CardHeader>

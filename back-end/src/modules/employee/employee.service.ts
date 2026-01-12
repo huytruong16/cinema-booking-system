@@ -1,31 +1,64 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateEmployeeDto } from './dtos/update-employee.dto';
+import { UserStatusEnum } from 'src/libs/common/enums';
+import { FilterEmployeeDto } from './dtos/filter-employee.dto';
+import { CursorUtils } from 'src/libs/common/utils/pagination.util';
 
 @Injectable()
 export class EmployeeService {
   constructor(readonly prisma: PrismaService) {}
 
-  async getAllEmployees() {
-    return await this.prisma.nHANVIEN.findMany({
-      where: { DeletedAt: null },
-      orderBy: { CreatedAt: 'desc' },
-      include: {
-        NguoiDungPhanMem: {
-          select: {
-            MaNguoiDung: true,
-            HoTen: true,
-            Email: true,
-            VaiTro: true,
-            SoDienThoai: true,
-            AvatarUrl: true,
-            CreatedAt: true,
-            UpdatedAt: true,
-            DeletedAt: true,
+  async getAllEmployees(filters?: FilterEmployeeDto) {
+    const whereConditions: any = {
+      DeletedAt: null,
+    };
+
+    if (filters?.TrangThai) {
+      whereConditions.TrangThai = filters.TrangThai;
+    }
+
+    if (filters?.fromNgayVaoLam || filters?.toNgayVaoLam) {
+      whereConditions.NgayVaoLam = {};
+
+      if (filters.fromNgayVaoLam) {
+        whereConditions.NgayVaoLam.gte = new Date(filters.fromNgayVaoLam);
+      }
+
+      if (filters.toNgayVaoLam) {
+        whereConditions.NgayVaoLam.lte = new Date(filters.toNgayVaoLam);
+      }
+
+      if (filters?.TrangThaiNguoiDung) {
+        whereConditions.NguoiDungPhanMem = {
+          TrangThai: filters.TrangThaiNguoiDung,
+        };
+      }
+    }
+
+    const [data, pagination] = await this.prisma.xprisma.nHANVIEN
+      .paginate({
+        where: whereConditions,
+        orderBy: [{ CreatedAt: 'desc' }, { MaNhanVien: 'desc' }],
+        include: {
+          NguoiDungPhanMem: {
+            select: {
+              MaNguoiDung: true,
+              HoTen: true,
+              Email: true,
+              SoDienThoai: true,
+              AvatarUrl: true,
+              VaiTro: true,
+              TrangThai: true,
+              CreatedAt: true,
+              UpdatedAt: true,
+            },
           },
         },
-      },
-    });
+      })
+      .withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaNhanVien'));
+
+    return { data, pagination };
   }
 
   async getEmployeeById(id: string) {
@@ -95,22 +128,37 @@ export class EmployeeService {
 
   async removeEmployee(id: string) {
     const employee = await this.prisma.nHANVIEN.findFirst({
-      where: { MaNhanVien: id, DeletedAt: null },
+      where: {
+        MaNhanVien: id,
+        DeletedAt: null,
+      },
+      include: {
+        NguoiDungPhanMem: true,
+      },
     });
 
     if (!employee) {
       throw new NotFoundException(`Nhân viên với ID ${id} không tồn tại`);
     }
 
-    await this.prisma.nHANVIEN.update({
-      where: { MaNhanVien: id },
-      data: {
-        DeletedAt: new Date(),
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.nHANVIEN.update({
+        where: { MaNhanVien: id },
+        data: {
+          DeletedAt: new Date(),
+        },
+      }),
+
+      this.prisma.nGUOIDUNGPHANMEM.update({
+        where: { MaNguoiDung: employee.MaNguoiDung },
+        data: {
+          TrangThai: UserStatusEnum.KHONGHOATDONG,
+        },
+      }),
+    ]);
 
     return {
-      message: 'Xóa nhân viên thành công',
+      message: 'Xóa nhân viên và vô hiệu hóa tài khoản người dùng thành công',
     };
   }
 }

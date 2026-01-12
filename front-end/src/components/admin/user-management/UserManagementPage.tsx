@@ -51,6 +51,8 @@ import {
   Users,
   CalendarIcon,
   Trash2,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -137,6 +139,11 @@ function EmployeeManager() {
   const [editingUser, setEditingUser] = useState<any>(null);
 
   const [employeeToDelete, setEmployeeToDelete] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [actionUser, setActionUser] = useState<{
+    user: any;
+    type: "lock" | "unlock";
+  } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchEmployees = async () => {
@@ -156,7 +163,9 @@ function EmployeeManager() {
           NguoiDung: {
             ...user,
             AvatarUrl: user.AvatarUrl,
+            TrangThaiNguoiDung: user.TrangThai || "CHUAKICHHOAT",
           },
+          TrangThai: item.TrangThai,
         };
       });
 
@@ -215,19 +224,72 @@ function EmployeeManager() {
     }
   };
 
-  const handleDeleteEmployee = async () => {
-    if (!employeeToDelete) return;
-    if (isDeleting) return;
-    setIsDeleting(true);
+  const handleToggleLockStatus = async () => {
+    if (!actionUser) return;
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
-      await employeeService.delete(employeeToDelete.MaNhanVien);
-      toast.success("Đã xóa nhân viên thành công");
-      setEmployeeToDelete(null);
-      fetchEmployees();
+      const userId = actionUser.user.NguoiDung?.MaNguoiDung;
+      if (!userId) {
+        toast.error("Không tìm thấy mã người dùng");
+        return;
+      }
+
+      if (actionUser.type === "lock") {
+        await userService.lockUser(userId);
+        toast.success(`Đã khóa tài khoản ${actionUser.user.HoTen}`);
+      } else {
+        await userService.unlockUser(userId);
+        toast.success(`Đã mở khóa tài khoản ${actionUser.user.HoTen}`);
+      }
+
+      setActionUser(null);
+      fetchEmployees(); 
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Không thể xóa nhân viên");
+      toast.error(
+        error.response?.data?.message || "Lỗi khi cập nhật trạng thái tài khoản"
+      );
     } finally {
-      setIsDeleting(false);
+      setIsProcessing(false);
+    }
+  };
+
+  const renderAccountStatusBadge = (status: string) => {
+    switch (status) {
+      case "CONHOATDONG":
+        return (
+          <Badge
+            variant="outline"
+            className="text-blue-500 border-blue-500/30 bg-blue-500/10"
+          >
+            Active
+          </Badge>
+        );
+      case "KHONGHOATDONG":
+      case "BIKHOA":
+        return (
+          <Badge
+            variant="outline"
+            className="text-red-500 border-red-500/30 bg-red-500/10"
+          >
+            Locked
+          </Badge>
+        );
+      case "CHUAKICHHOAT":
+        return (
+          <Badge
+            variant="outline"
+            className="text-yellow-500 border-yellow-500/30 bg-yellow-500/10"
+          >
+            Pending
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-slate-500">
+            Unknown ({status})
+          </Badge>
+        );
     }
   };
 
@@ -288,91 +350,120 @@ function EmployeeManager() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((emp) => (
-                  <TableRow
-                    key={emp.MaNhanVien}
-                    className="border-slate-800 hover:bg-slate-800/50"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9 border border-slate-700">
-                          <AvatarImage src={emp.NguoiDung?.AvatarUrl} />
-                          <AvatarFallback className="bg-slate-700">
-                            <User className="size-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-slate-200">
-                            {emp.HoTen}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Mã: {emp.MaNhanVien.substring(0, 8)}...
+                filtered.map((emp) => {
+                  const accountStatus = emp.NguoiDung?.TrangThaiNguoiDung;
+                  const isAccountActive = accountStatus === "CONHOATDONG";
+                  const roleLabel = emp.MaNhomNguoiDung
+                    ? ROLES.find((r) => r.value === emp.MaNhomNguoiDung)?.label || "Nhân viên"
+                    : emp.NguoiDung?.VaiTro || "Nhân viên";
+
+                  return (
+                    <TableRow
+                      key={emp.MaNhanVien}
+                      className="border-slate-800 hover:bg-slate-800/50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-9 border border-slate-700">
+                            <AvatarImage src={emp.NguoiDung?.AvatarUrl} />
+                            <AvatarFallback className="bg-slate-700">
+                              <User className="size-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-slate-200">
+                              {emp.HoTen}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              Mã: {emp.MaNhanVien.substring(0, 8)}...
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className="bg-slate-800 hover:bg-slate-700"
-                      >
-                        {ROLES.find((r) => r.value === emp.MaNhomNguoiDung)
-                          ?.label || "Nhân viên"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-slate-300">{emp.Email}</div>
-                      <div className="text-xs text-slate-500">
-                        {emp.SoDienThoai || "---"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-400">
-                      {emp.NgayVaoLam
-                        ? format(new Date(emp.NgayVaoLam), "dd/MM/yyyy", {
-                            locale: vi,
-                          })
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          emp.TrangThai === "CONLAM"
-                            ? "text-green-500 border-green-500/30 bg-green-500/10"
-                            : "text-slate-500 border-slate-500 bg-slate-500/10"
-                        )}
-                      >
-                        {emp.TrangThai === "CONLAM"
-                          ? "Đang làm việc"
-                          : "Đã nghỉ"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-slate-800 text-blue-400 hover:text-blue-300"
-                          onClick={() => {
-                            setEditingUser(emp);
-                            setIsModalOpen(true);
-                          }}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className="bg-slate-800 hover:bg-slate-700"
                         >
-                          <Edit className="size-4" />
-                        </Button>
+                          {emp.MaNhomNguoiDung === 2
+                            ? "QL Phim & Lịch chiếu"
+                            : emp.MaNhomNguoiDung === 3
+                            ? "NV Bán vé"
+                            : emp.MaNhomNguoiDung === 4
+                            ? "NV Soát vé"
+                            : "Nhân viên"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-300">
+                          {emp.Email}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {emp.SoDienThoai || "---"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-400">
+                        {emp.NgayVaoLam
+                          ? format(new Date(emp.NgayVaoLam), "dd/MM/yyyy", {
+                              locale: vi,
+                            })
+                          : "-"}
+                      </TableCell>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hover:bg-slate-800 text-red-400 hover:text-red-300"
-                          onClick={() => setEmployeeToDelete(emp)}
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            emp.TrangThai === "CONLAM"
+                              ? "text-green-500 border-green-500/30 bg-green-500/10"
+                              : "text-slate-500 border-slate-500 bg-slate-500/10"
+                          )}
                         >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          {emp.TrangThai === "CONLAM" ? "Đang làm" : "Đã nghỉ"}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        {renderAccountStatusBadge(accountStatus)}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost" size="icon"
+                            className="hover:bg-slate-800 text-blue-400 hover:text-blue-300"
+                            onClick={() => {
+                              setEditingUser(emp);
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            <Edit className="size-4" />
+                          </Button>
+
+                          {isAccountActive ? (
+                            <Button
+                              variant="ghost" size="icon"
+                              className="hover:bg-slate-800 text-orange-400 hover:text-orange-300"
+                              title="Khóa tài khoản"
+                              onClick={() => setActionUser({ user: emp, type: 'lock' })}
+                            >
+                              <Lock className="size-4" />
+                            </Button>
+                          ) : (
+                             <Button
+                              variant="ghost" size="icon"
+                              className="hover:bg-slate-800 text-green-400 hover:text-green-300"
+                              title="Mở khóa tài khoản"
+                              onClick={() => setActionUser({ user: emp, type: 'unlock' })}
+                            >
+                              <Unlock className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -386,30 +477,55 @@ function EmployeeManager() {
         user={editingUser}
       />
 
-      <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)}>
+      <AlertDialog
+        open={!!actionUser}
+        onOpenChange={(open) => !open && setActionUser(null)}
+      >
         <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Xóa nhân viên?
+              {actionUser?.type === "lock"
+                ? "Khóa tài khoản nhân viên?"
+                : "Mở khóa tài khoản nhân viên?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              Hành động này sẽ xóa nhân viên{" "}
-              <b>{employeeToDelete?.HoTen}</b> khỏi hệ thống.
+              Bạn có chắc chắn muốn{" "}
+              {actionUser?.type === "lock" ? "khóa" : "mở khóa"} tài khoản
+              <b> {actionUser?.user?.HoTen}</b>?
+              {actionUser?.type === "lock" && (
+                <span className="block mt-2 text-yellow-500/80 text-xs">
+                  Nhân viên sẽ không thể đăng nhập vào hệ thống.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white" disabled={isDeleting}>
+            <AlertDialogCancel
+              className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white"
+              disabled={isProcessing}
+            >
               Hủy
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                handleDeleteEmployee();
+                handleToggleLockStatus();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              disabled={isDeleting}
+              className={cn(
+                "text-white",
+                actionUser?.type === "lock"
+                  ? "bg-orange-600 hover:bg-orange-700"
+                  : "bg-green-600 hover:bg-green-700"
+              )}
+              disabled={isProcessing}
             >
-              {isDeleting ? <Loader2 className="animate-spin size-4" /> : "Xóa"}
+              {isProcessing ? (
+                <Loader2 className="animate-spin size-4" />
+              ) : actionUser?.type === "lock" ? (
+                "Khóa"
+              ) : (
+                "Mở khóa"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -423,8 +539,11 @@ function CustomerManager() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [customerToDelete, setCustomerToDelete] = useState<any>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionCustomer, setActionCustomer] = useState<{
+    user: any;
+    type: "lock" | "unlock";
+  } | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -442,7 +561,7 @@ function CustomerManager() {
           NguoiDung: {
             ...user,
             AvatarUrl: user.AvatarUrl,
-            TrangThai: user.TrangThai || "CONHOATDONG",
+            TrangThaiNguoiDung: user.TrangThai || "CHUAKICHHOAT",
           },
         };
       });
@@ -460,19 +579,33 @@ function CustomerManager() {
     fetchCustomers();
   }, []);
 
-  const handleDeleteCustomer = async () => {
-    if (!customerToDelete) return;
-    if (isDeleting) return;
-    setIsDeleting(true);
+  const handleToggleLockStatus = async () => {
+    if (!actionCustomer) return;
+    if (isProcessing) return;
+    setIsProcessing(true);
     try {
-      await customerService.delete(customerToDelete.MaKhachHang);
-      toast.success("Xóa khách hàng thành công");
-      setCustomerToDelete(null);
+      const userId = actionCustomer.user.NguoiDung?.MaNguoiDung;
+      if (!userId) {
+        toast.error("Không tìm thấy mã người dùng");
+        return;
+      }
+
+      if (actionCustomer.type === "lock") {
+        await userService.lockUser(userId);
+        toast.success("Đã khóa khách hàng thành công");
+      } else {
+        await userService.unlockUser(userId);
+        toast.success("Đã mở khóa khách hàng thành công");
+      }
+
+      setActionCustomer(null);
       fetchCustomers();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi khi xóa khách hàng");
+      toast.error(
+        error.response?.data?.message || "Lỗi khi cập nhật trạng thái"
+      );
     } finally {
-      setIsDeleting(false);
+      setIsProcessing(false);
     }
   };
 
@@ -483,6 +616,44 @@ function CustomerManager() {
       cus.Email?.toLowerCase().includes(term)
     );
   });
+
+  const renderAccountStatusBadge = (status: string) => {
+    switch (status) {
+      case "CONHOATDONG":
+        return (
+          <Badge
+            variant="outline"
+            className="text-green-500 border-green-500/30 bg-green-500/10"
+          >
+            Active
+          </Badge>
+        );
+      case "KHONGHOATDONG":
+        return (
+          <Badge
+            variant="outline"
+            className="text-red-500 border-red-500/30 bg-red-500/10"
+          >
+            Locked
+          </Badge>
+        );
+      case "CHUAKICHHOAT":
+        return (
+          <Badge
+            variant="outline"
+            className="text-yellow-500 border-yellow-500/30 bg-yellow-500/10"
+          >
+            Pending
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-slate-500">
+            Unknown
+          </Badge>
+        );
+    }
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -529,100 +700,136 @@ function CustomerManager() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((cus) => (
-                  <TableRow
-                    key={cus.MaKhachHang}
-                    className="border-slate-800 hover:bg-slate-800/50"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9 border border-slate-700">
-                          <AvatarImage src={cus.NguoiDung?.AvatarUrl} />
-                          <AvatarFallback className="bg-slate-700">
-                            <User className="size-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-slate-200">
-                            {cus.HoTen}
-                          </div>
-                          <div
-                            className="text-xs text-slate-500"
-                            title={cus.MaKhachHang}
-                          >
-                            Code: {cus.MaKhachHang.substring(0, 8)}...
+                filtered.map((cus) => {
+                  const accountStatus = cus.NguoiDung?.TrangThaiNguoiDung;
+                  const isAccountActive = accountStatus === "CONHOATDONG";
+
+                  return (
+                    <TableRow
+                      key={cus.MaKhachHang}
+                      className="border-slate-800 hover:bg-slate-800/50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-9 border border-slate-700">
+                            <AvatarImage src={cus.NguoiDung?.AvatarUrl} />
+                            <AvatarFallback className="bg-slate-700">
+                              <User className="size-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-slate-200">
+                              {cus.HoTen}
+                            </div>
+                            <div
+                              className="text-xs text-slate-500"
+                              title={cus.MaKhachHang}
+                            >
+                              Code: {cus.MaKhachHang.substring(0, 8)}...
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-slate-300">{cus.Email}</div>
-                      <div className="text-xs text-slate-500">
-                        {cus.SoDienThoai || "---"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-400">
-                      {cus.CreatedAt
-                        ? format(new Date(cus.CreatedAt), "dd/MM/yyyy", {
-                            locale: vi,
-                          })
-                        : "-"}
-                    </TableCell>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-300">
+                          {cus.Email}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {cus.SoDienThoai || "---"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-slate-400">
+                        {cus.CreatedAt
+                          ? format(new Date(cus.CreatedAt), "dd/MM/yyyy", {
+                              locale: vi,
+                            })
+                          : "-"}
+                      </TableCell>
 
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          cus.NguoiDung?.TrangThai === "CONHOATDONG"
-                            ? "text-green-500 border-green-500/30 bg-green-500/10"
-                            : "text-red-500 border-red-500/30 bg-red-500/10"
+                      <TableCell className="text-center">
+                        {renderAccountStatusBadge(accountStatus)}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        {isAccountActive ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-slate-800 text-red-400 hover:text-red-300"
+                            title="Khóa tài khoản"
+                            onClick={() =>
+                              setActionCustomer({ user: cus, type: "lock" })
+                            }
+                          >
+                            <Lock className="size-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-slate-800 text-green-400 hover:text-green-300"
+                            title="Mở khóa tài khoản"
+                            onClick={() =>
+                              setActionCustomer({ user: cus, type: "unlock" })
+                            }
+                          >
+                            <Unlock className="size-4" />
+                          </Button>
                         )}
-                      >
-                        {cus.NguoiDung?.TrangThai === "CONHOATDONG"
-                          ? "Active"
-                          : "Locked"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-slate-800 text-red-400 hover:text-red-300"
-                        onClick={() => setCustomerToDelete(cus)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+      <AlertDialog
+        open={!!actionCustomer}
+        onOpenChange={(open) => !open && setActionCustomer(null)}
+      >
         <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa khách hàng?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {actionCustomer?.type === "lock"
+                ? "Khóa khách hàng?"
+                : "Mở khóa khách hàng?"}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              Hành động này sẽ xóa khách hàng <b>{customerToDelete?.HoTen}</b>
-              .
+              Hành động này sẽ{" "}
+              {actionCustomer?.type === "lock" ? "khóa" : "mở khóa"} tài khoản
+              của khách hàng <b>{actionCustomer?.user?.HoTen}</b>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white" disabled={isDeleting}>
+            <AlertDialogCancel
+              className="bg-transparent border-slate-700 hover:bg-slate-800 text-white hover:text-white"
+              disabled={isProcessing}
+            >
               Hủy
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
-                handleDeleteCustomer();
+                handleToggleLockStatus();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white"
-              disabled={isDeleting}
+              className={cn(
+                "text-white",
+                actionCustomer?.type === "lock"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-green-600 hover:bg-green-700"
+              )}
+              disabled={isProcessing}
             >
-              {isDeleting ? <Loader2 className="animate-spin size-4" /> : "Xóa"}
+              {isProcessing ? (
+                <Loader2 className="animate-spin size-4" />
+              ) : actionCustomer?.type === "lock" ? (
+                "Khóa"
+              ) : (
+                "Mở khóa"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

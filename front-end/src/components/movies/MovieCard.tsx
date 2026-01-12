@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Info, Ticket, Clock } from "lucide-react";
+import { Heart, Info, Ticket, Clock, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Movie } from "@/types/movie";
 
@@ -58,17 +58,23 @@ export function MovieCard({
             {/* Poster */}
             <div
                 className={cn(
-                    "relative aspect-[2/3] overflow-hidden rounded-xl bg-card shadow-md transition-all hover:z-20 hover:shadow-lg",
+                    "relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-800 shadow-md transition-all hover:z-20 hover:shadow-lg",
                     className
                 )}
             >
-                <Image
-                    src={posterUrl}
-                    alt={title}
-                    fill
-                    className="object-cover transition-transform duration-500 hover:scale-105"
-                    sizes="(max-width: 300px) 50vw, 20vw"
-                />
+                {posterUrl ? (
+                    <Image
+                        src={posterUrl}
+                        alt={title}
+                        fill
+                        className="object-cover transition-transform duration-500 hover:scale-105"
+                        sizes="(max-width: 300px) 50vw, 20vw"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-zinc-600">
+                        <Film className="w-12 h-12" />
+                    </div>
+                )}
             </div>
 
             {/* Info  */}
@@ -110,8 +116,14 @@ export function MovieCard({
                         className="absolute left-1/2 top-0 z-50 w-[340px] h-[420px] -translate-x-1/2 -translate-y-[5%] overflow-hidden rounded-2xl bg-card text-card-foreground shadow-2xl"
                     >
                         {/* Ảnh */}
-                        <div className="relative h-1/2 w-full">
-                            <Image src={posterUrl} alt={title} fill className="object-cover" />
+                        <div className="relative h-1/2 w-full bg-zinc-800">
+                            {posterUrl ? (
+                                <Image src={posterUrl} alt={title} fill className="object-cover" />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-zinc-600">
+                                    <Film className="w-12 h-12" />
+                                </div>
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                         </div>
 

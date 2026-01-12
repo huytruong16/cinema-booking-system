@@ -257,4 +257,58 @@ export class UserService {
       message: 'Gán người dùng vào nhóm thành công',
     };
   }
+
+  async lockAccount(userId: string) {
+    const user = await this.prisma.nGUOIDUNGPHANMEM.findFirst({
+      where: {
+        MaNguoiDung: userId,
+        DeletedAt: null,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    if (user.TrangThai === UserStatusEnum.KHONGHOATDONG) {
+      return { message: 'Tài khoản đã bị khóa trước đó' };
+    }
+
+    await this.prisma.nGUOIDUNGPHANMEM.update({
+      where: { MaNguoiDung: userId },
+      data: {
+        TrangThai: UserStatusEnum.KHONGHOATDONG,
+        UpdatedAt: new Date(),
+      },
+    });
+
+    return { message: 'Khóa tài khoản thành công' };
+  }
+
+  async unlockAccount(userId: string) {
+    const user = await this.prisma.nGUOIDUNGPHANMEM.findFirst({
+      where: {
+        MaNguoiDung: userId,
+        DeletedAt: null,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    if (user.TrangThai === UserStatusEnum.CONHOATDONG) {
+      return { message: 'Tài khoản đã đang hoạt động' };
+    }
+
+    await this.prisma.nGUOIDUNGPHANMEM.update({
+      where: { MaNguoiDung: userId },
+      data: {
+        TrangThai: UserStatusEnum.CONHOATDONG,
+        UpdatedAt: new Date(),
+      },
+    });
+
+    return { message: 'Mở khóa tài khoản thành công' };
+  }
 }

@@ -46,6 +46,12 @@ export class AuthService {
       throw new ForbiddenException('Tài khoản chưa xác minh email.');
     }
 
+    if (user.TrangThai === 'KHONGHOATDONG') {
+      throw new ForbiddenException(
+        'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.',
+      );
+    }
+
     let maKhachHang: string | null = null;
 
     if (user.VaiTro === 'KHACHHANG') {

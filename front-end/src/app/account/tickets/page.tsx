@@ -3,14 +3,38 @@
 import React, { useState, useEffect } from 'react';
 import { TicketCard } from '@/components/ticket/TicketCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TicketX, Loader2 } from 'lucide-react';
+import { TicketX, Loader2, Clock, CheckCircle2, XCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { getMyTickets } from '@/services/user.service';
+import { refundService, RefundRequest, RefundStatus } from '@/services/refund.service';
 import { TicketResponse } from '@/types/ticket';
 import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
+
+const getStatusBadge = (status: RefundStatus) => {
+  switch (status) {
+    case 'DANGCHO':
+      return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30"><Clock className="w-3 h-3 mr-1" />Đang chờ xử lý</Badge>;
+    case 'DAHOAN':
+      return <Badge className="bg-green-500/20 text-green-400 border-green-500/30"><CheckCircle2 className="w-3 h-3 mr-1" />Đã hoàn tiền</Badge>;
+    case 'DAHUY':
+      return <Badge className="bg-red-500/20 text-red-400 border-red-500/30"><XCircle className="w-3 h-3 mr-1" />Đã từ chối</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+};
 
 export default function MyTicketsPage() {
   const [tickets, setTickets] = useState<any[]>([]);
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRefunds, setLoadingRefunds] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -27,6 +51,46 @@ export default function MyTicketsPage() {
     };
     fetchTickets();
   }, []);
+
+  useEffect(() => {
+    fetchRefundRequests();
+  }, []);
+
+  const fetchRefundRequests = async (cursor?: string, append: boolean = false) => {
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoadingRefunds(true);
+      }
+      
+      const response = await refundService.getMyRequests({ 
+        limit: 10,
+        cursor: cursor 
+      });
+      
+      if (append) {
+        setRefundRequests(prev => [...prev, ...response.data]);
+      } else {
+        setRefundRequests(response.data);
+      }
+      
+      setNextCursor(response.meta.nextCursor);
+      setHasNextPage(response.meta.hasNextPage);
+    } catch (error) {
+      console.error('Failed to fetch refund requests:', error);
+      toast.error('Không thể tải danh sách yêu cầu hoàn vé');
+    } finally {
+      setLoadingRefunds(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (nextCursor && hasNextPage && !loadingMore) {
+      fetchRefundRequests(nextCursor, true);
+    }
+  };
 
   const upcomingTickets = tickets.filter(t => t.status === 'upcoming');
   const historyTickets = tickets;
@@ -58,6 +122,12 @@ export default function MyTicketsPage() {
           >
             Lịch sử đặt vé
           </TabsTrigger>
+          <TabsTrigger 
+            value="refunds" 
+            className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400"
+          >
+            Yêu cầu hoàn vé ({refundRequests.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab Vé sắp chiếu */}
@@ -84,6 +154,98 @@ export default function MyTicketsPage() {
              <div className="flex flex-col items-center justify-center py-12 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
               <TicketX className="w-12 h-12 mb-4 opacity-50" />
               <p>Lịch sử đặt vé trống.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Tab Yêu cầu hoàn vé */}
+        <TabsContent value="refunds" className="space-y-4 animate-in fade-in-50 duration-300">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-zinc-400">Danh sách các yêu cầu hoàn vé của bạn</p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => fetchRefundRequests()}
+              disabled={loadingRefunds}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loadingRefunds ? 'animate-spin' : ''}`} />
+              Làm mới
+            </Button>
+          </div>
+
+          {loadingRefunds ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : refundRequests.length > 0 ? (
+            <>
+              {refundRequests.map(request => (
+                <Card key={request.MaYeuCau} className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-mono text-zinc-500">
+                            #{request.MaYeuCau.slice(0, 8)}
+                          </span>
+                          {getStatusBadge(request.TrangThai)}
+                        </div>
+                        <p className="text-sm text-zinc-300">
+                          <span className="text-zinc-500">Lý do:</span> {request.LyDoHoan || 'Không có lý do'}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-zinc-400">
+                          <span>
+                            Ngày tạo: {format(new Date(request.CreatedAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                          </span>
+                          {request.NganHang && (
+                            <span className="flex items-center gap-1">
+                              {request.NganHang.Logo && (
+                                <img src={request.NganHang.Logo} alt="" className="w-4 h-4" />
+                              )}
+                              {request.NganHang.Code}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-zinc-500">Số tiền hoàn</p>
+                        <p className="text-lg font-bold text-primary">
+                          {(request.SoTien || 0).toLocaleString('vi-VN')} ₫
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Load more button */}
+              {hasNextPage && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="border-zinc-700"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang tải...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Xem thêm
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
+              <RefreshCw className="w-12 h-12 mb-4 opacity-50" />
+              <p>Bạn chưa có yêu cầu hoàn vé nào.</p>
             </div>
           )}
         </TabsContent>

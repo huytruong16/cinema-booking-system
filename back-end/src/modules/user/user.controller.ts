@@ -182,4 +182,64 @@ export class UserController {
   async assignUserToGroup(@Body() dto: AssignUserToGroupDto) {
     return this.userService.assignUserToGroup(dto);
   }
+
+  @Patch(':id/lock')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
+  @ApiOperation({ summary: 'ADMIN khóa tài khoản người dùng' })
+  @ApiParam({
+    name: 'id',
+    description: 'Mã người dùng (MaNguoiDung)',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Khóa tài khoản thành công',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Người dùng không tồn tại',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Tham số id không hợp lệ',
+  })
+  async lockUser(@Param('id') id: string) {
+    if (!isUUID(id, '4')) {
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    }
+
+    return this.userService.lockAccount(id);
+  }
+
+  @Patch(':id/unlock')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN)
+  @ApiOperation({ summary: 'ADMIN mở khóa tài khoản người dùng' })
+  @ApiParam({
+    name: 'id',
+    description: 'Mã người dùng (MaNguoiDung)',
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Mở khóa tài khoản thành công',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Người dùng không tồn tại',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Tham số id không hợp lệ',
+  })
+  async unlockUser(@Param('id') id: string) {
+    if (!isUUID(id, '4')) {
+      throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
+    }
+
+    return this.userService.unlockAccount(id);
+  }
 }
