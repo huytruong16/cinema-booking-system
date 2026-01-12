@@ -24,21 +24,20 @@ import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
 import { RoleEnum } from 'src/libs/common/enums';
-import { Public } from 'src/libs/common/decorators/public.decorator';
 
 @ApiTags('Thống kê')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
 @Controller('statistics')
 export class StatisticsController {
   constructor(
     private readonly statisticsService: StatisticsService,
     private readonly statisticsExportService: StatisticsExportService,
     private readonly statisticsPdfService: StatisticsPdfService,
-  ) { }
+  ) {}
 
   @Get('room-status')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Lấy trạng thái tất cả phòng chiếu',
     description:
@@ -54,6 +53,9 @@ export class StatisticsController {
   }
 
   @Get('summary')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Tổng quan doanh thu vé / combo / tỉ lệ lấp đầy',
   })
@@ -74,6 +76,9 @@ export class StatisticsController {
   }
 
   @Get('revenue-chart')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Doanh thu vé / combo dạng biểu đồ cột theo ngày' })
   @ApiQuery({
     name: 'range',
@@ -92,6 +97,9 @@ export class StatisticsController {
   }
 
   @Get('top-movies')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Top phim ăn khách theo doanh thu' })
   @ApiQuery({
     name: 'limit',
@@ -113,7 +121,6 @@ export class StatisticsController {
   }
 
   @Get('top-movies-for-banner')
-  @Public()
   @ApiOperation({ summary: 'Top phim ăn khách dành cho banner' })
   @ApiQuery({
     name: 'limit',
@@ -133,6 +140,9 @@ export class StatisticsController {
   }
 
   @Get('top-staff')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Hiệu suất nhân viên' })
   @ApiQuery({
     name: 'range',
@@ -154,6 +164,9 @@ export class StatisticsController {
   }
 
   @Get('/export/room-status')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất Excel trạng thái phòng chiếu' })
   async exportRoomStatus(@Res() res: any) {
     const buffer = await this.statisticsExportService.exportRoomStatus();
@@ -171,6 +184,9 @@ export class StatisticsController {
   }
 
   @Get('/export/summary')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất Excel tổng quan doanh thu' })
   @ApiQuery({ name: 'date', required: false })
   @ApiQuery({
@@ -191,6 +207,9 @@ export class StatisticsController {
   }
 
   @Get('/export/revenue-chart')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất Excel doanh thu theo ngày' })
   @ApiQuery({
     name: 'range',
@@ -217,6 +236,9 @@ export class StatisticsController {
   }
 
   @Get('/export/top-movies')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất Excel top phim doanh thu cao' })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({
@@ -240,6 +262,9 @@ export class StatisticsController {
   }
 
   @Get('/export/top-staff')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất Excel hiệu suất nhân viên' })
   @ApiQuery({
     name: 'range',
@@ -260,6 +285,9 @@ export class StatisticsController {
   }
 
   @Get('/export/pdf/room-status')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất PDF trạng thái phòng chiếu' })
   async exportRoomStatusPdf(@Res() res: any) {
     const buffer = await this.statisticsPdfService.generateRoomStatusPdf();
@@ -274,6 +302,9 @@ export class StatisticsController {
   }
 
   @Get('/export/pdf/summary')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất PDF tổng quan doanh thu' })
   @ApiQuery({ name: 'date', required: false })
   @ApiQuery({
@@ -291,6 +322,9 @@ export class StatisticsController {
   }
 
   @Get('/export/pdf/revenue-chart')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất PDF doanh thu theo ngày' })
   @ApiQuery({
     name: 'range',
@@ -315,6 +349,9 @@ export class StatisticsController {
   }
 
   @Get('/export/pdf/top-movies')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất PDF top phim doanh thu cao' })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({
@@ -332,6 +369,9 @@ export class StatisticsController {
   }
 
   @Get('/export/pdf/top-staff')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xuất PDF hiệu suất nhân viên' })
   @ApiQuery({
     name: 'range',
