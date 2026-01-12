@@ -111,14 +111,12 @@ function BookingPageContent() {
 
   const formatCountdown = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
-  // Xử lý Click Ghế (Chọn/Bỏ chọn)
   const handleSeatClick = async (seat: SelectedSeat) => {
     if (processingSeatId) return;
 
     const isSelected = selectedSeats.some(s => s.id === seat.id);
 
     if (isSelected) {
-      // Bỏ chọn
       const newSeats = selectedSeats.filter(s => s.id !== seat.id);
       setSelectedSeats(newSeats);
       if (newSeats.length === 0) {
@@ -126,7 +124,6 @@ function BookingPageContent() {
         setTimeLeft(300);
       }
     } else {
-      // Chọn mới
       if (selectedSeats.length >= 8) {
         toast.warning("Bạn chỉ được chọn tối đa 8 ghế.");
         return;
@@ -137,18 +134,34 @@ function BookingPageContent() {
         return;
       }
 
+      setSelectedSeats(prev => [...prev, seat]);
+      if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
+
       setProcessingSeatId(seat.id);
+
       try {
         const isAvailable = await showtimeService.checkSeatAvailability(seat.uuid);
-        if (isAvailable) {
-          if (selectedSeats.length === 0 && !isTimerActive) setIsTimerActive(true);
-          setSelectedSeats(prev => [...prev, seat]);
-        } else {
+
+        if (!isAvailable) {
+          setSelectedSeats(prev => prev.filter(s => s.id !== seat.id));
           toast.error(`Ghế ${seat.id} đã có người chọn hoặc không còn trống.`);
+
+          const remainingSeats = selectedSeats.filter(s => s.id !== seat.id);
+          if (remainingSeats.length === 0) {
+            setIsTimerActive(false);
+            setTimeLeft(300);
+          }
         }
       } catch (error) {
         console.error("Lỗi kiểm tra ghế:", error);
-        toast.error("Có lỗi xảy ra khi kiểm tra ghế.");
+        setSelectedSeats(prev => prev.filter(s => s.id !== seat.id));
+        toast.error("Có lỗi xảy ra khi kiểm tra ghế. Vui lòng thử lại.");
+
+        const remainingSeats = selectedSeats.filter(s => s.id !== seat.id);
+        if (remainingSeats.length === 0) {
+          setIsTimerActive(false);
+          setTimeLeft(300);
+        }
       } finally {
         setProcessingSeatId(null);
       }
@@ -338,6 +351,7 @@ function BookingPageContent() {
             selectedSeats={selectedSeats}
             onSeatClick={handleSeatClick}
             seatTypes={seatTypes}
+            processingSeatId={processingSeatId}
           />
 
           <Card className="bg-card/50 border border-border text-white">
