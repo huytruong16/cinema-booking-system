@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
-import  NavBar  from "@/components/layout/NavBar";
+import NavBar from "@/components/layout/NavBar";
 import ConditionalFooter from "@/components/layout/ConditionalFooter";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Movix - Rạp chiếu phim hàng đầu UIT",
   description: "Movix- Rạp chiếu phim hàng đầu UIT",
+  icons: {
+    icon: "/images/logo_mini.png",
+    shortcut: "/images/logo_mini.png",
+    apple: "/images/logo_mini.png",
+  },
 };
 
 export default function RootLayout({
@@ -35,7 +40,7 @@ export default function RootLayout({
           <NavBar />
           {children}
           <Toaster />
-          <ConditionalFooter/>
+          <ConditionalFooter />
         </AuthProvider>
 
 

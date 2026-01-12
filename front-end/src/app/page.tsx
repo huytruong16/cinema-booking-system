@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { MovieCard } from "../components/movies/MovieCard"; 
+import { MovieCard } from "../components/movies/MovieCard";
 import { useRouter } from "next/navigation";
 import type { Movie } from "@/types/movie";
 import { filmService } from "@/services/film.service";
-import { Skeleton } from "@/components/ui/skeleton"; 
+import { Skeleton } from "@/components/ui/skeleton";
+import TopWeeklyHeroBanner from "@/components/home/TopWeeklyHeroBanner";
 
 export default function MoviesPage() {
   const router = useRouter();
@@ -46,12 +47,12 @@ export default function MoviesPage() {
     return (
       <main className="dark bg-background min-h-screen text-foreground px-6 py-10">
         <div className="max-w-7xl mx-auto space-y-10">
-            <Skeleton className="h-10 w-48 mb-6" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-[300px] rounded-xl" />
-                ))}
-            </div>
+          <Skeleton className="h-10 w-48 mb-6" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-[300px] rounded-xl" />
+            ))}
+          </div>
         </div>
       </main>
     );
@@ -59,7 +60,7 @@ export default function MoviesPage() {
 
   return (
     <main className="dark bg-background min-h-screen text-foreground">
-      
+      <TopWeeklyHeroBanner />
       {nowShowingMovies.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 py-10">
           <h1 className="text-4xl font-bold mb-6 text-white">Phim đang chiếu</h1>

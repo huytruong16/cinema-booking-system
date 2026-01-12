@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from "next/link";
+import Image from "next/image";
 import { Search, X, User, Ticket, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,12 +155,13 @@ const Navbar = () => {
         {/* Logo & Nav (Trái) */}
         <div className="flex items-center space-x-4 md:space-x-8">
           <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* (paths logo) */}
-              <path d="M6.34292 21.7071C5.56187 22.4882 4.29521 22.4882 3.51416 21.7071C2.73311 20.9261 2.73311 19.6594 3.51416 18.8784L12.0001 10.3924L20.4859 18.8784C21.267 19.6594 21.267 20.9261 20.4859 21.7071C19.7049 22.4882 18.4382 22.4882 17.6572 21.7071L12.0001 16.05L6.34292 21.7071Z" fill="#E50914" />
-              <path d="M3.51416 5.12164C4.29521 4.34059 5.56187 4.34059 6.34292 5.12164L12.0001 10.7788L17.6572 5.12164C18.4382 4.34059 19.7049 4.34059 20.4859 5.12164C21.267 5.90269 21.267 7.16935 20.4859 7.9504L12.0001 16.4363L3.51416 7.9504C2.73311 7.16935 2.73311 5.90269 3.51416 5.12164Z" fill="#E50914" />
-              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="#E50914" />
-            </svg>
+            <Image
+              src="/images/logo_mini.png"
+              alt="Movix Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
             <span className="text-xl md:text-2xl font-bold">Movix</span>
           </Link>
 
@@ -226,8 +228,8 @@ const Navbar = () => {
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
                 className={`block text-sm px-3 py-2 rounded-md ${isActive
-                    ? 'bg-red-600 text-white'
-                    : 'text-gray-300 hover:bg-[#2A2A2A]'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-300 hover:bg-[#2A2A2A]'
                   }`}
               >
                 {item.title}
