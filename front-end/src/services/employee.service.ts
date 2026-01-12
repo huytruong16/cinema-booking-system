@@ -3,7 +3,13 @@ import apiClient from "@/lib/apiClient";
 
 export const employeeService = {
   getAll: async () => {
-    const res = await apiClient.get("/employees");
+    const res = await apiClient.get("/employees", {
+      params: {
+        fromNgayVaoLam: '2000-01-01',
+        toNgayVaoLam: '2100-12-31',
+        limit: 100
+      }
+    });
     return res.data;
   },
   getById: async (id: string) => {
