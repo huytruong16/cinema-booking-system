@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Info, Ticket, Clock, Film } from "lucide-react";
+import { Info, Ticket, Clock, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Movie } from "@/types/movie";
 
@@ -113,7 +113,7 @@ export function MovieCard({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute left-1/2 top-0 z-50 w-[340px] h-[420px] -translate-x-1/2 -translate-y-[5%] overflow-hidden rounded-2xl bg-card text-card-foreground shadow-2xl"
+                        className="absolute left-1/2 top-0 z-50 w-[340px] h-[480px] -translate-x-1/2 -translate-y-[5%] overflow-hidden rounded-2xl bg-card text-card-foreground shadow-2xl"
                     >
                         {/* Ảnh */}
                         <div className="relative h-1/2 w-full bg-zinc-800">
@@ -150,10 +150,10 @@ export function MovieCard({
                                         <span
                                             key={`${tag}-${i}`}
                                             className={`px-2 py-0.5 rounded-md font-medium ${i % 3 === 0
-                                                    ? "bg-[var(--chart-3)]/20 text-[var(--chart-3)]"
-                                                    : i % 3 === 1
-                                                        ? "bg-[var(--chart-4)]/20 text-[var(--chart-4)]"
-                                                        : "bg-[var(--chart-5)]/20 text-[var(--chart-5)]"
+                                                ? "bg-[var(--chart-3)]/20 text-[var(--chart-3)]"
+                                                : i % 3 === 1
+                                                    ? "bg-[var(--chart-4)]/20 text-[var(--chart-4)]"
+                                                    : "bg-[var(--chart-5)]/20 text-[var(--chart-5)]"
                                                 }`}
                                         >
                                             {tag}
@@ -172,14 +172,6 @@ export function MovieCard({
                                     onClick={() => onBook?.(movie)}
                                 >
                                     <Ticket className="size-4 mr-1" /> Đặt vé ngay
-                                </Button>
-                                <Button
-                                    size="icon-sm"
-                                    variant="ghost"
-                                    onClick={() => onLike?.(movie)}
-                                    className="pointer-events-auto"
-                                >
-                                    <Heart className="size-4" />
                                 </Button>
                                 <Button
                                     size="icon-sm"
