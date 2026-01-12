@@ -29,7 +29,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Ngôn ngữ')
 @Controller('languages')
 export class LanguageController {
-  constructor(private readonly languageService: LanguageService) {}
+  constructor(private readonly languageService: LanguageService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các ngôn ngữ' })
@@ -52,7 +52,7 @@ export class LanguageController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo ngôn ngữ mới' })
   @ApiBody({ type: CreateLanguageDto })
   @ApiResponse({
@@ -66,7 +66,7 @@ export class LanguageController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật ngôn ngữ' })
   @ApiParam({
     name: 'id',
@@ -92,7 +92,7 @@ export class LanguageController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm ngôn ngữ' })
   @ApiParam({
     name: 'id',

@@ -28,10 +28,11 @@ import { FilterCustomerDto } from './dtos/filter-customer.dto';
 @Controller('customers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(private readonly customerService: CustomerService) { }
 
   @Get()
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
+
   @ApiOperation({
     summary: 'Lấy danh sách khách hàng (phân trang & filter)',
   })
@@ -71,7 +72,6 @@ export class CustomerController {
   //   if (!isUUID(id, '4')) {
   //     throw new BadRequestException('Tham số id phải là UUID v4 hợp lệ');
   //   }
-
   //   return this.customerService.removeCustomer(id);
   // }
 }

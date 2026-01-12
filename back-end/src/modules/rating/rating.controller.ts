@@ -29,7 +29,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiTags('Nhãn phim')
 @Controller('ratings')
 export class RatingController {
-  constructor(private readonly ratingService: RatingService) {}
+  constructor(private readonly ratingService: RatingService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các nhãn phim' })
@@ -52,7 +52,7 @@ export class RatingController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo nhãn phim mới' })
   @ApiBody({ type: CreateRatingDto })
   @ApiResponse({
@@ -66,7 +66,7 @@ export class RatingController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật nhãn phim (partial)' })
   @ApiParam({
     name: 'id',
@@ -92,7 +92,7 @@ export class RatingController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm nhãn phim' })
   @ApiParam({
     name: 'id',
