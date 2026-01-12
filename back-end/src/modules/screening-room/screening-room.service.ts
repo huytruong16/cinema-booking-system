@@ -312,17 +312,22 @@ export class ScreeningRoomService {
         throw new NotFoundException(`Phòng chiếu với ID ${id} không tồn tại`);
       }
 
-      const existShowtime = await tx.sUATCHIEU.findFirst({
+      const now = new Date();
+
+      const existActiveOrFutureShowtime = await tx.sUATCHIEU.findFirst({
         where: {
           MaPhongChieu: id,
           DeletedAt: null,
+          ThoiGianKetThuc: {
+            gte: now,
+          },
         },
         select: { MaSuatChieu: true },
       });
 
-      if (existShowtime) {
+      if (existActiveOrFutureShowtime) {
         throw new BadRequestException(
-          'Không thể xoá phòng chiếu vì vẫn còn suất chiếu',
+          'Không thể xoá phòng chiếu vì vẫn còn suất chiếu hiện tại hoặc tương lai',
         );
       }
 
