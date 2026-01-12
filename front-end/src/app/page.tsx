@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { MovieCard } from "../components/movies/MovieCard";
+import { MovieCarousel } from "../components/movies/MovieCarrosel";
 import { useRouter } from "next/navigation";
 import type { Movie } from "@/types/movie";
 import { filmService } from "@/services/film.service";
@@ -47,11 +47,24 @@ export default function MoviesPage() {
     return (
       <main className="dark bg-background min-h-screen text-foreground px-6 py-10">
         <div className="max-w-7xl mx-auto space-y-10">
-          <Skeleton className="h-10 w-48 mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-[300px] rounded-xl" />
-            ))}
+          <Skeleton className="h-[400px] w-full rounded-xl mb-8" />
+
+          <div>
+            <Skeleton className="h-10 w-48 mb-6" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-[300px] rounded-xl" />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Skeleton className="h-10 w-48 mb-6" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={`coming-${i}`} className="h-[300px] rounded-xl" />
+              ))}
+            </div>
           </div>
         </div>
       </main>
@@ -61,37 +74,30 @@ export default function MoviesPage() {
   return (
     <main className="dark bg-background min-h-screen text-foreground">
       <TopWeeklyHeroBanner />
+
       {nowShowingMovies.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-10">
-          <h1 className="text-4xl font-bold mb-6 text-white">Phim đang chiếu</h1>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-            {nowShowingMovies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={movie}
-                onBook={handleBook}
-                onLike={handleLike}
-                onDetail={handleDetail}
-              />
-            ))}
-          </div>
+        <section className="max-w-7xl mx-auto py-6">
+          <MovieCarousel
+            title="Phim đang chiếu"
+            movies={nowShowingMovies}
+            onCardBook={handleBook}
+            onCardLike={handleLike}
+            onCardDetail={handleDetail}
+            itemsPerPage={5}
+          />
         </section>
       )}
 
       {comingSoonMovies.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-10">
-          <h1 className="text-4xl font-bold mb-6 text-white">Phim sắp chiếu</h1>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-10">
-            {comingSoonMovies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={movie}
-                onBook={handleBook}
-                onLike={handleLike}
-                onDetail={handleDetail}
-              />
-            ))}
-          </div>
+        <section className="max-w-7xl mx-auto py-6">
+          <MovieCarousel
+            title="Phim sắp chiếu"
+            movies={comingSoonMovies}
+            onCardBook={handleBook}
+            onCardLike={handleLike}
+            onCardDetail={handleDetail}
+            itemsPerPage={5}
+          />
         </section>
       )}
 

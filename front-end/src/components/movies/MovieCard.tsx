@@ -51,16 +51,13 @@ export function MovieCard({
 
     return (
         <div
-            className="relative inline-block"
+            className={cn("relative block w-full", className)}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
             {/* Poster */}
             <div
-                className={cn(
-                    "relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-800 shadow-md transition-all hover:z-20 hover:shadow-lg",
-                    className
-                )}
+                className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-800 shadow-md transition-all hover:z-20 hover:shadow-lg"
             >
                 {posterUrl ? (
                     <Image

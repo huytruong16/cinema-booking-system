@@ -255,7 +255,7 @@ export const statisticsService = {
     return res.data;
   },
   getTopMoviesForBanner: async (limit: number = 5): Promise<TopMovieBanner[]> => {
-    const USE_MOCK_DATA = true;
+    const USE_MOCK_DATA = false;
 
     if (USE_MOCK_DATA) {
       const mockData: TopMovieBanner[] = [
