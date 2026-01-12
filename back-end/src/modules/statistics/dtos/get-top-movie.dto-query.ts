@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsISO8601, IsNumber, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum TopMovieRangeEnum {
   DAY = 'day',
@@ -13,6 +14,7 @@ export class GetTopMovieDto {
   @ApiPropertyOptional({ description: 'Số lượng phim' })
   @IsOptional()
   @IsNumber({}, { message: 'Số lượng phim phải là một số' })
+  @Type(() => Number)
   limit?: number = 5;
 
   @ApiPropertyOptional({

@@ -28,11 +28,10 @@ import { FilterCustomerDto } from './dtos/filter-customer.dto';
 @Controller('customers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) { }
+  constructor(private readonly customerService: CustomerService) {}
 
   @Get()
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
-
   @ApiOperation({
     summary: 'Lấy danh sách khách hàng (phân trang & filter)',
   })

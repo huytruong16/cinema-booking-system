@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomStatusDto } from './dtos/room-status.dto';
 import {
+  FilmStatusEnum,
   ScreeningRoomStatusEnum,
   SeatStatusEnum,
   StaffStatusEnum,
@@ -25,6 +26,7 @@ import {
   TopMovieRangeEnum,
 } from './dtos/get-top-movie.dto-query';
 import { TopMovieDto } from './dtos/top-movie.dto';
+import { TopMovieBannerDto } from './dtos/top-movie-banner.dto';
 import {
   GetTopStaffQueryDto,
   TopStaffRangeEnum,
@@ -457,6 +459,155 @@ export class StatisticsService {
       DoanhThu: r.revenue,
       SoVeDaBan: r.ticketsSold,
     }));
+  }
+
+  async getTopMoviesForBanner(
+    query: GetTopMovieDto,
+  ): Promise<TopMovieBannerDto[]> {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
+
+    let start: Date | undefined;
+    let end: Date | undefined;
+
+    switch (query.range) {
+      case TopMovieRangeEnum.DAY: {
+        start = new Date(y, m, d, 0, 0, 0, 0);
+        end = new Date(y, m, d + 1, 0, 0, 0, 0);
+        break;
+      }
+      case TopMovieRangeEnum.WEEK: {
+        const dayOfWeek = now.getDay();
+        const offsetToMonday = (dayOfWeek + 6) % 7;
+        const monday = new Date(y, m, d - offsetToMonday, 0, 0, 0, 0);
+        start = monday;
+        end = new Date(monday.getTime());
+        end.setDate(monday.getDate() + 7);
+        break;
+      }
+      case TopMovieRangeEnum.MONTH:
+        start = new Date(y, m, 1, 0, 0, 0, 0);
+        end = new Date(y, m + 1, 1, 0, 0, 0, 0);
+        break;
+      case TopMovieRangeEnum.YEAR:
+        start = new Date(y, 0, 1, 0, 0, 0, 0);
+        end = new Date(y + 1, 0, 1, 0, 0, 0, 0);
+        break;
+      case TopMovieRangeEnum.ALL:
+        start = undefined;
+        end = undefined;
+        break;
+    }
+
+    const whereClause: any = {
+      DeletedAt: null,
+      TrangThaiVe: { not: TicketStatusEnum.DAHOAN },
+      HoaDon: {},
+    };
+    if (start && end) {
+      whereClause.HoaDon.NgayLap = { gte: start, lt: end };
+    }
+
+    const tickets = await this.prisma.vE.findMany({
+      where: whereClause,
+      select: {
+        GiaVe: true,
+        GheSuatChieu: {
+          select: {
+            SuatChieu: {
+              select: {
+                PhienBanPhim: {
+                  select: {
+                    Phim: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const agg: Record<string, { revenue: number; ticketsSold: number }> = {};
+    for (const t of tickets) {
+      const pbp = t.GheSuatChieu?.SuatChieu?.PhienBanPhim;
+      const maPhim = pbp?.Phim?.MaPhim;
+      if (!maPhim) continue;
+
+      if (!agg[maPhim]) agg[maPhim] = { revenue: 0, ticketsSold: 0 };
+      agg[maPhim].revenue += Number(t.GiaVe || 0);
+      agg[maPhim].ticketsSold += 1;
+    }
+
+    const capped = Math.max(
+      1,
+      Math.min(
+        50,
+        Number.isFinite(Number(query.limit)) ? Number(query.limit) : 5,
+      ),
+    );
+
+    const ranked = Object.entries(agg)
+      .map(([id, v]) => ({
+        id,
+        revenue: v.revenue,
+        ticketsSold: v.ticketsSold,
+      }))
+      .sort((a, b) => b.ticketsSold - a.ticketsSold)
+      .slice(0, capped);
+
+    const movieIds = ranked.map((r) => r.id);
+    const movies = movieIds.length
+      ? await this.prisma.pHIM.findMany({
+          where: {
+            MaPhim: { in: movieIds },
+            DeletedAt: null,
+            TrangThaiPhim: FilmStatusEnum.DANGCHIEU,
+          },
+          include: {
+            NhanPhim: true,
+            PhimTheLoais: {
+              include: {
+                TheLoai: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    const movieMap: Record<string, any> = {};
+    for (const m of movies) movieMap[m.MaPhim] = m;
+
+    return ranked
+      .map((r, index) => {
+        const m = movieMap[r.id];
+        if (!m) return null;
+        return {
+          rank: index + 1,
+          movie: {
+            MaPhim: m.MaPhim,
+            TenHienThi: m.TenHienThi,
+            TenGoc: m.TenGoc,
+            PosterUrl: m.PosterUrl,
+            BackdropUrl: m.BackdropUrl,
+            TomTatNoiDung: m.TomTatNoiDung,
+            TrailerUrl: m.TrailerUrl,
+            ThoiLuong: m.ThoiLuong,
+            QuocGia: m.QuocGia,
+            DiemDanhGia: m.DiemDanhGia,
+            TrangThaiPhim: m.TrangThaiPhim,
+            NhanPhim: {
+              TenNhanPhim: m.NhanPhim?.TenNhanPhim || '',
+            },
+            TheLoais: m.PhimTheLoais.map((ptl) => ptl.TheLoai.TenTheLoai),
+          },
+          ticketsSold: r.ticketsSold,
+          revenue: r.revenue,
+        };
+      })
+      .filter((item) => item !== null) as TopMovieBannerDto[];
   }
 
   async getTopStaff(query: GetTopStaffQueryDto): Promise<TopStaffDto[]> {

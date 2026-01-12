@@ -29,7 +29,7 @@ import { RolesGuard } from 'src/libs/common/guards/role.guard';
 @ApiTags('Ngôn ngữ')
 @Controller('languages')
 export class LanguageController {
-  constructor(private readonly languageService: LanguageService) { }
+  constructor(private readonly languageService: LanguageService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các ngôn ngữ' })

@@ -18,6 +18,7 @@ import { GetRevenueChartQueryDto } from './dtos/get-revenue-chart-query.dto';
 import { GetTopMovieDto } from './dtos/get-top-movie.dto-query';
 import { TopMovieDto } from './dtos/top-movie.dto';
 import { GetTopStaffQueryDto } from './dtos/get-top-staff-query.dto';
+import { TopMovieBannerDto } from './dtos/top-movie-banner.dto';
 import { TopStaffDto } from './dtos/top-staff.dto';
 import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
@@ -108,6 +109,25 @@ export class StatisticsController {
   })
   async getTopMovies(@Query() query: GetTopMovieDto): Promise<TopMovieDto[]> {
     return this.statisticsService.getTopMovies(query);
+  }
+
+  @Get('top-movies-for-banner')
+  @ApiOperation({ summary: 'Top phim ăn khách dành cho banner' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Số lượng phim trả về (mặc định 5)',
+  })
+  @ApiQuery({
+    name: 'range',
+    required: false,
+    enum: ['day', 'week', 'month', 'year', 'all'],
+    description: 'Khoảng thời gian (mặc định day)',
+  })
+  async getTopMoviesForBanner(
+    @Query() query: GetTopMovieDto,
+  ): Promise<TopMovieBannerDto[]> {
+    return this.statisticsService.getTopMoviesForBanner(query);
   }
 
   @Get('top-staff')
