@@ -34,10 +34,10 @@ import { GetUsersInGroupDto } from './dtos/get-users-in-group.dto';
 @ApiTags('Nhóm người dùng')
 @Controller('user-groups')
 export class UserGroupController {
-  constructor(private readonly userGroupService: UserGroupService) {}
+  constructor(private readonly userGroupService: UserGroupService) { }
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN lấy danh sách nhóm người dùng' })
   async getAllGroups() {
@@ -46,7 +46,7 @@ export class UserGroupController {
 
   @Patch('permissions')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN cập nhật quyền cho nhóm người dùng' })
   @ApiBody({
@@ -59,7 +59,7 @@ export class UserGroupController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN lấy chi tiết nhóm người dùng' })
   @ApiParam({
@@ -76,7 +76,7 @@ export class UserGroupController {
 
   @Get(':id/users')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN lấy danh sách người dùng theo nhóm' })
   @ApiParam({
@@ -96,7 +96,7 @@ export class UserGroupController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN tạo nhóm người dùng' })
   @ApiBody({
@@ -111,7 +111,7 @@ export class UserGroupController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN cập nhật tên nhóm người dùng' })
   @ApiParam({
@@ -132,7 +132,7 @@ export class UserGroupController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN xóa nhóm người dùng (soft delete)' })
   @ApiParam({

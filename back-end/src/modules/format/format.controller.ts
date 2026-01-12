@@ -28,7 +28,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Định dạng')
 @Controller('formats')
 export class FormatController {
-  constructor(private readonly formatService: FormatService) {}
+  constructor(private readonly formatService: FormatService) { }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các định dạng phim' })
@@ -51,7 +51,7 @@ export class FormatController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Tạo thể loại mới' })
   @ApiBody({ type: CreateFormatDto })
   @ApiResponse({ status: 201, description: 'Tạo thể loại thành công.' })
@@ -62,7 +62,7 @@ export class FormatController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Cập nhật định dạng (partial)' })
   @ApiParam({
     name: 'id',
@@ -81,7 +81,7 @@ export class FormatController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Xóa mềm định dạng' })
   @ApiParam({ name: 'id', description: 'Mã định dạng cần xóa', required: true })
   @ApiResponse({ status: 200, description: 'Xóa định dạng thành công.' })

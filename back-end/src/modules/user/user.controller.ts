@@ -34,12 +34,12 @@ import { AssignUserToGroupDto } from './dtos/assign-user-to-group.dto';
 @ApiTags('Người dùng')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Get()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Lấy danh sách tất cả người dùng (NguoiDungPhanMem)',
   })
@@ -58,7 +58,7 @@ export class UserController {
   @Get(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Lấy chi tiết người dùng theo mã' })
   @ApiParam({ name: 'id', description: 'Mã người dùng', required: true })
   async getUserById(@Param('id') id: string) {
@@ -136,7 +136,7 @@ export class UserController {
 
   @Post('assign-employee')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'ADMIN tạo tài khoản nhân viên mới' })
   @ApiBody({
