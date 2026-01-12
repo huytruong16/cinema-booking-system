@@ -29,7 +29,7 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiTags('Nhãn phim')
 @Controller('ratings')
 export class RatingController {
-  constructor(private readonly ratingService: RatingService) { }
+  constructor(private readonly ratingService: RatingService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các nhãn phim' })

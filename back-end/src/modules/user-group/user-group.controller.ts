@@ -34,7 +34,7 @@ import { GetUsersInGroupDto } from './dtos/get-users-in-group.dto';
 @ApiTags('Nhóm người dùng')
 @Controller('user-groups')
 export class UserGroupController {
-  constructor(private readonly userGroupService: UserGroupService) { }
+  constructor(private readonly userGroupService: UserGroupService) {}
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)

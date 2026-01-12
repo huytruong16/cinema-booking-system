@@ -28,7 +28,7 @@ import { Roles } from 'src/libs/common/decorators/role.decorator';
 @ApiTags('Định dạng')
 @Controller('formats')
 export class FormatController {
-  constructor(private readonly formatService: FormatService) { }
+  constructor(private readonly formatService: FormatService) {}
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách các định dạng phim' })
