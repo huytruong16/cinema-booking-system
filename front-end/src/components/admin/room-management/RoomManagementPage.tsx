@@ -1126,6 +1126,7 @@ function SeatTypeManagerDialog({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
 
   const resetForm = () => {
     setEditingId(null);
@@ -1161,16 +1162,22 @@ function SeatTypeManagerDialog({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (deletingId) return;
-    if (!confirm("Xóa loại ghế này?")) return;
+  const initiateDelete = (id: string) => {
+    setDeleteConfirmationId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmationId || deletingId) return;
+    const id = deleteConfirmationId;
     setDeletingId(id);
     try {
       await seatTypeService.delete(id);
       refreshData();
       toast.success("Đã xóa.");
+      setDeleteConfirmationId(null);
     } catch {
       toast.error("Không thể xóa (đang được sử dụng).");
+      setDeleteConfirmationId(null);
     } finally {
       setDeletingId(null);
     }
@@ -1234,14 +1241,9 @@ function SeatTypeManagerDialog({
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                          onClick={() => handleDelete(t.MaLoaiGhe)}
-                          disabled={!!deletingId}
+                          onClick={() => initiateDelete(t.MaLoaiGhe)}
                         >
-                          {deletingId === t.MaLoaiGhe ? (
-                            <Loader2 className="animate-spin size-4" />
-                          ) : (
-                            <Trash2 className="size-4" />
-                          )}
+                           <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -1332,6 +1334,35 @@ function SeatTypeManagerDialog({
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteConfirmationId} onOpenChange={(open) => !open && setDeleteConfirmationId(null)}>
+          <AlertDialogContent className="bg-[#1C1C1C] border-slate-800 text-white z-[9999]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa loại ghế?</AlertDialogTitle>
+              <AlertDialogDescription className="text-slate-400">
+                Bạn có chắc chắn muốn xóa loại ghế này? Hành động này không thể hoàn tác nếu tên loại ghế đã được sử dụng.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={!!deletingId} className="bg-transparent border-slate-700 text-white hover:bg-slate-800">
+                Hủy
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleConfirmDelete();
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={!!deletingId}
+              >
+                {deletingId ? <Loader2 className="animate-spin size-4 mr-2" /> : null}
+                Xóa ngay
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </DialogContent>
     </Dialog>
   );
