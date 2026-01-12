@@ -24,6 +24,7 @@ import { JwtAuthGuard } from 'src/libs/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/libs/common/guards/role.guard';
 import { Roles } from 'src/libs/common/decorators/role.decorator';
 import { RoleEnum } from 'src/libs/common/enums';
+import { Public } from 'src/libs/common/decorators/public.decorator';
 
 @ApiTags('Thống kê')
 @ApiBearerAuth()
@@ -35,7 +36,7 @@ export class StatisticsController {
     private readonly statisticsService: StatisticsService,
     private readonly statisticsExportService: StatisticsExportService,
     private readonly statisticsPdfService: StatisticsPdfService,
-  ) {}
+  ) { }
 
   @Get('room-status')
   @ApiOperation({
@@ -112,6 +113,7 @@ export class StatisticsController {
   }
 
   @Get('top-movies-for-banner')
+  @Public()
   @ApiOperation({ summary: 'Top phim ăn khách dành cho banner' })
   @ApiQuery({
     name: 'limit',
