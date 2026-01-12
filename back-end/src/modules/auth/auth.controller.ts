@@ -59,8 +59,6 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Làm mới access token' })
   @ApiOkResponse({
     description: 'Access token mới được cấp thành công.',
