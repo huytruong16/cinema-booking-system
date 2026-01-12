@@ -102,7 +102,7 @@ api.interceptors.request.use(
             try {
                 const decoded: DecodedToken = jwtDecode(token);
                 const currentTime = Date.now() / 1000;
-                const timeBuffer = 8 * 60;
+                const timeBuffer = 3 * 60;
 
                 if (decoded.exp < (currentTime + timeBuffer)) {
                     if (!isRefreshing) {
