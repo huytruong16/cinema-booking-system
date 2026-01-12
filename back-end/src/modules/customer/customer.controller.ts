@@ -31,7 +31,7 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Get()
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({
     summary: 'Lấy danh sách khách hàng (phân trang & filter)',
   })
@@ -50,7 +50,7 @@ export class CustomerController {
   }
 
   @Get(':id')
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.NHANVIEN)
   @ApiOperation({ summary: 'Lấy chi tiết khách hàng theo mã' })
   @ApiParam({ name: 'id', description: 'Mã khách hàng', required: true })
   @ApiResponse({ status: 200, description: 'Chi tiết khách hàng' })
