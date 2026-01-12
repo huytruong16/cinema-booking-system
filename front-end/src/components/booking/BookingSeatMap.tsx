@@ -3,21 +3,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Armchair, X } from 'lucide-react';
+import { Armchair, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 
 import { SeatType } from '@/types/showtime';
 
 export interface SelectedSeat {
-  id: string; // VD: A01, G01
-  uuid?: string; 
+  id: string;
+  uuid?: string;
   type: string;
   price: number;
 }
 
 export interface SeatRenderMeta {
-  uuid?: string; 
+  uuid?: string;
   type: string;
   price: number;
   status?: string;
@@ -32,6 +32,7 @@ interface BookingSeatMapProps {
   selectedSeats: SelectedSeat[];
   onSeatClick: (seat: SelectedSeat) => void;
   seatTypes: SeatType[];
+  processingSeatId?: string | null;
 }
 
 export default function BookingSeatMap({
@@ -41,7 +42,8 @@ export default function BookingSeatMap({
   basePrice,
   selectedSeats,
   onSeatClick,
-  seatTypes = []
+  seatTypes = [],
+  processingSeatId
 }: BookingSeatMapProps) {
 
   const rows = Object.keys(seatMap).sort();
@@ -56,12 +58,10 @@ export default function BookingSeatMap({
   };
 
   const getSeatColor = (type: string) => {
-    // Normalize type string for comparison
     const normalizedType = type.toLowerCase();
 
     if (normalizedType.includes('vip')) return "bg-yellow-900/20 border-yellow-700/50 hover:bg-yellow-900/40 text-yellow-500";
     if (normalizedType.includes('doi') || normalizedType.includes('đôi')) return "bg-purple-900/20 border-purple-700/50 hover:bg-purple-900/40 text-purple-400";
-    // Default or 'thuong'
     return "bg-slate-800 border-slate-700 hover:bg-slate-700 hover:border-slate-600 text-slate-300";
   };
 
@@ -80,8 +80,8 @@ export default function BookingSeatMap({
           {seatTypes.length > 0 ? (
             seatTypes.map(st => (
               <div key={st.MaLoaiGhe} className="flex items-center gap-1.5">
-                <Armchair 
-                  className={cn("size-4", !st.MauSac && getSeatIconColor(st.LoaiGhe))} 
+                <Armchair
+                  className={cn("size-4", !st.MauSac && getSeatIconColor(st.LoaiGhe))}
                   style={st.MauSac ? { color: st.MauSac } : undefined}
                 /> {st.LoaiGhe}
               </div>
@@ -127,17 +127,17 @@ export default function BookingSeatMap({
                     let price = meta?.price ?? basePrice;
 
                     if (!meta) {
-                      // Nếu không có API data, tạm thời fallback về thường (hoặc có thể disable ghế này)
-                      // Nhưng không hardcode VIP theo hàng D, E, F nữa
                     }
 
                     const isBooked = meta?.status ? meta.status !== 'CONTRONG' : bookedSeats.includes(seatId);
                     const isSelected = selectedSeats.some(s => s.id === seatId);
+                    const isProcessing = processingSeatId === seatId;
+                    const isAnyProcessing = !!processingSeatId;
 
-                    const customStyle = (!isSelected && !isBooked && meta?.color) ? {
-                        borderColor: meta.color,
-                        color: meta.color,
-                        backgroundColor: `${meta.color}33`
+                    const customStyle = (!isSelected && !isBooked && !isProcessing && meta?.color) ? {
+                      borderColor: meta.color,
+                      color: meta.color,
+                      backgroundColor: `${meta.color}33`
                     } : {};
 
                     return (
@@ -146,23 +146,32 @@ export default function BookingSeatMap({
                         variant="outline"
                         style={customStyle}
                         className={cn(
-                          "p-0 text-xs flex-shrink-0 transition-all duration-200",
+                          "p-0 text-xs flex-shrink-0 transition-all duration-200 relative",
                           isDouble ? "w-[4.5rem] h-8 rounded-lg" : "size-8 rounded-md",
-                          
-                          // Use default classes only if no custom color is provided
+
                           !meta?.color && getSeatColor(type),
-                          
-                          // If custom color is provided, add generic hover effect
-                          meta?.color && !isSelected && !isBooked && "hover:brightness-125",
+
+                          meta?.color && !isSelected && !isBooked && !isProcessing && "hover:brightness-125",
 
                           isSelected && "bg-primary border-primary text-primary-foreground hover:bg-primary/80 ring-2 ring-offset-2 ring-offset-background ring-primary",
-                          isBooked && "bg-slate-800/50 border-transparent text-slate-600 cursor-not-allowed hover:bg-slate-800/50"
+
+                          isBooked && "bg-slate-800/50 border-transparent text-slate-600 cursor-not-allowed hover:bg-slate-800/50",
+
+                          isProcessing && "bg-primary/50 border-primary animate-pulse cursor-wait",
+
+                          isAnyProcessing && !isProcessing && !isSelected && "opacity-50 cursor-not-allowed"
                         )}
                         onClick={() => handleInternalSeatClick(seatId, type, price, meta?.uuid)}
-                        disabled={isBooked}
-                        title={`${seatId} - ${price.toLocaleString()}đ`}
+                        disabled={isBooked || isAnyProcessing}
+                        title={isProcessing ? "Đang xử lý..." : `${seatId} - ${price.toLocaleString()}đ`}
                       >
-                        {isBooked ? <X className="size-4" /> : seatNum}
+                        {isProcessing ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : isBooked ? (
+                          <X className="size-4" />
+                        ) : (
+                          seatNum
+                        )}
                       </Button>
                     );
                   })}

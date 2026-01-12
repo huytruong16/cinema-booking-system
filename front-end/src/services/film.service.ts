@@ -17,9 +17,9 @@ export interface BackendFilm {
   NgayBatDauChieu: string;
   NgayKetThucChieu: string;
   DiemDanhGia: number;
-  TrangThaiPhim: string; 
+  TrangThaiPhim: string;
   MaNhanPhim: string;
-  NhanPhim?: { 
+  NhanPhim?: {
     TenNhanPhim: string;
     MoTa?: string;
   };
@@ -38,30 +38,30 @@ export interface BackendFilm {
 }
 
 export interface CreateFilmDto {
-    TenGoc: string;
-    TenHienThi: string;
-    TomTatNoiDung: string;
-    DaoDien: string;
-    DanhSachDienVien: string;
-    QuocGia: string;
-    TrailerUrl: string;
-    ThoiLuong: number;
-    NgayBatDauChieu: string;
-    NgayKetThucChieu: string;
-    MaNhanPhim: string;
-    TheLoais: string[]; 
-    posterFile?: File | null;
-    backdropFile?: File | null;
+  TenGoc: string;
+  TenHienThi: string;
+  TomTatNoiDung: string;
+  DaoDien: string;
+  DanhSachDienVien: string;
+  QuocGia: string;
+  TrailerUrl: string;
+  ThoiLuong: number;
+  NgayBatDauChieu: string;
+  NgayKetThucChieu: string;
+  MaNhanPhim: string;
+  TheLoais: string[];
+  posterFile?: File | null;
+  backdropFile?: File | null;
 }
 
 export interface Genre {
-    MaTheLoai: string;
-    TenTheLoai: string;
+  MaTheLoai: string;
+  TenTheLoai: string;
 }
 
 export interface Label {
-    MaNhanPhim: string;
-    TenNhanPhim: string;
+  MaNhanPhim: string;
+  TenNhanPhim: string;
 }
 
 const mapToFrontendMovie = (film: BackendFilm): Movie => {
@@ -70,8 +70,8 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
   else if (film.TrangThaiPhim === "SAPCHIEU") status = "coming_soon";
   else if (film.TrangThaiPhim === "NGUNGCHIEU") status = "ended";
 
-  const price = film.PhienBanPhims && film.PhienBanPhims.length > 0 
-    ? parseInt(film.PhienBanPhims[0].GiaVe) 
+  const price = film.PhienBanPhims && film.PhienBanPhims.length > 0
+    ? parseInt(film.PhienBanPhims[0].GiaVe)
     : 0;
 
   const tags = Array.from(new Set(film.PhimTheLoais?.map((item) => item.TheLoai.TenTheLoai) || []));
@@ -86,23 +86,51 @@ const mapToFrontendMovie = (film: BackendFilm): Movie => {
     trailerUrl: film.TrailerUrl,
     year: new Date(film.NgayBatDauChieu).getFullYear(),
     status: status,
-    ageRating: "T18", 
+    ageRating: "T18",
     duration: `${film.ThoiLuong} phút`,
     actorList: film.DanhSachDienVien,
     country: film.QuocGia,
     rating: film.DiemDanhGia,
     price: price,
-    tags: tags, 
+    tags: tags,
     views: 0,
     startDate: new Date(film.NgayBatDauChieu),
     endDate: new Date(film.NgayKetThucChieu),
   };
 };
 
+export interface FilmFilterParams {
+  MaTheLoai?: string;
+  MaDinhDang?: string;
+  MaNhanPhim?: string;
+  MaNgonNgu?: string;
+  search?: string;
+}
+
 export const filmService = {
   getAllFilms: async (): Promise<Movie[]> => {
     try {
       const response = await api.get<any>('/films');
+      const films = Array.isArray(response.data) ? response.data : response.data.data || [];
+      return films.map(mapToFrontendMovie);
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách phim:", error);
+      return [];
+    }
+  },
+
+  getFilmsWithFilter: async (params?: FilmFilterParams): Promise<Movie[]> => {
+    try {
+      const cleanParams: Record<string, string> = {};
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value && value !== 'all') {
+            cleanParams[key] = value;
+          }
+        });
+      }
+
+      const response = await api.get<any>('/films', { params: cleanParams });
       const films = Array.isArray(response.data) ? response.data : response.data.data || [];
       return films.map(mapToFrontendMovie);
     } catch (error) {
@@ -122,108 +150,108 @@ export const filmService = {
   },
 
   getAll: async (): Promise<BackendFilm[]> => {
-      const res = await api.get<BackendFilm[]>('/films');
-      return res.data;
+    const res = await api.get<BackendFilm[]>('/films');
+    return res.data;
   },
 
   create: async (data: CreateFilmDto) => {
-      const formData = new FormData();
+    const formData = new FormData();
 
-      const append = (key: string, value: any) => {
-          if (value !== undefined && value !== null && value !== '') {
-              formData.append(key, value);
-          }
-      };
-
-      append('TenGoc', data.TenGoc);
-      append('TenHienThi', data.TenHienThi);
-      append('TomTatNoiDung', data.TomTatNoiDung);
-      append('DaoDien', data.DaoDien);
-      append('DanhSachDienVien', data.DanhSachDienVien);
-      append('QuocGia', data.QuocGia);
-      append('TrailerUrl', data.TrailerUrl);
-      append('ThoiLuong', data.ThoiLuong?.toString());
-      append('MaNhanPhim', data.MaNhanPhim);
-
-      if (data.NgayBatDauChieu) append('NgayBatDauChieu', new Date(data.NgayBatDauChieu).toISOString());
-      if (data.NgayKetThucChieu) append('NgayKetThucChieu', new Date(data.NgayKetThucChieu).toISOString());
-      
-      if (data.TheLoais && Array.isArray(data.TheLoais)) {
-          formData.append('TheLoais', JSON.stringify(data.TheLoais));
-      } else {
-          formData.append('TheLoais', JSON.stringify([]));
+    const append = (key: string, value: any) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, value);
       }
+    };
 
-      if (data.posterFile instanceof File) formData.append('posterFile', data.posterFile);
-      if (data.backdropFile instanceof File) formData.append('backdropFile', data.backdropFile);
+    append('TenGoc', data.TenGoc);
+    append('TenHienThi', data.TenHienThi);
+    append('TomTatNoiDung', data.TomTatNoiDung);
+    append('DaoDien', data.DaoDien);
+    append('DanhSachDienVien', data.DanhSachDienVien);
+    append('QuocGia', data.QuocGia);
+    append('TrailerUrl', data.TrailerUrl);
+    append('ThoiLuong', data.ThoiLuong?.toString());
+    append('MaNhanPhim', data.MaNhanPhim);
 
-      const res = await api.post('/films', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return res.data;
+    if (data.NgayBatDauChieu) append('NgayBatDauChieu', new Date(data.NgayBatDauChieu).toISOString());
+    if (data.NgayKetThucChieu) append('NgayKetThucChieu', new Date(data.NgayKetThucChieu).toISOString());
+
+    if (data.TheLoais && Array.isArray(data.TheLoais)) {
+      formData.append('TheLoais', JSON.stringify(data.TheLoais));
+    } else {
+      formData.append('TheLoais', JSON.stringify([]));
+    }
+
+    if (data.posterFile instanceof File) formData.append('posterFile', data.posterFile);
+    if (data.backdropFile instanceof File) formData.append('backdropFile', data.backdropFile);
+
+    const res = await api.post('/films', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
   },
 
   update: async (id: string, data: Partial<CreateFilmDto>) => {
     const formData = new FormData();
 
     const append = (key: string, value: any) => {
-        if (value !== undefined && value !== null) {
-            formData.append(key, value);
-        }
+      if (value !== undefined && value !== null) {
+        formData.append(key, value);
+      }
     };
 
     if (data.TenGoc) append('TenGoc', data.TenGoc);
     if (data.TenHienThi) append('TenHienThi', data.TenHienThi);
-    
+
     if (data.TomTatNoiDung !== undefined) formData.append('TomTatNoiDung', data.TomTatNoiDung || '');
     if (data.DaoDien !== undefined) formData.append('DaoDien', data.DaoDien || '');
     if (data.DanhSachDienVien !== undefined) formData.append('DanhSachDienVien', data.DanhSachDienVien || '');
     if (data.QuocGia !== undefined) formData.append('QuocGia', data.QuocGia || '');
     if (data.TrailerUrl !== undefined) formData.append('TrailerUrl', data.TrailerUrl || '');
-    
+
     if (data.ThoiLuong !== undefined && data.ThoiLuong !== null) append('ThoiLuong', data.ThoiLuong.toString());
     if (data.MaNhanPhim) append('MaNhanPhim', data.MaNhanPhim);
 
     if (data.NgayBatDauChieu) {
-        const dateVal = typeof data.NgayBatDauChieu === 'string' ? new Date(data.NgayBatDauChieu) : data.NgayBatDauChieu;
-        formData.append('NgayBatDauChieu', dateVal.toISOString());
+      const dateVal = typeof data.NgayBatDauChieu === 'string' ? new Date(data.NgayBatDauChieu) : data.NgayBatDauChieu;
+      formData.append('NgayBatDauChieu', dateVal.toISOString());
     }
     if (data.NgayKetThucChieu) {
-        const dateVal = typeof data.NgayKetThucChieu === 'string' ? new Date(data.NgayKetThucChieu) : data.NgayKetThucChieu;
-        formData.append('NgayKetThucChieu', dateVal.toISOString());
+      const dateVal = typeof data.NgayKetThucChieu === 'string' ? new Date(data.NgayKetThucChieu) : data.NgayKetThucChieu;
+      formData.append('NgayKetThucChieu', dateVal.toISOString());
     }
-    
+
     if (data.TheLoais && Array.isArray(data.TheLoais)) {
-        data.TheLoais.forEach((tl: string) => {
-            formData.append('TheLoais', tl); 
-        });
+      data.TheLoais.forEach((tl: string) => {
+        formData.append('TheLoais', tl);
+      });
     }
 
     if (data.posterFile instanceof File) {
-        formData.append('posterFile', data.posterFile);
+      formData.append('posterFile', data.posterFile);
     }
     if (data.backdropFile instanceof File) {
-        formData.append('backdropFile', data.backdropFile);
+      formData.append('backdropFile', data.backdropFile);
     }
 
     const res = await api.patch(`/films/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
-},
+  },
 
   delete: async (id: string) => {
-      const res = await api.delete(`/films/${id}`);
-      return res.data;
+    const res = await api.delete(`/films/${id}`);
+    return res.data;
   },
 
   getAllGenres: async () => {
-      const res = await api.get<Genre[]>('/genres'); 
-      return res.data;
+    const res = await api.get<Genre[]>('/genres');
+    return res.data;
   },
-  
+
   getAllLabels: async () => {
-      const res = await api.get<Label[]>('/ratings'); 
-      return res.data;
+    const res = await api.get<Label[]>('/ratings');
+    return res.data;
   }
 };
