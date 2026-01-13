@@ -421,9 +421,14 @@ export default function ShowtimeManagementPage() {
       await showtimeService.cancel(maSuatChieu, reason);
       toast.success("Hủy suất chiếu thành công. Hệ thống đã tạo yêu cầu hoàn vé cho khách hàng.");
       fetchShowtimes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi hủy suất chiếu:", error);
-      toast.error("Hủy suất chiếu thất bại");
+      const message = error?.response?.data?.message;
+      if (message === "Không thể hủy suất chiếu đang diễn ra") {
+        toast.error(message);
+      } else {
+        toast.error("Hủy suất chiếu thất bại");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -734,7 +739,7 @@ function ShowtimeDetailPanel({
             />
             <InfoRow label="Thời lượng" value={`${showtime.ThoiLuong} phút`} />
 
-            {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && hasPermission("QLLICHCHIEU") && (
+            {showtime.TrangThai !== "DAHUY" && showtime.TrangThai !== "DACHIEU" && showtime.TrangThai !== "DANGCHIEU" && hasPermission("QLLICHCHIEU") && (
               <div className="space-y-2 mt-4">
                 <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                   <AlertDialogTrigger asChild>
