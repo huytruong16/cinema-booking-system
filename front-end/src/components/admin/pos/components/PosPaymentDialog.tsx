@@ -6,25 +6,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Loader2 } from 'lucide-react';
 
 interface PosPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   paymentUrl: string | null;
-  iframeRef: React.RefObject<HTMLIFrameElement | null>;
-  checkIframeUrl: () => void;
 }
 
 export function PosPaymentDialog({
   open,
   onOpenChange,
   paymentUrl,
-  iframeRef,
-  checkIframeUrl
 }: PosPaymentDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Thanh toán đơn hàng</DialogTitle>
           <DialogDescription>
@@ -33,15 +30,19 @@ export function PosPaymentDialog({
         </DialogHeader>
         <div className="flex flex-col items-center justify-center space-y-4 py-4">
           {paymentUrl && (
-            <div className="w-full aspect-square relative border rounded-md overflow-hidden">
-              <iframe 
-                ref={iframeRef}
-                src={paymentUrl} 
-                className="w-full h-full" 
-                title="Payment Frame"
-                onLoad={checkIframeUrl}
-              />
-            </div>
+            <>
+              <div className="w-full aspect-square relative border rounded-md overflow-hidden">
+                <iframe 
+                  src={paymentUrl} 
+                  className="w-full h-full" 
+                  title="Payment Frame"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Đang chờ xác nhận thanh toán...</span>
+              </div>
+            </>
           )}
         </div>
       </DialogContent>

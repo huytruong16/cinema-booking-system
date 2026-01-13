@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw } from 'lucide-react'; 
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { RefreshCcw, Printer } from 'lucide-react'; 
 import { toast } from "sonner";
 import { format } from 'date-fns';
 
@@ -12,6 +13,7 @@ import { filmService } from '@/services/film.service';
 import { showtimeService } from '@/services/showtime.service';
 import { comboService, Combo } from '@/services/combo.service';
 import { invoiceService } from '@/services/invoice.service';
+import { transactionService } from '@/services/transaction.service';
 import { Movie } from '@/types/movie';
 import { Showtime, SeatType } from '@/types/showtime';
 import { SelectedSeat, SeatRenderMeta } from '@/components/booking/BookingSeatMap';
@@ -43,6 +45,7 @@ export default function PosPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingShowtimeId, setLoadingShowtimeId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const [customerEmail, setCustomerEmail] = useState("guest@cinema.com");
   const [paymentMethod, setPaymentMethod] = useState<"TRUCTIEP" | "TRUCTUYEN">("TRUCTIEP");
@@ -51,9 +54,18 @@ export default function PosPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const pendingInvoiceCodeRef = useRef<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { hasPermission } = useAuth();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -178,7 +190,7 @@ export default function PosPage() {
   const handlePaymentSuccess = async (code: string) => {
       setShowPaymentDialog(false);
       pendingInvoiceCodeRef.current = null;
-      toast.success("Thanh toán thành công! Đang in vé...");
+      setIsPrinting(true);
       
       const printDoc = async (fetcher: (code: string) => Promise<any>, name: string) => {
         try {
@@ -208,6 +220,9 @@ export default function PosPage() {
 
       await Promise.all(printTasks);
 
+      setIsPrinting(false);
+      toast.success("Thanh toán thành công! Đã in vé.");
+
       setSelectedSeats([]);
       setComboQuantities({});
       setSelectedShowtime(null); 
@@ -216,23 +231,40 @@ export default function PosPage() {
       }
   };
 
-  const checkIframeUrl = () => {
+  const stopPaymentPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  };
+
+  const startPaymentPolling = (transactionIdToCheck: string, invoiceCode: string) => {
+    stopPaymentPolling();
+    
+    pollingIntervalRef.current = setInterval(async () => {
       try {
-          if (iframeRef.current && iframeRef.current.contentWindow) {
-              const href = iframeRef.current.contentWindow.location.href;
-              if (href.includes('/success') && href.includes('status=PAID')) {
-                  const url = new URL(href);
-                  const orderCode = url.searchParams.get('orderCode');
-                  
-                  if (pendingInvoiceCodeRef.current) {
-                      handlePaymentSuccess(pendingInvoiceCodeRef.current);
-                  } else if (orderCode) {
-                      handlePaymentSuccess(orderCode);
-                  }
-              }
-          }
+        const transaction = await transactionService.getById(transactionIdToCheck);
+        if (transaction.TrangThai === 'THANHCONG') {
+          stopPaymentPolling();
+          handlePaymentSuccess(invoiceCode);
+        } else if (transaction.TrangThai === 'THATBAI' || transaction.TrangThai === 'HUY') {
+          stopPaymentPolling();
+          setShowPaymentDialog(false);
+          toast.error('Thanh toán thất bại hoặc đã bị hủy');
+        }
       } catch (error) {
+        console.error('Polling error:', error);
       }
+    }, 3000); 
+  };
+
+  const handleCancelPayment = () => {
+    stopPaymentPolling();
+    setShowPaymentDialog(false);
+    setPaymentUrl(null);
+    setTransactionId(null);
+    pendingInvoiceCodeRef.current = null;
+    toast.info('Đã hủy thanh toán');
   };
 
   const handleCheckout = async () => {
@@ -264,6 +296,7 @@ export default function PosPage() {
           setPaymentUrl(res.GiaoDichUrl);
           setTransactionId(res.MaGiaoDich);
           setShowPaymentDialog(true);
+          startPaymentPolling(res.MaGiaoDich, res.CodeHoaDon);
           toast.success("Đơn hàng đã được tạo. Vui lòng thanh toán.");
       } else {
           if (res && res.CodeHoaDon) {
@@ -411,11 +444,32 @@ export default function PosPage() {
 
       <PosPaymentDialog 
           open={showPaymentDialog} 
-          onOpenChange={setShowPaymentDialog} 
+          onOpenChange={(open) => {
+            if (!open) handleCancelPayment();
+            else setShowPaymentDialog(open);
+          }} 
           paymentUrl={paymentUrl} 
-          iframeRef={iframeRef} 
-          checkIframeUrl={checkIframeUrl} 
       />
+
+      {/* Printing Dialog */}
+      <Dialog open={isPrinting}>
+        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="relative">
+              <Printer className="h-16 w-16 text-primary animate-pulse" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold">Đang in vé...</h3>
+              <p className="text-sm text-muted-foreground">Vui lòng chờ trong giây lát</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+              <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+              <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
