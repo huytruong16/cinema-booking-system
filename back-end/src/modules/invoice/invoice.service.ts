@@ -38,7 +38,7 @@ export class InvoiceService {
     private readonly pdfService: PdfService,
     private readonly mailService: MailService,
     @Inject(REQUEST) private readonly request: any,
-  ) {}
+  ) { }
 
   async getAllInvoices(
     userId: string,
@@ -50,35 +50,35 @@ export class InvoiceService {
         where: {
           ...(filters?.search
             ? {
-                OR: [
-                  { Email: { contains: filters.search } },
-                  { Code: { contains: filters.search } },
-                ],
-              }
+              OR: [
+                { Email: { contains: filters.search } },
+                { Code: { contains: filters.search } },
+              ],
+            }
             : undefined),
           ...(filters?.status
             ? {
-                GiaoDichs: {
-                  some: { TrangThai: filters.status },
-                },
-              }
+              GiaoDichs: {
+                some: { TrangThai: filters.status },
+              },
+            }
             : undefined),
           ...(filters?.date
             ? {
-                NgayLap: {
-                  gte: new Date(new Date(filters.date).setHours(0, 0, 0, 0)),
-                  lt: new Date(new Date(filters.date).setHours(23, 59, 59, 0)),
-                },
-              }
+              NgayLap: {
+                gte: new Date(new Date(filters.date).setHours(0, 0, 0, 0)),
+                lt: new Date(new Date(filters.date).setHours(23, 59, 59, 0)),
+              },
+            }
             : undefined),
           ...(role === RoleEnum.KHACHHANG
             ? {
-                KhachHang: {
-                  NguoiDungPhanMem: {
-                    MaNguoiDung: userId,
-                  },
+              KhachHang: {
+                NguoiDungPhanMem: {
+                  MaNguoiDung: userId,
                 },
-              }
+              },
+            }
             : undefined),
           DeletedAt: null,
         },
@@ -187,12 +187,12 @@ export class InvoiceService {
         MaHoaDon: id,
         ...(role === RoleEnum.KHACHHANG
           ? {
-              KhachHang: {
-                NguoiDungPhanMem: {
-                  MaNguoiDung: userid,
-                },
+            KhachHang: {
+              NguoiDungPhanMem: {
+                MaNguoiDung: userid,
               },
-            }
+            },
+          }
           : undefined),
         DeletedAt: null,
       },
@@ -536,7 +536,7 @@ export class InvoiceService {
           NoiDung: paymentData ? paymentData.description : null,
         },
       });
-    } else {
+    } else if (TransactionEnum.TRUCTUYEN === request.LoaiGiaoDich) {
       throw new BadRequestException(
         'Không tạo được giao dịch thanh toán, vui lòng thử lại sau',
       );
@@ -686,11 +686,11 @@ export class InvoiceService {
       const combos =
         Combos && Combos.length > 0
           ? await prisma.cOMBO.findMany({
-              where: {
-                MaCombo: { in: Combos.map((c) => c.MaCombo) },
-                DeletedAt: null,
-              },
-            })
+            where: {
+              MaCombo: { in: Combos.map((c) => c.MaCombo) },
+              DeletedAt: null,
+            },
+          })
           : [];
 
       if (Combos && Combos.length !== combos.length) {
@@ -700,15 +700,15 @@ export class InvoiceService {
       const comboPrices =
         Combos && Combos.length > 0
           ? (() => {
-              const comboPrices = combos.map((c) => {
-                const price = Number(c.GiaTien);
-                total +=
-                  price *
-                  (Combos.find((x) => x.MaCombo === c.MaCombo)?.SoLuong || 1);
-                return { id: c.MaCombo, price };
-              });
-              return comboPrices;
-            })()
+            const comboPrices = combos.map((c) => {
+              const price = Number(c.GiaTien);
+              total +=
+                price *
+                (Combos.find((x) => x.MaCombo === c.MaCombo)?.SoLuong || 1);
+              return { id: c.MaCombo, price };
+            });
+            return comboPrices;
+          })()
           : [];
       return comboPrices;
     }
