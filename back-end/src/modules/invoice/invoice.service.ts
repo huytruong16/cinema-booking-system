@@ -543,7 +543,7 @@ export class InvoiceService {
     }
 
     return {
-      MaGiaoDich: transaction.MaGiaoDich,
+      MaGiaoDich: transaction?.MaGiaoDich,
       GiaoDichUrl: paymentData?.checkoutUrl,
       CodeHoaDon: created.Code,
     };
