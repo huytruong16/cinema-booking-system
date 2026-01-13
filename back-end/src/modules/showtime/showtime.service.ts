@@ -22,7 +22,7 @@ export class ShowtimeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   private applyShowtimeFilters(
     filters: GetAllShowtimeDto,
@@ -344,7 +344,7 @@ export class ShowtimeService {
       });
 
       if (ghePhongChieus.length === 0) {
-        throw new Error('Phòng chiếu chưa được cấu hình ghế');
+        throw new BadRequestException('Phòng chiếu chưa được cấu hình ghế');
       }
 
       await tx.gHE_SUATCHIEU.createMany({
@@ -428,7 +428,7 @@ export class ShowtimeService {
         });
 
         if (ghePhongChieus.length === 0) {
-          throw new Error('Phòng chiếu mới chưa được cấu hình ghế');
+          throw new BadRequestException('Phòng chiếu mới chưa được cấu hình ghế');
         }
 
         await tx.gHE_SUATCHIEU.createMany({
@@ -672,7 +672,7 @@ export class ShowtimeService {
           DiscountAmount: discountAmount,
           CancellationReason: LyDoHuy ?? 'Suất chiếu bị hủy',
         });
-      } catch {}
+      } catch { }
     }
   }
 }
