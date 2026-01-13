@@ -69,8 +69,17 @@ export const getMyTickets = async (): Promise<TicketResponse[]> => {
 };
 
 export const userService = {
+  getAllUsers: async () => {
+    return await getAllUsers();
+  },
+  
   assignEmployee: async (data: any) => {
     const response = await apiClient.post('/users/assign-employee', data);
+    return response.data;
+  },
+
+  assignGroup: async (data: { userId: string, groupId: string }) => {
+    const response = await apiClient.post('/users/assign-group', data);
     return response.data;
   },
 

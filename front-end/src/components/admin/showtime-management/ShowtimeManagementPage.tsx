@@ -53,7 +53,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, addDays, subDays, startOfDay, parseISO } from "date-fns";
+import { format, addDays, subDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -108,8 +108,10 @@ const DAY_START_MINUTES = 0;
 const DAY_TOTAL_MINUTES = 24 * 60;
 
 function calculateTimelineStyle(showtime: SuatChieuView, selectedDate: Date) {
-  const dayStart =
-    startOfDay(selectedDate).getTime() + DAY_START_MINUTES * 60000;
+  // Use local start of day relative to the selected date
+  const selectedStart = new Date(selectedDate);
+  selectedStart.setHours(0, 0, 0, 0);
+  const dayStart = selectedStart.getTime() + DAY_START_MINUTES * 60000;
 
   const startTime = showtime.ThoiGianBatDau.getTime();
   const endTime = showtime.ThoiGianKetThuc.getTime();
@@ -222,9 +224,34 @@ export default function ShowtimeManagementPage() {
   const fetchShowtimes = async () => {
     setLoading(true);
     try {
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
-      const res = await showtimeService.getAll({ NgayChieu: dateStr });
+      // Calculate start and end of the selected local day
+      const start = new Date(selectedDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(selectedDate);
+      end.setHours(23, 59, 59, 999);
+
+      // Add 24h buffer before and after to handle timezone edge cases safely.
+      // Timeline logic will filter out what shouldn't be displayed.
+      const bufferStart = new Date(start);
+      bufferStart.setDate(bufferStart.getDate() - 1);
+      
+      const bufferEnd = new Date(end);
+      bufferEnd.setDate(bufferEnd.getDate() + 1);
+
+      const tuNgay = bufferStart.toISOString();
+      const denNgay = bufferEnd.toISOString();
+      
+      console.log("Fetching showtimes range (with buffer):", { 
+        selectedDate: format(selectedDate, 'yyyy-MM-dd HH:mm:ss'),
+        tuNgayUTC: tuNgay, 
+        denNgayUTC: denNgay 
+      });
+
+      // Increase limit to ensure we get all showtimes in the buffered range
+      const res = await showtimeService.getAll({ TuNgay: tuNgay, DenNgay: denNgay, limit: 1000 });
       const dataToSet = Array.isArray(res) ? res : (res as any).data || [];
+      console.log("Fetched showtimes count:", dataToSet.length);
 
       setRawShowtimes(dataToSet);
     } catch (error) {
@@ -302,25 +329,38 @@ export default function ShowtimeManagementPage() {
     try {
       const newStart = formData.ThoiGianBatDau.getTime();
       const newEnd = formData.ThoiGianKetThuc.getTime();
-      const now = new Date().getTime();
-
-      if (newStart < now) {
-        toast.error("Không thể tạo suất chiếu trong quá khứ");
-        return;
-      }
+      // Removed "past time check" if necessary, or keep valid check
+      // if (newStart < now) { ... }
 
       let showtimesToCheck = allShowtimes;
-      const targetDateStr = format(formData.ThoiGianBatDau, "yyyy-MM-dd");
-      const currentDateStr = format(selectedDate, "yyyy-MM-dd");
+      // Ensure specific target date coverage
+      const targetDate = new Date(formData.ThoiGianBatDau);
+      const currentDate = new Date(selectedDate);
+      
+      const isDifferentDay = 
+        targetDate.getDate() !== currentDate.getDate() ||
+        targetDate.getMonth() !== currentDate.getMonth() ||
+        targetDate.getFullYear() !== currentDate.getFullYear();
 
-      if (targetDateStr !== currentDateStr) {
-        const res = await showtimeService.getAll({ NgayChieu: targetDateStr });
+      if (isDifferentDay) {
+        const tStart = new Date(targetDate);
+        tStart.setHours(0, 0, 0, 0);
+        const tEnd = new Date(targetDate);
+        tEnd.setHours(23, 59, 59, 999);
+
+        const res = await showtimeService.getAll({ 
+          TuNgay: tStart.toISOString(), 
+          DenNgay: tEnd.toISOString() 
+        });
         const data = Array.isArray(res) ? res : (res as any).data || [];
         showtimesToCheck = mapShowtimes(data, phongChieuList, phimDinhDangList);
       }
 
       const hasConflict = showtimesToCheck.some((existing) => {
         if (existing.MaPhongChieu !== formData.MaPhongChieu) return false;
+
+        // Bỏ qua các suất chiếu đã bị hủy
+        if (existing.TrangThai === "DAHUY") return false;
 
         if (
           editingShowtime &&
@@ -358,7 +398,7 @@ export default function ShowtimeManagementPage() {
       }
 
       setIsModalOpen(false);
-      if (targetDateStr !== currentDateStr) {
+      if (isDifferentDay) {
         setSelectedDate(startOfDay(formData.ThoiGianBatDau));
       } else {
         fetchShowtimes();
