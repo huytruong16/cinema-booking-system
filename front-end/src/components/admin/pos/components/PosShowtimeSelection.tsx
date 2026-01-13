@@ -12,6 +12,7 @@ interface PosShowtimeSelectionProps {
   onShowtimeSelect: (showtimeId: string) => void;
   loading: boolean;
   selectedMovie: Movie | null;
+  loadingShowtimeId?: string | null;
 }
 
 export function PosShowtimeSelection({ 
@@ -19,7 +20,8 @@ export function PosShowtimeSelection({
   selectedShowtime, 
   onShowtimeSelect, 
   loading, 
-  selectedMovie 
+  selectedMovie,
+  loadingShowtimeId 
 }: PosShowtimeSelectionProps) {
   if (!selectedMovie) return null;
 
@@ -35,21 +37,35 @@ export function PosShowtimeSelection({
           <p className="text-sm text-muted-foreground text-center py-2">Không có suất chiếu nào cho ngày này.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {showtimes.map(st => (
-              <Button
-                key={st.MaSuatChieu}
-                variant={selectedShowtime?.MaSuatChieu === st.MaSuatChieu ? "default" : "outline"}
-                onClick={() => onShowtimeSelect(st.MaSuatChieu)}
-                className="flex flex-col h-auto py-2 px-4"
-              >
-                <span className="text-lg font-bold">
-                  {format(new Date(st.ThoiGianBatDau), 'HH:mm')}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {st.PhongChieu?.TenPhongChieu}
-                </span>
-              </Button>
-            ))}
+            {showtimes.map(st => {
+              const isLoading = loadingShowtimeId === st.MaSuatChieu;
+              const isSelected = selectedShowtime?.MaSuatChieu === st.MaSuatChieu;
+              return (
+                <Button
+                  key={st.MaSuatChieu}
+                  variant={isSelected ? "default" : "outline"}
+                  onClick={() => onShowtimeSelect(st.MaSuatChieu)}
+                  className="flex flex-col h-auto py-2 px-4 min-w-[80px] relative"
+                  disabled={!!loadingShowtimeId}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin w-5 h-5 mb-1" />
+                      <span className="text-xs text-muted-foreground">Đang tải...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg font-bold">
+                        {format(new Date(st.ThoiGianBatDau), 'HH:mm')}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {st.PhongChieu?.TenPhongChieu}
+                      </span>
+                    </>
+                  )}
+                </Button>
+              );
+            })}
           </div>
         )}
       </CardContent>

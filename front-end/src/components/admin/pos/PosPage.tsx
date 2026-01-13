@@ -41,10 +41,11 @@ export default function PosPage() {
   const [loadingMovies, setLoadingMovies] = useState(false);
   const [loadingShowtimes, setLoadingShowtimes] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingShowtimeId, setLoadingShowtimeId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
 
   const [customerEmail, setCustomerEmail] = useState("guest@cinema.com");
-  const [paymentMethod, setPaymentMethod] = useState<"TAIQUAY" | "TRUCTUYEN">("TAIQUAY");
+  const [paymentMethod, setPaymentMethod] = useState<"TRUCTIEP" | "TRUCTUYEN">("TRUCTIEP");
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -120,6 +121,7 @@ export default function PosPage() {
 
   const handleShowtimeSelect = async (showtimeId: string) => {
     setLoadingDetails(true);
+    setLoadingShowtimeId(showtimeId);
     try {
       const fullShowtime = await showtimeService.getShowtimeById(showtimeId);
       setSelectedShowtime(fullShowtime);
@@ -129,6 +131,7 @@ export default function PosPage() {
       toast.error("Lỗi tải chi tiết suất chiếu");
     } finally {
       setLoadingDetails(false);
+      setLoadingShowtimeId(null);
     }
   };
 
@@ -341,9 +344,9 @@ export default function PosPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
         {/* Left Column: Selection (Movies, Showtimes, Seats) */}
-        <div className="col-span-8 flex flex-col gap-4 min-h-0">
+        <div className="col-span-8 flex flex-col gap-4 overflow-y-auto pb-4">
             {/* 1. Movie & Date Selection */}
             <Card className="shrink-0">
                 <CardContent className="p-4 space-y-4">
@@ -367,7 +370,8 @@ export default function PosPage() {
                 selectedShowtime={selectedShowtime} 
                 onShowtimeSelect={handleShowtimeSelect} 
                 loading={loadingShowtimes} 
-                selectedMovie={selectedMovie} 
+                selectedMovie={selectedMovie}
+                loadingShowtimeId={loadingShowtimeId}
             />
 
             {/* 3. Seat Map */}
@@ -383,7 +387,7 @@ export default function PosPage() {
         </div>
 
         {/* Right Column: Cart & Payment */}
-        <div className="col-span-4 flex flex-col gap-4 h-full">
+        <div className="col-span-4 flex flex-col gap-4 overflow-y-auto pb-4">
             <PosCart 
                 selectedMovie={selectedMovie}
                 selectedShowtime={selectedShowtime}

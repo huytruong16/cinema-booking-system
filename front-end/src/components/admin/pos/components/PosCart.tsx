@@ -25,8 +25,8 @@ interface PosCartProps {
   onComboChange: (comboId: string, delta: number) => void;
   customerEmail: string;
   setCustomerEmail: (email: string) => void;
-  paymentMethod: "TAIQUAY" | "TRUCTUYEN";
-  setPaymentMethod: (method: "TAIQUAY" | "TRUCTUYEN") => void;
+  paymentMethod: "TRUCTIEP" | "TRUCTUYEN";
+  setPaymentMethod: (method: "TRUCTIEP" | "TRUCTUYEN") => void;
   totalAmount: number;
   onCheckout: () => void;
   processingPayment: boolean;
@@ -161,13 +161,13 @@ export function PosCart({
               <Label className="text-xs">Phương thức thanh toán</Label>
               <Select 
                 value={paymentMethod} 
-                onValueChange={(v: any) => setPaymentMethod(v)}
+                onValueChange={(v: "TRUCTIEP" | "TRUCTUYEN") => setPaymentMethod(v)}
               >
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TAIQUAY">Tiền mặt (Tại quầy)</SelectItem>
+                  <SelectItem value="TRUCTIEP">Tiền mặt (Tại quầy)</SelectItem>
                   <SelectItem value="TRUCTUYEN">Chuyển khoản / Thẻ</SelectItem>
                 </SelectContent>
               </Select>

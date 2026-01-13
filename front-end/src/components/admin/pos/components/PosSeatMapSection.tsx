@@ -26,8 +26,8 @@ export function PosSeatMapSection({
   if (!selectedShowtime) return null;
 
   return (
-    <Card className="flex-1 min-h-0 flex flex-col">
-      <CardHeader className="py-3 border-b">
+    <Card className="min-h-[500px] flex flex-col overflow-hidden shrink-0">
+      <CardHeader className="py-3 border-b shrink-0">
         <CardTitle className="text-sm font-medium flex justify-between items-center">
           <span>Sơ đồ ghế - {selectedShowtime.PhongChieu?.TenPhongChieu}</span>
           <div className="flex gap-4 text-xs font-normal">
@@ -37,22 +37,27 @@ export function PosSeatMapSection({
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-0 relative overflow-hidden">
+      <CardContent className="flex-1 p-0 relative overflow-auto">
         {loadingDetails ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
-            <Loader2 className="animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="animate-spin w-8 h-8 text-primary" />
+              <span className="text-sm text-muted-foreground">Đang tải sơ đồ ghế...</span>
+            </div>
           </div>
         ) : (
-          <div className="h-full overflow-auto p-4">
-            <BookingSeatMap
-              seatMap={selectedShowtime.PhongChieu?.SoDoGhe || {}}
-              bookedSeats={bookedSeats}
-              seatMetaById={seatMetaById}
-              basePrice={Number(selectedShowtime.PhienBanPhim.GiaVe)}
-              selectedSeats={selectedSeats}
-              onSeatClick={onSeatClick}
-              seatTypes={seatTypes}
-            />
+          <div className="p-4 h-full overflow-auto">
+            <div className="min-w-fit">
+              <BookingSeatMap
+                seatMap={selectedShowtime.PhongChieu?.SoDoGhe || {}}
+                bookedSeats={bookedSeats}
+                seatMetaById={seatMetaById}
+                basePrice={Number(selectedShowtime.PhienBanPhim.GiaVe)}
+                selectedSeats={selectedSeats}
+                onSeatClick={onSeatClick}
+                seatTypes={seatTypes}
+              />
+            </div>
           </div>
         )}
       </CardContent>

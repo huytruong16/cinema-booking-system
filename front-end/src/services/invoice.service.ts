@@ -3,7 +3,7 @@ import apiClient from '@/lib/apiClient';
 
 export interface CreateInvoiceDto {
   Email: string;
-  LoaiGiaoDich: "TRUCTUYEN" | "TAIQUAY";
+  LoaiGiaoDich: "TRUCTUYEN" | "TRUCTIEP";
   MaGheSuatChieus: string[];
   Combos: {
     MaCombo: string;
