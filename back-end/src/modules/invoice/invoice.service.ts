@@ -16,6 +16,7 @@ import {
   SeatStatusEnum,
   TicketStatusEnum,
   TransactionEnum,
+  TransactionStatusEnum,
   TransactionTypeEnum,
 } from 'src/libs/common/enums';
 import { PayosService } from 'src/libs/common/services/payos.service';
@@ -379,13 +380,13 @@ export class InvoiceService {
       })),
       NgayLap: invoice.NgayLap,
       GiaoDich: {
-        MaGiaoDich: transaction.MaGiaoDich,
-        Code: transaction.Code,
-        NgayGiaoDich: transaction.NgayGiaoDich,
-        PhuongThuc: transaction.PhuongThuc,
-        TrangThai: transaction.TrangThai,
-        LoaiGiaoDich: transaction.LoaiGiaoDich,
-        NoiDung: transaction.NoiDung,
+        MaGiaoDich: transaction?.MaGiaoDich ?? 'Giao dịch bằng tiền mặt',
+        Code: transaction?.Code ?? 'Giao dịch bằng tiền mặt',
+        NgayGiaoDich: transaction?.NgayGiaoDich ?? new Date(),
+        PhuongThuc: transaction?.PhuongThuc ?? TransactionEnum.TRUCTIEP,
+        TrangThai: transaction?.TrangThai ?? TransactionStatusEnum.THANHCONG,
+        LoaiGiaoDich: transaction?.LoaiGiaoDich ?? TransactionTypeEnum.MUAVE,
+        NoiDung: transaction?.NoiDung ?? '',
       },
       TongTien: Number(invoice.TongTien),
     };
