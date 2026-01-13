@@ -174,7 +174,9 @@ const Navbar = () => {
           <div className="relative flex items-center">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
             <Input
-              type="text"
+              type="search"
+              name="movie-search"
+              autoComplete="off"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onKeyDown={handleSearchSubmit}
