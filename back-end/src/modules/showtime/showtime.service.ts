@@ -301,29 +301,31 @@ export class ShowtimeService {
   }
 
   async createShowtime(payload: CreateShowtimeDto) {
-    return await this.prisma.$transaction(async (tx) => {
-      const phienBan = await tx.pHIENBANPHIM.findFirst({
-        where: {
-          MaPhienBanPhim: payload.MaPhienBanPhim,
-          DeletedAt: null,
-        },
-      });
+    const [phienBan, phong] = await Promise.all([
+      this.prisma.pHIENBANPHIM.findFirst({
+        where: { MaPhienBanPhim: payload.MaPhienBanPhim, DeletedAt: null },
+      }),
+      this.prisma.pHONGCHIEU.findFirst({
+        where: { MaPhongChieu: payload.MaPhongChieu, DeletedAt: null },
+      }),
+    ]);
 
-      if (!phienBan) {
-        throw new NotFoundException('Phiên bản phim không tồn tại');
-      }
+    if (!phienBan) throw new NotFoundException('Phiên bản phim không tồn tại');
+    if (!phong) throw new NotFoundException('Phòng chiếu không tồn tại');
 
-      const phong = await tx.pHONGCHIEU.findFirst({
-        where: {
-          MaPhongChieu: payload.MaPhongChieu,
-          DeletedAt: null,
-        },
-      });
+    const ghePhongChieus = await this.prisma.gHE_PHONGCHIEU.findMany({
+      where: {
+        MaPhongChieu: payload.MaPhongChieu,
+        DeletedAt: null,
+      },
+      select: { MaGhePhongChieu: true },
+    });
 
-      if (!phong) {
-        throw new NotFoundException('Phòng chiếu không tồn tại');
-      }
+    if (ghePhongChieus.length === 0) {
+      throw new BadRequestException('Phòng chiếu chưa được cấu hình ghế');
+    }
 
+    const showtime = await this.prisma.$transaction(async (tx) => {
       const showtime = await tx.sUATCHIEU.create({
         data: {
           MaPhienBanPhim: payload.MaPhienBanPhim,
@@ -333,20 +335,6 @@ export class ShowtimeService {
         },
       });
 
-      const ghePhongChieus = await tx.gHE_PHONGCHIEU.findMany({
-        where: {
-          MaPhongChieu: payload.MaPhongChieu,
-          DeletedAt: null,
-        },
-        select: {
-          MaGhePhongChieu: true,
-        },
-      });
-
-      if (ghePhongChieus.length === 0) {
-        throw new BadRequestException('Phòng chiếu chưa được cấu hình ghế');
-      }
-
       await tx.gHE_SUATCHIEU.createMany({
         data: ghePhongChieus.map((ghe) => ({
           MaSuatChieu: showtime.MaSuatChieu,
@@ -354,12 +342,14 @@ export class ShowtimeService {
         })),
       });
 
-      return {
-        message: 'Tạo suất chiếu thành công',
-        MaSuatChieu: showtime.MaSuatChieu,
-        SoLuongGhe: ghePhongChieus.length,
-      };
+      return showtime;
     });
+
+    return {
+      message: 'Tạo suất chiếu thành công',
+      MaSuatChieu: showtime.MaSuatChieu,
+      SoLuongGhe: ghePhongChieus.length,
+    };
   }
 
   async updateShowtime(id: string, updateDto: UpdateShowtimeDto) {
