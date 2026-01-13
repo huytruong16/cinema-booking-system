@@ -27,12 +27,31 @@ export class RefundRequestService {
     readonly prisma: PrismaService,
     @Inject(REQUEST) private readonly request: any,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
   async getAllRefundRequests(filters: GetRefundRequestDto) {
+    const userRole = this.request?.user?.vaitro;
+    const userId = this.request?.user?.id;
+
+    const where: any = {
+      DeletedAt: null,
+      HoaDon: {
+        MaKhachHang: { not: null },
+        DeletedAt: null,
+      },
+    };
+
+    if (userRole === RoleEnum.KHACHHANG) {
+      where.HoaDon.KhachHang = {
+        NguoiDungPhanMem: {
+          MaNguoiDung: userId,
+        },
+      };
+    }
+
     const [data, pagination] = await this.prisma.xprisma.yEUCAUHOANVE
       .paginate({
         orderBy: [{ CreatedAt: 'desc' }, { MaYeuCau: 'desc' }],
-        where: { DeletedAt: null },
+        where,
         include: { HoaDon: true },
       })
       .withCursor(CursorUtils.getPrismaOptions(filters ?? {}, 'MaYeuCau'));
