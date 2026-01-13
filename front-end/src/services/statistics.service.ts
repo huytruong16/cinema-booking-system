@@ -7,7 +7,6 @@ import {
   TopStaff,
 } from '@/types/statistics';
 import { TopMovieBanner } from '@/types/home-banner';
-import { filmService } from './film.service';
 
 export interface GetSummaryParams {
   range: 'day' | 'week' | 'month' | 'year';
@@ -103,6 +102,7 @@ export const statisticsService = {
       comboRevenue: item.DoanhThuCombo
     }));
   },
+
 
   getTopMovies: async (
     params: GetTopMovieParams
@@ -254,150 +254,63 @@ export const statisticsService = {
     });
     return res.data;
   },
-  getTopMoviesForBanner: async (limit: number = 5): Promise<TopMovieBanner[]> => {
-    const USE_MOCK_DATA = false;
-
-    if (USE_MOCK_DATA) {
-      const mockData: TopMovieBanner[] = [
-        {
-          rank: 1,
-          movie: {
-            id: "PHIM001",
-            title: "Godzilla x Kong: Đế Chế Mới",
-            subTitle: "Godzilla x Kong: The New Empire",
-            posterUrl: "https://image.tmdb.org/t/p/w500/z1p34vh7dEOnLDmyCrlUVLuoDzd.jpg",
-            backdropUrl: "https://image.tmdb.org/t/p/original/xRd1eJIDe7JHO5u4gtEYwGn5wtf.jpg",
-            description: "Hai titan huyền thoại - Godzilla và Kong - cùng nhau đối đầu với mối đe dọa chưa từng có từ thế giới bí ẩn dưới lòng đất.",
-            trailerUrl: "https://www.youtube.com/watch?v=qqrpMRDuPfc",
-            year: 2024,
-            status: "now_showing",
-            ageRating: "T13",
-            duration: "115 phút",
-            country: "Mỹ",
-            rating: 8.5,
-            tags: ["Hành động", "Phiêu lưu", "Viễn tưởng"],
-          },
-          ticketsSold: 15234,
-          revenue: 1523400000,
-        },
-        {
-          rank: 2,
-          movie: {
-            id: "PHIM002",
-            title: "Kung Fu Panda 4",
-            subTitle: "Kung Fu Panda 4",
-            posterUrl: "https://image.tmdb.org/t/p/w500/kDp1vUBnMpe8ak4rjgl3cLELqjU.jpg",
-            backdropUrl: "https://image.tmdb.org/t/p/original/1XDDXPXGiI8id7MrUxK36ke7gkX.jpg",
-            description: "Po được chọn làm Lãnh đạo Tinh thần của Thung lũng Hòa bình và phải tìm người kế nhiệm mới để trở thành Chiến binh Rồng.",
-            trailerUrl: "https://www.youtube.com/watch?v=_inKs4eeHiI",
-            year: 2024,
-            status: "now_showing",
-            ageRating: "P",
-            duration: "94 phút",
-            country: "Mỹ",
-            rating: 8.2,
-            tags: ["Hoạt hình", "Hài hước", "Gia đình"],
-          },
-          ticketsSold: 12890,
-          revenue: 1289000000,
-        },
-        {
-          rank: 3,
-          movie: {
-            id: "PHIM003",
-            title: "Quật Mộ Trùng Ma",
-            subTitle: "Exhuma",
-            posterUrl: "https://image.tmdb.org/t/p/w500/pM3mLrHPfgjvRJEySjKSMzXtLMk.jpg",
-            backdropUrl: "https://image.tmdb.org/t/p/original/pM3mLrHPfgjvRJEySjKSMzXtLMk.jpg",
-            description: "Một pháp sư nổi tiếng và thầy phong thủy được thuê để giải quyết lời nguyền đang ám ảnh một gia đình giàu có.",
-            trailerUrl: "https://www.youtube.com/watch?v=GjpnqN8GMPA",
-            year: 2024,
-            status: "now_showing",
-            ageRating: "T18",
-            duration: "134 phút",
-            country: "Hàn Quốc",
-            rating: 8.8,
-            tags: ["Kinh dị", "Bí ẩn", "Tâm lý"],
-          },
-          ticketsSold: 11567,
-          revenue: 1156700000,
-        },
-        {
-          rank: 4,
-          movie: {
-            id: "PHIM004",
-            title: "Địa Đạo: Mặt Trời Trong Bóng Tối",
-            subTitle: "Cu Chi: The Tunnel",
-            posterUrl: "https://image.tmdb.org/t/p/w500/aSuL1HN0CRBd5mAMfbWGZCNkNKY.jpg",
-            backdropUrl: "https://image.tmdb.org/t/p/original/aSuL1HN0CRBd5mAMfbWGZCNkNKY.jpg",
-            description: "Câu chuyện về những người chiến sĩ trong hệ thống địa đạo Củ Chi huyền thoại.",
-            trailerUrl: "https://www.youtube.com/watch?v=example",
-            year: 2024,
-            status: "now_showing",
-            ageRating: "T16",
-            duration: "128 phút",
-            country: "Việt Nam",
-            rating: 9.1,
-            tags: ["Chiến tranh", "Lịch sử", "Hành động"],
-          },
-          ticketsSold: 9876,
-          revenue: 987600000,
-        },
-        {
-          rank: 5,
-          movie: {
-            id: "PHIM005",
-            title: "Dune: Hành Tinh Cát - Phần Hai",
-            subTitle: "Dune: Part Two",
-            posterUrl: "https://image.tmdb.org/t/p/w500/1pdfLvkbY9OH7Lv4gPqRWlzXpfl.jpg",
-            backdropUrl: "https://image.tmdb.org/t/p/original/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",
-            description: "Paul Atreides hợp nhất với Chani và người Fremen trong khi trên con đường chiến tranh chống lại những kẻ đã tiêu diệt gia đình anh.",
-            trailerUrl: "https://www.youtube.com/watch?v=Way9Dexny3w",
-            year: 2024,
-            status: "now_showing",
-            ageRating: "T13",
-            duration: "166 phút",
-            country: "Mỹ",
-            rating: 8.7,
-            tags: ["Viễn tưởng", "Phiêu lưu", "Hành động"],
-          },
-          ticketsSold: 8543,
-          revenue: 854300000,
-        },
-      ];
-
-      return mockData.slice(0, limit);
+  getTopMoviesForBanner: async (limit: number = 5, range: 'day' | 'week' | 'month' | 'year' | 'all' = 'week'): Promise<TopMovieBanner[]> => {
+    interface RawTopMovieBannerItem {
+      rank: number;
+      movie: {
+        MaPhim: string;
+        TenHienThi: string;
+        TenGoc: string;
+        PosterUrl: string;
+        BackdropUrl: string;
+        TomTatNoiDung: string;
+        TrailerUrl: string;
+        ThoiLuong: number;
+        QuocGia: string;
+        DiemDanhGia: number;
+        TrangThaiPhim: string;
+        NhanPhim: {
+          TenNhanPhim: string;
+        };
+        TheLoais: string[];
+      };
+      ticketsSold: number;
+      revenue: number;
     }
 
     try {
-      const topMovies = await statisticsService.getTopMovies({
-        range: 'week',
-        limit: limit + 10
+      const res = await apiClient.get<RawTopMovieBannerItem[]>('/statistics/top-movies-for-banner', {
+        params: { range, limit }
       });
 
-      const enrichedMovies = await Promise.all(
-        topMovies.map(async (item) => {
-          try {
-            const movie = await filmService.getFilmById(item.Phim.MaPhim);
-            if (!movie || movie.status !== 'now_showing') return null;
-            return {
-              movie,
-              ticketsSold: item.SoVeDaBan,
-              revenue: item.DoanhThu,
-            };
-          } catch {
-            return null;
-          }
-        })
-      );
+      return res.data.map((item) => {
+        const statusMap: Record<string, 'now_showing' | 'coming_soon' | 'ended'> = {
+          'DANGCHIEU': 'now_showing',
+          'SAPCHIEU': 'coming_soon',
+          'NGUNGCHIEU': 'ended',
+        };
 
-      return enrichedMovies
-        .filter((item): item is Omit<TopMovieBanner, 'rank'> => item !== null)
-        .slice(0, limit)
-        .map((item, index) => ({
-          ...item,
-          rank: index + 1,
-        }));
+        return {
+          rank: item.rank,
+          movie: {
+            id: item.movie.MaPhim,
+            title: item.movie.TenHienThi,
+            subTitle: item.movie.TenGoc,
+            posterUrl: item.movie.PosterUrl,
+            backdropUrl: item.movie.BackdropUrl,
+            description: item.movie.TomTatNoiDung,
+            trailerUrl: item.movie.TrailerUrl,
+            duration: `${item.movie.ThoiLuong} phút`,
+            country: item.movie.QuocGia,
+            rating: item.movie.DiemDanhGia,
+            status: statusMap[item.movie.TrangThaiPhim] || 'now_showing',
+            ageRating: item.movie.NhanPhim?.TenNhanPhim,
+            tags: item.movie.TheLoais,
+          },
+          ticketsSold: item.ticketsSold,
+          revenue: item.revenue,
+        };
+      });
     } catch (error) {
       console.error('Error fetching top movies for banner:', error);
       return [];
