@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { employeeService } from "@/services/employee.service";
 import { customerService } from "@/services/customer.service";
 import { userService } from "@/services/user.service";
+import { roleService } from "@/services/role.service";
 import {
   Popover,
   PopoverContent,
@@ -159,11 +160,12 @@ function EmployeeManager() {
           HoTen: user.HoTen || "Không tên",
           Email: user.Email || "",
           SoDienThoai: user.SoDienThoai,
-          MaNhomNguoiDung: user.MaNhomNguoiDung,
+          MaNhomNguoiDung: user.MaNhomNguoiDung || user.NhomNguoiDung?.MaNhomNguoiDung,
           NguoiDung: {
             ...user,
             AvatarUrl: user.AvatarUrl,
             TrangThaiNguoiDung: user.TrangThai || "CHUAKICHHOAT",
+            MaNhomNguoiDung: user.MaNhomNguoiDung || user.NhomNguoiDung?.MaNhomNguoiDung,
           },
           TrangThai: item.TrangThai,
         };
@@ -210,7 +212,31 @@ function EmployeeManager() {
             : format(new Date(), "yyyy-MM-dd"),
         };
 
-        await userService.assignEmployee(createPayload);
+        const res: any = await userService.assignEmployee(createPayload);
+        
+        const newUserId =
+          res?.user?.MaNguoiDung ||
+          res?.User?.MaNguoiDung ||
+          res?.data?.user?.MaNguoiDung ||
+          res?.MaNguoiDung;
+
+        console.log("Check Assign Group:", { newUserId, groupId: data.MaNhomNguoiDung });
+
+        if (newUserId && data.MaNhomNguoiDung) {
+          try {
+             await userService.assignGroup({
+              userId: newUserId,
+              groupId: data.MaNhomNguoiDung.toString(),
+            });
+            toast.success("Đã gán nhóm người dùng thành công");
+          } catch(err) {
+             console.error("Assign group error:", err);
+             toast.error("Tạo nhân viên thành công nhưng lỗi gán nhóm người dùng");
+          }
+        } else if (!newUserId) {
+             toast.error("Không thể lấy ID người dùng mới để gán nhóm");
+        }
+        
         toast.success("Tạo tài khoản nhân viên thành công!");
       }
 
@@ -844,23 +870,31 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
     Email: "",
     SoDienThoai: "",
     MatKhau: "",
-    MaNhomNguoiDung: "2",
+    MaNhomNguoiDung: "",
     NgayVaoLam: new Date(),
     TrangThai: "CONLAM",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [roles, setRoles] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen) {
+      roleService
+        .getAll()
+        .then((res: any) => {
+          setRoles(Array.isArray(res) ? res : res.data || []);
+        })
+        .catch((err) => console.error("Fetch roles error:", err));
+
       if (user) {
         setFormData({
-          HoTen: user.HoTen || "",
-          Email: user.Email || "",
-          SoDienThoai: user.SoDienThoai || "",
+          HoTen: user?.HoTen || "",
+          Email: user?.Email || "",
+          SoDienThoai: user?.SoDienThoai || "",
           MatKhau: "",
-          MaNhomNguoiDung: user.MaNhomNguoiDung?.toString() || "2",
-          NgayVaoLam: user.NgayVaoLam ? new Date(user.NgayVaoLam) : new Date(),
-          TrangThai: user.TrangThai || "CONLAM",
+          MaNhomNguoiDung: user?.MaNhomNguoiDung?.toString() || "",
+          NgayVaoLam: user?.NgayVaoLam ? new Date(user.NgayVaoLam) : new Date(),
+          TrangThai: user?.TrangThai || "CONLAM",
         });
       } else {
         setFormData({
@@ -868,7 +902,7 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
           Email: "",
           SoDienThoai: "",
           MatKhau: "",
-          MaNhomNguoiDung: "2",
+          MaNhomNguoiDung: "",
           NgayVaoLam: new Date(),
           TrangThai: "CONLAM",
         });
@@ -879,11 +913,17 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    if (!formData.MaNhomNguoiDung) {
+      toast.error("Vui lòng chọn chức vụ");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
         ...formData,
-        MaNhomNguoiDung: Number(formData.MaNhomNguoiDung),
+        MaNhomNguoiDung: formData.MaNhomNguoiDung,
       });
     } finally {
       setIsSubmitting(false);
@@ -905,7 +945,7 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
             </Label>
             <Input
               required
-              disabled={!!user} 
+              disabled={!!user}
               value={formData.HoTen}
               onChange={(e) =>
                 setFormData({ ...formData, HoTen: e.target.value })
@@ -915,25 +955,22 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
             />
           </div>
 
-
-            <div className="space-y-2">
-              <Label>
-                Email <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                required
-                type="email"
-                disabled={!!user}
-                value={formData.Email}
-                onChange={(e) =>
-                  setFormData({ ...formData, Email: e.target.value })
-                }
-                className="bg-transparent border-slate-700 focus:border-primary disabled:opacity-50"
-                placeholder="staff@example.com"
-              />
-            </div>
-          
-          
+          <div className="space-y-2">
+            <Label>
+              Email <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              required
+              type="email"
+              disabled={!!user}
+              value={formData.Email}
+              onChange={(e) =>
+                setFormData({ ...formData, Email: e.target.value })
+              }
+              className="bg-transparent border-slate-700 focus:border-primary disabled:opacity-50"
+              placeholder="staff@example.com"
+            />
+          </div>
 
           {!user && (
             <div className="space-y-2">
@@ -956,25 +993,28 @@ function EmployeeFormDialog({ isOpen, onClose, onSubmit, user }: any) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Chức vụ</Label>
+              <Label>
+                Chức vụ <span className="text-red-500">*</span>
+              </Label>
               <Select
-                disabled={true}
+                required
+                disabled={!!user}
                 value={formData.MaNhomNguoiDung}
                 onValueChange={(v) =>
                   setFormData({ ...formData, MaNhomNguoiDung: v })
                 }
               >
-                <SelectTrigger className="bg-transparent border-slate-700 focus:ring-offset-0 disabled:opacity-50">
-                  <SelectValue />
+                <SelectTrigger className="bg-transparent border-slate-700 focus:ring-offset-0 w-full">
+                  <SelectValue placeholder="Chọn chức vụ" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1C1C1C] border-slate-700 text-white">
-                  {ROLES.map((r) => (
+                  {roles.map((r: any) => (
                     <SelectItem
-                      key={r.value}
-                      value={r.value.toString()}
+                      key={r.MaNhomNguoiDung}
+                      value={r.MaNhomNguoiDung.toString()}
                       className="cursor-pointer hover:bg-slate-800"
                     >
-                      {r.label}
+                      {r.TenNhomNguoiDung}
                     </SelectItem>
                   ))}
                 </SelectContent>
