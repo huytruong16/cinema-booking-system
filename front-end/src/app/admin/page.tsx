@@ -88,12 +88,12 @@ export default function AdminDashboard() {
             : viewMode === "month"
             ? "month"
             : "week",
+        date: dateStr,
       } as const;
 
       const staffParams = {
         range: viewMode,
-        date: dateStr,
-      };
+      } as const;
 
       const chartRange = viewMode === "day" ? "week" : viewMode;
 
@@ -130,13 +130,13 @@ export default function AdminDashboard() {
       setTopMovies(mappedMovies);
 
       const mappedStaff: TopStaff[] = Array.isArray(staffRes)
-        ? staffRes.map((item: any) => ({
-            id: item.NhanVien?.MaNhanVien || Math.random(),
-            name: item.NhanVien?.NguoiDungPhanMem?.HoTen || "Nhân viên",
-            avatar: item.NhanVien?.NguoiDungPhanMem?.AvatarUrl || "",
-            revenue: Number(item.DoanhThu || 0),
-            ticketCount: Number(item.SoLuotGiaoDich || 0),
-            rank: "Standard",
+        ? staffRes.map((item: any, index: number) => ({
+            id: item.staffId || index + 1,
+            name: item.name || "Nhân viên",
+            avatar: "",
+            revenue: Number(item.totalRevenue || 0),
+            ticketCount: Number(item.totalTickets || 0),
+            rank: index === 0 ? "Gold" : index === 1 ? "Silver" : index === 2 ? "Bronze" : "Standard",
           }))
         : [];
       setTopStaff(mappedStaff);
