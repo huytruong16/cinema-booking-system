@@ -2,6 +2,15 @@
 import apiClient from '@/lib/apiClient'; 
 import { TicketResponse } from '@/types/ticket';
 
+export interface KhachHang {
+  MaKhachHang: string;
+  MaNguoiDung: string;
+  Diem: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+}
+
 export interface UserProfile {
   MaNguoiDung: string;
   HoTen: string;
@@ -19,6 +28,7 @@ export interface UserProfile {
       Quyen: string;
     }[];
   } | null;
+  KhachHangs?: KhachHang[];
   CreatedAt: string;
   UpdatedAt: string;
   DeletedAt: string | null;
