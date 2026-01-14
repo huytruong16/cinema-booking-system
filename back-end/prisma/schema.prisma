@@ -187,6 +187,7 @@ model GHE_SUATCHIEU {
 model KHACHHANG {
   MaKhachHang      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   MaNguoiDung      String                @db.Uuid
+  Diem             Int?                  @default(0)
   HoaDons          HOADON[]
   NguoiDungPhanMem NGUOIDUNGPHANMEM      @relation(fields: [MaNguoiDung], references: [MaNguoiDung])
   KhuyenMaiKhachHangs KHUYENMAI_KHACHHANG[]

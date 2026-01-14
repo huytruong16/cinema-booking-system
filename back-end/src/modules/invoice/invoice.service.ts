@@ -433,6 +433,13 @@ export class InvoiceService {
     const voucherPrices: { id: string; price: number }[] =
       await getVoucherPrice();
 
+    if (customer) {
+      await this.prisma.kHACHHANG.update({
+        where: { MaKhachHang: customer.MaKhachHang },
+        data: { Diem: { increment: Math.floor(total / 1000) } },
+      });
+    }
+
     const totalAfterDiscount = Math.max(0, total - discountTotal);
 
     const genCode = () => Math.floor(1000000000 + Math.random() * 9000000000);
