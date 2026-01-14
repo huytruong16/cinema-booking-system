@@ -35,7 +35,6 @@ export class RefundRequestService {
     const where: any = {
       DeletedAt: null,
       HoaDon: {
-        MaKhachHang: { not: null },
         DeletedAt: null,
       },
     };
