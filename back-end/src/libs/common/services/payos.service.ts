@@ -31,8 +31,8 @@ export class PayosService {
       amount,
       description,
       expiredAt,
-      returnUrl: 'http://localhost:3000/success',
-      cancelUrl: 'http://localhost:3000/cancel',
+      returnUrl: 'https://cinema-booking-system-opal.vercel.app/success',
+      cancelUrl: 'https://cinema-booking-system-opal.vercel.app/cancel',
     };
 
     const data = await this.payos.createPaymentLink(body);
