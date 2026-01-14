@@ -373,7 +373,7 @@ export class TransactionService {
       where: { MaNguoiDung: userId, DeletedAt: null },
     });
 
-    if (!staff) {
+    if (!staff && this.request?.user?.vaitro !== RoleEnum.ADMIN) {
       throw new NotFoundException('Nhân viên không tồn tại');
     }
 
@@ -403,7 +403,7 @@ export class TransactionService {
           PhuongThuc: PhuongThuc,
           NgayGiaoDich: new Date(),
           TrangThai: TransactionStatusEnum.DANGCHO,
-          MaNhanVien: staff.MaNhanVien,
+          MaNhanVien: staff?.MaNhanVien,
           Code: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
           GiaoDichUrl: '',
           LinkId: '',
