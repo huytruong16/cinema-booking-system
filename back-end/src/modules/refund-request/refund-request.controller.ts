@@ -29,9 +29,11 @@ import { RoleEnum } from 'src/libs/common/enums';
 @ApiTags('Yêu cầu hoàn vé')
 @Controller('refund-requests')
 export class RefundRequestController {
-  constructor(private readonly refundRequestService: RefundRequestService) {}
+  constructor(private readonly refundRequestService: RefundRequestService) { }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy danh sách yêu cầu hoàn vé' })
   @ApiResponse({ status: 200, description: 'Danh sách yêu cầu hoàn vé' })
   async getAllRefundRequests(@Query() filters: GetRefundRequestDto) {
@@ -91,6 +93,8 @@ export class RefundRequestController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy chi tiết yêu cầu hoàn vé theo mã' })
   @ApiParam({ name: 'id', description: 'Mã yêu cầu hoàn vé', required: true })
   @ApiResponse({ status: 200, description: 'Chi tiết yêu cầu hoàn vé' })
