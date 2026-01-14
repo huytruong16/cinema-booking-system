@@ -144,7 +144,7 @@ export default function AdminDashboard() {
       const mappedRooms: RoomStatus[] = Array.isArray(roomsRes)
         ? roomsRes.map((item: any) => {
             let status: any = "active";
-            if (item.TrangThai === "DANGCHIEU") status = "screening";
+            if (item.TrangThai === "DANG_CHIEU") status = "screening";
             else if (item.TrangThai === "BAOTRI") status = "maintenance";
             else if (item.TrangThai === "TRONG") status = "active";
 
@@ -152,13 +152,13 @@ export default function AdminDashboard() {
               id: item.PhongChieu?.MaPhongChieu || Math.random(),
               name: item.PhongChieu?.TenPhongChieu || "Phòng",
               status: status,
-              currentMovie: item.SuatChieuHienTai?.TenPhim || "",
-              currentShowtime: item.SuatChieuHienTai
+              currentMovie: item.SuatChieuTiepTheo?.TenPhim || "",
+              currentShowtime: item.SuatChieuTiepTheo
                 ? `${format(
-                    new Date(item.SuatChieuHienTai.ThoiGianBatDau),
+                    new Date(item.SuatChieuTiepTheo.ThoiGianBatDau),
                     "HH:mm"
                   )} - ${format(
-                    new Date(item.SuatChieuHienTai.ThoiGianKetThuc),
+                    new Date(item.SuatChieuTiepTheo.ThoiGianKetThuc),
                     "HH:mm"
                   )}`
                 : "",
